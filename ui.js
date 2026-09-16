@@ -27,6 +27,10 @@
   // ---------------- navigation ----------------
   var TABS = ["plan", "coach", "more"];
   var curTab = "plan";
+  // Matches styles.css's --dur-med (.28s) — the CSS-transition fallback
+  // below can't read a custom property off an element it hasn't swapped
+  // yet, so the duration is mirrored here instead.
+  var DUR_MED_MS = 280;
 
   function screenEl(tab) { return el("screen-" + tab); }
 
@@ -56,6 +60,34 @@
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!opts.instant && !reduce && document.startViewTransition) {
       document.startViewTransition(swap);
+    } else if (!opts.instant && !reduce) {
+      // No View Transitions support (Firefox, older Safari) — fade the
+      // outgoing screen out, swap, then fade the incoming screen in, reusing
+      // the exact same keyframes/classes as the View Transitions path
+      // (styles.css) so the motion is consistent across browsers instead of
+      // an instant, jarring cut.
+      var outgoing = null;
+      TABS.some(function (name) {
+        var s = screenEl(name);
+        if (s && !s.hidden) { outgoing = s; return true; }
+        return false;
+      });
+      if (outgoing) {
+        outgoing.classList.add("screen-fade-out-fallback");
+        setTimeout(function () {
+          outgoing.classList.remove("screen-fade-out-fallback");
+          swap();
+          var incoming = screenEl(tab);
+          if (incoming) {
+            incoming.classList.add("screen-fade-in-fallback");
+            incoming.addEventListener("animationend", function () {
+              incoming.classList.remove("screen-fade-in-fallback");
+            }, { once: true });
+          }
+        }, DUR_MED_MS);
+      } else {
+        swap();
+      }
     } else {
       swap();
     }
@@ -136,7 +168,17 @@
   function boot() {
     ob = el("onboarding");
     wireNav();
-    navigate(ls("gym_tab") || "plan", { instant: true, keepScroll: true });
+    var targetTab = ls("gym_tab") || "plan";
+    if (document.body.getAttribute("data-tab") === targetTab) {
+      // index.html's inline pre-paint script already applied this exact tab
+      // (hidden attrs + data-tab) before this script even loaded — redoing
+      // it here would be a second, unsynchronized apply of the same state
+      // and risks a visible flash/flicker. Just adopt the state it already
+      // set instead of re-navigating to it.
+      curTab = targetTab;
+    } else {
+      navigate(targetTab, { instant: true, keepScroll: true });
+    }
 
     var cont = el("obContinueBtn");
     if (cont) cont.addEventListener("click", startAnon);
