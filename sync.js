@@ -137,13 +137,37 @@
   }
 
   // ---- reconcile ----
-  function buildEntries() {
+  // If gym_meta_updatedAt (the per-key write-timestamp index) is missing or
+  // empty while real gym_* data already sits in localStorage, something wiped
+  // just the index (e.g. a user deleting what looks like disposable "cache"
+  // metadata in devtools) — not the data itself. Left alone, every key would
+  // read back as "last written at epoch 0" and lose a last-writer-wins merge
+  // against whatever the server has, silently overwriting fresh local data.
+  // Backfill the index from what's actually on disk, right now, so this
+  // session's data reads as current instead of prehistoric.
+  function repairMetaIfWiped() {
     var m = readMeta();
+    if (Object.keys(m).length > 0) return m;
+    var keys = gymKeys();
+    if (keys.length === 0) return m;
+    var now = nowMs();
+    keys.forEach(function (k) { m[k] = now; });
+    writeMeta(m);
+    return m;
+  }
+
+  function buildEntries() {
+    var m = repairMetaIfWiped();
     var entries = {};
     gymKeys().forEach(function (k) {
       var v = localStorage.getItem(k);
       if (v === null) return;
-      entries[k] = { value: v, updatedAt: new Date(m[k] || 0).toISOString() };
+      // hasOwnProperty, not `m[k] || 0`: a key genuinely never recorded is
+      // "unknown," not "known to be from 1970" — the two must not collapse
+      // to the same epoch-0 value or every never-yet-stamped key looks
+      // maximally stale against the server on the very next sync.
+      var ms = Object.prototype.hasOwnProperty.call(m, k) ? m[k] : nowMs();
+      entries[k] = { value: v, updatedAt: new Date(ms).toISOString() };
     });
     return entries;
   }
@@ -151,20 +175,34 @@
   function applyMerged(entries) {
     if (!entries) return false;
     var m = readMeta();
-    var changed = false;
+    var changed = false;      // an actual localStorage value changed — drives reload/refresh
+    var metaChanged = false;  // meta index needs persisting, even with no data change
     Object.keys(entries).forEach(function (k) {
       if (!syncable(k)) return;
       var remote = entries[k];
       var remoteMs = Date.parse(remote.updatedAt) || 0;
-      var localMs = m[k] || 0;
       var localVal = localStorage.getItem(k);
+      var haveLocalMeta = Object.prototype.hasOwnProperty.call(m, k);
+      var localMs = haveLocalMeta ? m[k] : undefined;
+      if (!haveLocalMeta && localVal != null) {
+        // A local value exists but its write time was never recorded (or was
+        // just wiped) — don't let it silently lose to remote as if it were
+        // from epoch 0. Keep it, and stamp meta now so future syncs compare
+        // correctly instead of repeating this ambiguity every time. This is
+        // a bookkeeping fix only — nothing in localStorage actually changed,
+        // so it must not trigger the caller's changed-data reload/refresh.
+        m[k] = nowMs();
+        metaChanged = true;
+        return;
+      }
       if (remoteMs > localMs || (remoteMs === localMs && localVal !== remote.value)) {
         try { localStorage.setItem(k, remote.value); } catch (e) { return; }
         m[k] = remoteMs;
         changed = true;
+        metaChanged = true;
       }
     });
-    if (changed) writeMeta(m);
+    if (metaChanged) writeMeta(m);
     return changed;
   }
 
