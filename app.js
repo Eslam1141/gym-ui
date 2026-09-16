@@ -832,6 +832,7 @@ const timerLabel = document.getElementById("timerLabel");
 const timerFill = document.getElementById("timerFill");
 
 function startRestTimer(seconds, name){
+  if(isDayComplete(activeDay)){ alert(t("dayAlreadyDone")); return; }
   clearInterval(restInterval);
   let remaining = seconds;
   const total = seconds;
