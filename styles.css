@@ -706,8 +706,26 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
   #screen-coach{ view-transition-name:screen-coach; }
   #screen-more{ view-transition-name:screen-more; }
 
-  @keyframes screen-fade-out{ to{ opacity:0; transform:translateY(-8px); } }
-  @keyframes screen-fade-in{ from{ opacity:0; transform:translateY(8px); } }
+  /* Opacity/slide cross-fade layered with a gradient sweep (mask-image) so
+     the swap reads as a directional wipe rather than a flat dissolve. */
+  @keyframes screen-fade-out{
+    to{
+      opacity:0; transform:translateY(-8px);
+      -webkit-mask-image:linear-gradient(90deg,#000 0%,transparent 100%);
+      mask-image:linear-gradient(90deg,#000 0%,transparent 100%);
+    }
+  }
+  @keyframes screen-fade-in{
+    from{
+      opacity:0; transform:translateY(8px);
+      -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 0%);
+      mask-image:linear-gradient(90deg,transparent 0%,#000 0%);
+    }
+    to{
+      -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 100%);
+      mask-image:linear-gradient(90deg,transparent 0%,#000 100%);
+    }
+  }
 
   ::view-transition-old(screen-plan),
   ::view-transition-old(screen-coach),
@@ -716,6 +734,13 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
   ::view-transition-new(screen-plan),
   ::view-transition-new(screen-coach),
   ::view-transition-new(screen-more){ animation:var(--dur-med) var(--ease) both screen-fade-in; }
+
+  /* Fallback for browsers without the View Transitions API (ui.js navigate()
+     applies these classes directly to the outgoing/incoming .screen when
+     document.startViewTransition is unavailable) — same keyframes, so the
+     motion looks identical either way. */
+  .screen-fade-out-fallback{ animation:var(--dur-med) var(--ease) both screen-fade-out; }
+  .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease) both screen-fade-in; }
 }
 
 @media (prefers-reduced-motion: reduce){
