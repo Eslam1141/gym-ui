@@ -7,7 +7,9 @@ module.exports = defineConfig({
   webServer: {
     command: "python -m http.server 4173 --directory ..",
     url: "http://127.0.0.1:4173/index.html",
-    reuseExistingServer: true
+    reuseExistingServer: true,
+    stdout: "ignore",
+    stderr: "ignore"
   },
   use: { baseURL: "http://127.0.0.1:4173" }
 });

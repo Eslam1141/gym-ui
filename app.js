@@ -296,6 +296,30 @@ const T = {
   langBtn:["العربية","English"],
   // ---- top-right header / profile / notifications (header.js, profile.js, notifications.js) ----
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
+  hdrStreakPending:["{n}-day streak, today not trained yet","سلسلة {n} يوم، لم تتمرن اليوم بعد"],
+  // ---- rest days + save-yesterday prompt (rest-days.js) ----
+  restBadge:["Rest day","يوم راحة"],
+  restTake:["Take a rest day","خذ يوم راحة"],
+  restMark:["Mark as rest day","تحديد كيوم راحة"],
+  restUndo:["Undo rest day","إلغاء يوم الراحة"],
+  restTodayNone:["Today: not trained yet","اليوم: لم تتمرن بعد"],
+  restTodayDone:["Today: trained","اليوم: تمرنت"],
+  restTodayRest:["Today: rest day, streak kept","اليوم: يوم راحة، السلسلة محفوظة"],
+  restLeft:["{n} of 2 rest days left this week","متبقي {n} من يومَي راحة هذا الأسبوع"],
+  restHint:["A rest day keeps your streak but doesn't add to it.","يوم الراحة يحافظ على سلسلتك لكنه لا يضيف إليها."],
+  restMarked:["Rest day saved","تم حفظ يوم الراحة"],
+  restRemoved:["Rest day removed","تم إلغاء يوم الراحة"],
+  restErrLimit:["You've used both rest days this week.","استخدمت يومَي الراحة لهذا الأسبوع."],
+  restErrTrained:["You already trained that day.","لقد تمرنت في هذا اليوم بالفعل."],
+  restErrWindow:["Only today and yesterday can be changed.","يمكن تغيير اليوم والأمس فقط."],
+  restErrNet:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى."],
+  sydTitle:["Did you finish yesterday's workout but forget to mark it?","هل أنهيت تمرين أمس ونسيت تسجيله؟"],
+  sydBody:["You checked {d} of {t} exercises for {day}. Saving it keeps your streak going.","أنجزت {d} من {t} تمارين في {day}. حفظه يُبقي سلسلتك مستمرة."],
+  sydYes:["Yes, save it","نعم، احفظه"],
+  sydNo:["No, I didn't","لا، لم أنهِه"],
+  sydSaved:["Yesterday's workout saved","تم حفظ تمرين أمس"],
+  sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
+  queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
   hdrAccountMenu:["Account menu","قائمة الحساب"],
   hdrGoProfile:["Go to profile","الذهاب إلى الملف الشخصي"],
   hdrAdmin:["Admin dashboard","لوحة الإدارة"],
@@ -336,6 +360,7 @@ const T = {
   profStreak:["Current streak","السلسلة الحالية"],
   profStreakDays:["{n}-day streak","سلسلة {n} يوم"],
   profStreakNone:["No active streak — finish today's workout to start one.","لا توجد سلسلة حالياً — أكمل تمرين اليوم لتبدأ واحدة."],
+  profStreakPending:["Train today to keep your streak going.","تمرّن اليوم لتحافظ على سلسلتك."],
   profTotalDays:["Days trained","أيام التمرين"],
   profSignInPrompt:["Sign in to see your profile.","سجّل الدخول لعرض ملفك الشخصي."],
   profSignInBtn:["Sign in","تسجيل الدخول"],
@@ -755,6 +780,22 @@ window.GymApp = window.GymApp || {};
 window.GymApp.dayExercises = function(dayId){
   const day = DAYS.find(d=>d.id===dayId);
   return day ? day.exercises : [];
+};
+// Marks every exercise of a past day's checklist as done (rest-days.js "save
+// yesterday"). Goes through the in-memory `checks` so the next toggle's
+// saveJSON doesn't overwrite it with a stale copy.
+window.GymApp.markDayComplete = function(date, dayId){
+  const day = DAYS.find(d=>d.id===dayId);
+  if(!day) return;
+  const k = date + "_" + dayId;
+  checks[k] = checks[k] || {};
+  day.exercises.forEach(ex=>{ checks[k][ex.id] = true; });
+  saveJSON("gym_checks", checks);
+};
+// Localised day label for dayId (used by the save-yesterday sheet).
+window.GymApp.dayName = function(dayId){
+  const day = DAYS.find(d=>d.id===dayId);
+  return day ? dayLabel(day) : "";
 };
 
 function t(key){ const e = T[key]; return e ? (e[activeLang === "ar" ? 1 : 0]) : key; }
