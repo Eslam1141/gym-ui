@@ -101,6 +101,9 @@
     if (blockedShown) return;
     blockedShown = true;
     if (window.GymSync && typeof GymSync.signOut === "function") GymSync.signOut();
+    // Account deleted (on this or another device): drop its local data and
+    // offline queue too, so nothing replays into a future account.
+    if (removed === true && window.GymPrivacy && GymPrivacy.wipeLocal) GymPrivacy.wipeLocal();
     if (window.GymToast) GymToast.show({ message: str(removed === true ? "hdrRemoved" : "hdrBlocked"), duration: 10000 });
     setTimeout(function () { blockedShown = false; }, 3000);
   }

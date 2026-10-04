@@ -340,7 +340,9 @@
       body: JSON.stringify({ confirm: "DELETE" })
     }).then(function (r) {
       setDeleting(false);
-      if (r.status === 204 || (r.status === 403 && r.code === "account_removed")) {
+      // 403 account_removed / 404 not_found: an earlier tap (or another tab)
+      // already deleted the account, so treat it as done and wipe.
+      if (r.status === 204 || r.status === 404 || (r.status === 403 && r.code === "account_removed")) {
         if (sheet.open) sheet.close();
         accountGone();
         return;
@@ -453,5 +455,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  window.GymPrivacy = { _test: { matches: matches, filenameFrom: filenameFrom } };
+  window.GymPrivacy = { wipeLocal: wipeLocal, _test: { matches: matches, filenameFrom: filenameFrom } };
 })();
