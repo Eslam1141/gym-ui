@@ -1,0 +1,118 @@
+/* privacy.css — More -> Privacy & data, the delete sheet and the
+ * "account deleted" screen (privacy.js). Existing tokens only; logical
+ * properties so it mirrors under dir="rtl". */
+
+#morePrivacy[hidden]{ display:none; }
+
+.pv-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  overflow:hidden;
+}
+.pv-row{ padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3); }
+.pv-row + .pv-row{ border-top:1px solid var(--line); }
+.pv-title{ font-size:var(--text-base); font-weight:var(--fw-black); color:var(--paper); }
+.pv-desc{ margin:var(--space-1) 0 0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); }
+
+.pv-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2);
+  min-height:44px; padding:0 var(--space-4); border-radius:var(--radius-sm);
+  font-family:inherit; font-size:var(--text-sm); font-weight:var(--fw-bold);
+  background:transparent; color:var(--paper); border:1px solid var(--line-strong);
+  cursor:pointer; transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+.pv-btn svg{ width:16px; height:16px; fill:currentColor; flex:none; }
+.pv-btn:hover{ background:var(--panel2); }
+.pv-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.pv-btn.is-busy{ cursor:progress; }
+.pv-btn.is-busy svg{ animation:pv-bob 1s var(--ease) infinite; }
+@keyframes pv-bob{ 50%{ transform:translateY(3px); } }
+.pv-row > .pv-btn{ align-self:flex-start; }
+
+.pv-btn-danger{ color:var(--danger); border-color:var(--danger); }
+.pv-btn-danger:hover{ background:var(--panel2); }
+.pv-btn-fill{ background:var(--danger); border-color:var(--danger); color:var(--surface); }
+.pv-btn-fill:hover:not(:disabled){ background:var(--danger); filter:brightness(1.08); }
+.pv-btn-fill:disabled{ opacity:.4; }
+/* the done screen's single action is the brand action, not a danger one */
+.pv-done .pv-btn-fill{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+
+.pv-status{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); }
+.pv-status:empty{ display:none; }
+.pv-status.is-ok{ color:var(--success-text); }
+.pv-status.is-err{ color:var(--danger); font-weight:var(--fw-medium); }
+.pv-err{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); font-weight:var(--fw-medium); color:var(--danger); }
+.pv-err:empty{ display:none; }
+
+/* ---- delete sheet: bottom sheet on phones, centered card on wider screens ---- */
+.pv-sheet{
+  margin:auto auto 0; padding:var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+  width:100%; max-width:480px; max-height:92dvh; overflow-y:auto; overscroll-behavior:contain;
+  color:var(--paper); background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0; box-shadow:var(--elev-2);
+}
+.pv-sheet::backdrop{ background:var(--scrim); }
+.pv-sheet[open]{ animation:pv-up var(--dur-med) var(--ease); }
+@keyframes pv-up{ from{ transform:translateY(24px); opacity:0; } }
+@media (min-width:600px){
+  .pv-sheet{ margin:auto; border-radius:var(--radius-lg); padding-bottom:var(--space-5); }
+}
+.pv-sheet-grip{ width:36px; height:4px; border-radius:var(--radius-pill); background:var(--line-strong); margin:calc(var(--space-2) * -1) auto var(--space-4); }
+@media (min-width:600px){ .pv-sheet-grip{ display:none; } }
+.pv-sheet [hidden]{ display:none; }
+.pv-sheet > div{ display:flex; flex-direction:column; gap:var(--space-3); }
+
+.pv-sh-title{ margin:0; font-size:var(--text-lg); font-weight:var(--fw-black); line-height:var(--lh-tight); outline:none; }
+.pv-sh-lead{ margin:0; font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+
+/* the ledger: what goes, each line struck-through-red marker */
+.pv-ledger{ background:var(--panel2); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+.pv-ledger-l{ font-size:var(--text-sm); font-weight:var(--fw-bold); color:var(--paper); margin-bottom:var(--space-2); }
+.pv-ledger ul{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:var(--space-2) var(--space-4); }
+.pv-ledger li{
+  position:relative; padding-inline-start:18px; font-size:var(--text-sm); line-height:1.4; color:var(--paper);
+}
+.pv-ledger li::before{
+  content:""; position:absolute; inset-inline-start:0; top:.55em; width:10px; height:2px;
+  background:var(--danger); border-radius:1px;
+}
+@media (max-width:359px){ .pv-ledger ul{ grid-template-columns:1fr; } }
+
+.pv-retain{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); }
+.pv-retain a{ color:var(--primary-text); font-weight:var(--fw-bold); }
+.pv-link{
+  align-self:flex-start; min-height:44px; padding:0; background:none; border:0; cursor:pointer;
+  font-family:inherit; font-size:var(--text-sm); font-weight:var(--fw-bold); color:var(--primary-text);
+  text-decoration:underline; text-underline-offset:3px;
+}
+.pv-link:disabled{ opacity:.5; cursor:progress; }
+
+.pv-field{ display:flex; flex-direction:column; gap:6px; font-size:var(--text-sm); font-weight:var(--fw-bold); color:var(--paper); }
+.pv-field input{
+  font-family:inherit; font-size:var(--text-md); font-weight:var(--fw-medium); color:var(--paper);
+  background:var(--panel2); border:1px solid var(--line-strong); border-radius:var(--radius-sm);
+  padding:0 var(--space-3); min-height:46px; width:100%; text-align:start;
+}
+.pv-field input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--glow); }
+.pv-field input[readonly]{ opacity:.75; }
+.pv-hint{ margin:calc(var(--space-1) * -1) 0 0; font-size:var(--text-xs); line-height:var(--lh-body); color:var(--paper-dim); }
+
+.pv-actions{ display:flex; gap:var(--space-3); margin-top:var(--space-2); }
+.pv-actions .pv-btn{ flex:1; }
+.pv-actions .pv-btn-fill{ flex:1.4; }
+.pv-ra-form{ display:flex; flex-direction:column; gap:var(--space-3); }
+.pv-gbtn{ display:flex; justify-content:center; min-height:44px; }
+
+/* ---- account deleted ---- */
+.pv-done{
+  position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center;
+  padding:var(--space-6); background:var(--surface); color:var(--paper);
+}
+.pv-done[hidden]{ display:none; }
+.pv-done-in{ max-width:360px; display:flex; flex-direction:column; align-items:center; gap:var(--space-4); text-align:center; }
+.pv-done h2{ margin:0; font-size:var(--text-xl); font-weight:var(--fw-black); line-height:var(--lh-tight); outline:none; }
+.pv-done p{ margin:0; font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.pv-done .pv-btn{ width:100%; margin-top:var(--space-2); }
+
+@media (prefers-reduced-motion:reduce){
+  .pv-sheet[open], .pv-btn.is-busy svg{ animation:none; }
+}

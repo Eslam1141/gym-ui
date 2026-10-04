@@ -26,6 +26,8 @@ const ASSETS = [
   "./sync.js",
   "./auth-email.js",
   "./auth-email.css",
+  "./privacy.js",
+  "./privacy.css",
   "./signin-fx.js",
   "./signin-fx.css",
   "./calendar.js",
