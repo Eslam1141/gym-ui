@@ -29,7 +29,9 @@ async function mockApi(context, s) {
       });
     }
     if (path === "/workouts/complete" && req.method() === "GET") {
-      return json(200, { records: s.records, restDays: s.restDays, restDaysLeftThisWeek: s.left });
+      const from = url.searchParams.get("from") || "0000", to = url.searchParams.get("to") || "9999";
+      const inR = (d) => (typeof d === "string" ? d : d.date) >= from && (typeof d === "string" ? d : d.date) <= to;
+      return json(200, { records: s.records.filter(inR), restDays: s.restDays.filter(inR), restDaysLeftThisWeek: s.left });
     }
     if (path === "/workouts/complete" && req.method() === "POST") {
       if (s.completeStatus !== 200) return json(s.completeStatus, { error: { code: s.completeError, message: "x" } });
@@ -59,6 +61,7 @@ async function mockApi(context, s) {
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
+    ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}),
     timezoneId: "Africa/Cairo", locale: opts.lang === "ar" ? "ar-EG" : "en-US", serviceWorkers: "block",
     viewport: opts.viewport || { width: 390, height: 844 }
   });
