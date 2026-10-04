@@ -30,10 +30,10 @@ h2 { font-size: 1.25rem; font-weight: 800; margin: 40px 0 12px; }
 p { margin: 0 0 12px; max-width: 62ch; }
 
 .steps { list-style: none; counter-reset: s; margin: 0 0 16px; padding: 0; display: grid; gap: 12px; }
-.steps li { counter-increment: s; display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: center; min-height: 36px; }
+.steps li { counter-increment: s; position: relative; padding: 5px 0; padding-inline-start: 50px; min-height: 36px; }
 .steps li::before {
-  content: counter(s); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
-  background: var(--teal); color: #fff; font-weight: 800;
+  content: counter(s); position: absolute; inset-inline-start: 0; top: 0; display: grid; place-items: center;
+  width: 36px; height: 36px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800;
 }
 
 .plain { margin: 0 0 12px; padding-inline-start: 22px; }

@@ -33,8 +33,8 @@
 .pv-btn-fill{ background:var(--danger); border-color:var(--danger); color:var(--surface); }
 .pv-btn-fill:hover:not(:disabled){ background:var(--danger); filter:brightness(1.08); }
 .pv-btn-fill:disabled{ opacity:.4; }
-/* the done screen's single action is the brand action, not a danger one */
-.pv-done .pv-btn-fill{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+/* the done screen and re-auth submit are brand actions, not danger ones */
+.pv-done .pv-btn-fill, .pv-ra-form .pv-btn-fill{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
 
 .pv-status{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); }
 .pv-status:empty{ display:none; }
