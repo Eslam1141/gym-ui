@@ -7,7 +7,7 @@
 (function () {
   "use strict";
   var COLORS = {
-    dark:  { male: "#0d1117", female: "#17121a" },
+    dark:  { male: "#10171f", female: "#1b1522" },
     light: { male: "#F3F0E8", female: "#F8F0F3" }
   };
   var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
