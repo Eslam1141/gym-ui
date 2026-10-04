@@ -537,7 +537,6 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 }
 #coachFab:hover{ background:var(--primary-hover); }
 #coachFab:active{ background:var(--primary-pressed); }
-#coachFab svg [fill="var(--paper-dim)"]{ fill:var(--on-primary); fill-opacity:.7; }
 #coachFab[hidden]{ display:none; }
 #coachFab:active{ transform:scale(.92); }
 #coachFab svg{ width:32px; height:32px; }
@@ -620,10 +619,10 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
 .coach-chat-head{ display:flex; align-items:center; gap:10px; padding:14px; border-bottom:1px solid var(--line); flex:none; }
 .coach-chat-head-icon{
   width:34px; height:34px; border-radius:50%; flex:none;
-  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  background:var(--primary);
   display:flex; align-items:center; justify-content:center;
 }
-.coach-chat-head-icon svg{ width:22px; height:22px; }
+.coach-chat-head-icon svg{ width:26px; height:26px; }
 .coach-chat-title{ flex:1; min-width:0; font-weight:800; font-size:var(--text-base); color:var(--paper); }
 #coachChatClose{
   flex:none; width:44px; height:44px; border-radius:12px; /* P0-4: 44px tap target */
@@ -1150,7 +1149,24 @@ body.onboarding-open #appNav{ display:none !important; }
   background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg);
   display:flex; flex-direction:column; align-items:center; gap:12px;
 }
-.coach-mascot{ filter:drop-shadow(0 14px 30px rgba(0,0,0,.4)); }
+/* shared coach mascot (mascot.js): colours are tokens, so it follows theme + plan */
+.etq-mascot{
+  --m-head:var(--primary); --m-face:var(--on-primary); --m-step:var(--ink); --m-band:var(--highlight);
+  display:block; overflow:visible;
+}
+.etq-mascot.on-primary{ --m-head:var(--on-primary); --m-face:var(--primary); --m-step:var(--on-primary); --m-band:var(--primary); }
+.etq-mascot .m-head{ fill:var(--m-head); }
+.etq-mascot .m-face{ fill:var(--m-face); }
+.etq-mascot .m-step{ fill:var(--m-step); }
+.etq-mascot .m-band{ fill:var(--m-band); }
+.etq-mascot .m-smile{ fill:none; stroke:var(--m-face); stroke-width:2.6; stroke-linecap:round; }
+.etq-mascot.on-primary .m-step{ fill-opacity:.6; }
+.etq-mascot.on-primary .m-band{ fill-opacity:.35; }
+.coach-mascot{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.22)); }
+@media (prefers-reduced-motion:no-preference){
+  .etq-mascot.is-live .m-eye{ transform-box:fill-box; transform-origin:center; animation:etq-blink 5.5s infinite; }
+}
+@keyframes etq-blink{ 0%,94%,100%{ transform:scaleY(1); } 97%{ transform:scaleY(.1); } }
 .coach-teaser h2{ margin:0; font-size:var(--text-lg); font-weight:var(--fw-black); }
 .coach-tease-body{ margin:0; color:var(--paper-dim); font-size:var(--text-base); max-width:40ch; }
 .coach-bullets{ list-style:none; margin:4px 0 6px; padding:0; text-align:start; width:100%; max-width:300px; }
