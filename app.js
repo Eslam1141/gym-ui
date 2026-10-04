@@ -360,6 +360,7 @@ const T = {
   profStreak:["Current streak","السلسلة الحالية"],
   profStreakDays:["{n}-day streak","سلسلة {n} يوم"],
   profStreakNone:["No active streak — finish today's workout to start one.","لا توجد سلسلة حالياً — أكمل تمرين اليوم لتبدأ واحدة."],
+  profStreakPending:["Train today to keep your streak going.","تمرّن اليوم لتحافظ على سلسلتك."],
   profTotalDays:["Days trained","أيام التمرين"],
   profSignInPrompt:["Sign in to see your profile.","سجّل الدخول لعرض ملفك الشخصي."],
   profSignInBtn:["Sign in","تسجيل الدخول"],

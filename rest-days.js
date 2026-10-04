@@ -188,7 +188,11 @@
 
   function leftText() { return str("restLeft", { n: restLeft() }); }
 
+  var lastMap = null;
+
   function renderCard(map) {
+    if (map) lastMap = map;
+    else map = lastMap;
     var panel = document.querySelector("#calendarStrip .cal-strip");
     if (!panel) return;
     var card = panel.querySelector(".rest-card");
@@ -242,6 +246,30 @@
       box.appendChild(left);
     }
     host.appendChild(box);
+  }
+
+  // Rest days marked while signed out live in gymrest_days. After sign-in they
+  // would be invisible (the server is the source of truth), so push the ones
+  // still inside the today/yesterday window and drop the rest.
+  var migrating = false;
+  function migrateLocal() {
+    var list = localRest();
+    if (migrating || !isAuthed() || !list.length) return Promise.resolve();
+    migrating = true;
+    var keep = list.filter(isEditable);
+    function next(i) {
+      if (i >= keep.length) return Promise.resolve();
+      return fetchTimeout("/workouts/rest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: keep[i] })
+      }).then(function (res) { return res.ok || res.status < 500 ? next(i + 1) : Promise.reject(new Error("rest " + res.status)); });
+    }
+    return next(0).then(function () {
+      try { localStorage.removeItem(LS_REST); } catch (e) {}
+      changed();
+    }, function () { /* offline: keep them, retry on the next signal */ })
+      .finally(function () { migrating = false; });
   }
 
   // ---------------- completion queue ----------------
@@ -413,13 +441,15 @@
   }
 
   // ---------------- wiring ----------------
-  function onSignal() { flushQueue(); maybePrompt(); }
+  function onSignal() { migrateLocal(); flushQueue(); maybePrompt(); }
 
   function init() {
     document.addEventListener("gym:authchange", function () { setTimeout(onSignal, 400); });
     document.addEventListener("gym:synctick", function () { flushQueue(); });
     window.addEventListener("online", function () { flushQueue(); });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) onSignal(); });
+    // The card reads todayDone from /me, which arrives after the strip.
+    if (window.GymHeader && GymHeader.onChange) GymHeader.onChange(function () { renderCard(); });
     // Give session restore a moment so a signed-in user isn't treated as local.
     setTimeout(onSignal, 2500);
   }

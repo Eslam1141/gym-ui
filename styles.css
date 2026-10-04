@@ -1817,3 +1817,96 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   #topPrefs{ left:calc(var(--side-w) + 12px); }
   [dir="rtl"] #topPrefs{ left:auto; right:calc(var(--side-w) + 12px); }
 }
+
+/* =====================================================================
+   Rest days + "save yesterday" (rest-days.js, calendar.js, header.js)
+   Rest reads as a deliberate pause: dashed outline, no fill, a small moon
+   mark. Only a trained day gets the green fill.
+   ===================================================================== */
+.rest-card{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+  margin-top:var(--space-3); padding-top:var(--space-3);
+  border-top:1px solid var(--line);
+}
+.rest-card-text{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+.rest-card-state{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:var(--text-base); font-weight:var(--fw-bold); color:var(--paper);
+}
+.rest-card-state svg{ width:16px; height:16px; fill:currentColor; flex:none; color:var(--primary-text); }
+.rest-card.is-done .rest-card-state{ color:var(--success-text); }
+.rest-card-left{ font-size:var(--text-xs); line-height:var(--lh-body); color:var(--paper-dim); text-align:start; }
+.rest-btn{
+  flex:none; min-height:44px; padding:0 var(--space-4); border-radius:var(--radius-pill);
+  font-family:inherit; font-size:var(--text-sm); font-weight:var(--fw-bold); cursor:pointer;
+  background:transparent; color:var(--primary-text); border:1px dashed var(--primary-text);
+  transition:background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.rest-btn:hover{ background:var(--primary-soft); }
+.rest-btn:active{ transform:scale(.97); }
+.rest-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.rest-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; background:transparent; }
+.rest-btn.is-undo{ color:var(--paper-dim); border:1px solid var(--line-strong); }
+.rest-btn.is-undo:hover{ background:var(--panel2); color:var(--paper); }
+@media (max-width:359.98px){
+  .rest-card{ flex-direction:column; align-items:stretch; }
+  .rest-btn{ width:100%; }
+}
+
+.cal-day-cell.rest, .cal-grid-cell.rest{
+  position:relative; background:transparent; border:1px dashed var(--line-strong);
+}
+.cal-day-cell.rest.today, .cal-grid-cell.rest.today{ border-color:var(--accent); }
+.cal-rest-mark{
+  position:absolute; inset-block-start:4px; inset-inline-end:4px;
+  width:6px; height:6px; border-radius:50%;
+  border:1.5px solid var(--primary-text);
+}
+.cal-grid-cell.rest .cal-rest-mark{ inset-block-start:5px; inset-inline-end:5px; }
+.cal-detail-status.rest{
+  display:inline-flex; align-items:center; gap:6px;
+  color:var(--primary-text); background:transparent; border:1px dashed var(--primary-text);
+}
+.cal-detail-status.rest svg{ width:13px; height:13px; fill:currentColor; flex:none; }
+.rest-detail{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-3); margin-top:var(--space-3); }
+.rest-detail .cal-more-hint{ margin:0; flex:1 1 100%; }
+
+/* streak badge: today not trained yet, streak still alive */
+.tb-streak.is-pending{ background:transparent; border-style:dashed; border-color:var(--line-strong); color:var(--paper-dim); }
+.prof-progress-num.is-pending{ opacity:.7; }
+
+/* save-yesterday sheet: bottom sheet on phones, centred dialog on wider screens */
+.syd{ position:fixed; inset:0; z-index:200; display:flex; align-items:flex-end; justify-content:center; }
+.syd-backdrop{ position:absolute; inset:0; background:var(--scrim); animation:sydFade var(--dur-med) var(--ease); }
+.syd-panel{
+  position:relative; width:100%; max-width:440px;
+  padding:var(--space-6) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  background:var(--panel); color:var(--paper); border:1px solid var(--line);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0; box-shadow:var(--elev-2);
+  text-align:start; animation:sydRise var(--dur-med) var(--ease);
+}
+.syd-title{ margin:0 0 var(--space-2); font-size:var(--text-lg); line-height:var(--lh-tight); font-weight:var(--fw-black); }
+.syd-body{ margin:0 0 var(--space-5); font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.syd-actions{ display:flex; flex-direction:column; gap:var(--space-2); }
+.syd-yes, .syd-no{
+  min-height:48px; padding:0 var(--space-5); border-radius:var(--radius); cursor:pointer;
+  font-family:inherit; font-size:var(--text-md); font-weight:var(--fw-bold);
+}
+.syd-yes{ background:var(--primary); color:var(--on-primary); border:1px solid var(--primary); }
+.syd-yes:hover{ background:var(--primary-hover); }
+.syd-no{ background:transparent; color:var(--paper); border:1px solid var(--line-strong); }
+.syd-no:hover{ background:var(--panel2); }
+.syd-yes:focus-visible, .syd-no:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.syd-yes:disabled, .syd-no:disabled{ opacity:.6; cursor:default; }
+@media (min-width:600px){
+  .syd{ align-items:center; padding:var(--space-4); }
+  .syd-panel{ border-radius:var(--radius-lg); padding-bottom:var(--space-6); }
+  .syd-actions{ flex-direction:row-reverse; justify-content:flex-start; }
+  .syd-yes, .syd-no{ flex:1; }
+}
+@keyframes sydFade{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes sydRise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce){
+  .syd-backdrop, .syd-panel{ animation:none; }
+  .rest-btn{ transition:none; }
+}
