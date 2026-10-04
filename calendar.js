@@ -165,10 +165,14 @@
   var ICON_CLOSE = '<svg viewBox="0 0 24 24"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.3 19.7 2.89 18.29 9.17 12 2.89 5.71 4.3 4.3l6.29 6.29L16.89 4.3z"/></svg>';
   var ICON_EXPAND = '<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg>';
 
+  // Weeks run Saturday-Friday (Egypt), matching the server's rest-day week.
+  var WEEK_START = 6; // Date#getDay() of Saturday
+  function weekOffset(d) { return (d.getDay() - WEEK_START + 7) % 7; }
+
   // ---------------- week strip ----------------
   function weekDatesFor(d) {
     var start = new Date(d);
-    start.setDate(d.getDate() - d.getDay()); // back up to Sunday
+    start.setDate(d.getDate() - weekOffset(d)); // back up to Saturday
     var out = [];
     for (var i = 0; i < 7; i++) {
       var day = new Date(start);
@@ -241,7 +245,7 @@
     for (var i = 0; i < 7; i++) {
       var el = document.createElement("div");
       el.className = "cal-weekday";
-      el.textContent = dowShort(i);
+      el.textContent = dowShort((i + WEEK_START) % 7);
       weekdayRow.appendChild(el);
     }
   }
@@ -255,7 +259,7 @@
       monthLabel.textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString(loc, { month: "long", year: "numeric" });
     }
     var bounds = monthBounds(viewYear, viewMonth);
-    var leading = bounds.first.getDay();
+    var leading = weekOffset(bounds.first);
     var totalCells = Math.ceil((leading + bounds.last.getDate()) / 7) * 7;
     var tKey = todayKey();
     var reqId = ++monthReqSeq;

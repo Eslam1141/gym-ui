@@ -151,3 +151,34 @@ test.describe("rest days (signed out)", () => {
     await context.close();
   });
 });
+
+test.describe("week starts on Saturday", () => {
+  test("strip and month grid run Saturday-Friday, rolling over at Friday midnight", async ({ browser }) => {
+    const { context, page, consoleErrors } = await openApp(browser, { signedIn: true });
+    const cells = page.locator("#calStrip .cal-day-cell, .cal-day-cell").filter({ has: page.locator(".cal-num") });
+    // NOW is Friday 2026-10-02 (Cairo): the week is Sat 26 Sep .. Fri 2 Oct, today last.
+    await expect(cells.first()).toHaveAttribute("data-date", "2026-09-26", T);
+    await expect(cells.nth(6)).toHaveAttribute("data-date", TODAY);
+    await expect(cells.first().locator(".cal-dow")).toHaveText("Sat");
+    await expect(cells.nth(6)).toHaveClass(/today/);
+
+    // Month view (Sep 2026, opened from Sat 26 Sep): header starts on Sat; Sep 1 is a Tuesday -> 3 leading blanks (was 2 with Sunday).
+    await cells.first().click();
+    await expect(page.locator("#calWeekdayRow .cal-weekday").first()).toHaveText("Sat", T);
+    await expect(page.locator("#calWeekdayRow .cal-weekday").last()).toHaveText("Fri");
+    const leading = await page.locator("#calGrid .cal-grid-cell").evaluateAll((els) => {
+      let n = 0; for (const el of els) { if (!el.classList.contains("empty")) break; n++; } return n;
+    });
+    expect(leading).toBe(3);
+    await page.keyboard.press("Escape");
+
+    // Saturday 00:30 Cairo: a new week starts with today first.
+    await page.clock.setSystemTime(new Date("2026-10-02T21:30:00Z"));
+    await page.evaluate(() => GymCalendar.refresh(true));
+    await expect(cells.first()).toHaveAttribute("data-date", "2026-10-03", T);
+    await expect(cells.first()).toHaveClass(/today/);
+    await expect(cells.nth(6)).toHaveAttribute("data-date", "2026-10-09");
+    expect(consoleErrors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]);
+    await context.close();
+  });
+});
