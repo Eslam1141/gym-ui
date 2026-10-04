@@ -108,7 +108,7 @@
   function refreshMe() {
     if (!isAuthed()) { clearState(); render(); emitChange(); return Promise.resolve(null); }
     var seq = ++meSeq;
-    return api("/me")
+    return api("/me?today=" + window.GymDate.key())
       .then(function (res) {
         if (res.status === 403) {
           return res.json().catch(function () { return {}; }).then(function (b) {
@@ -233,8 +233,13 @@
     if (streak > 0) {
       streakEl.hidden = false;
       streakEl.textContent = "🔥" + streak;
-      streakEl.title = str("hdrStreak", { n: streak });
-      streakEl.setAttribute("aria-label", str("hdrStreak", { n: streak }));
+      // Today not trained yet: the streak is still alive (it only breaks after
+      // a full missed day), so show it dimmed instead of hiding it.
+      var pending = me.todayDone === false && me.todayRested !== true;
+      var label = str(pending ? "hdrStreakPending" : "hdrStreak", { n: streak });
+      streakEl.classList.toggle("is-pending", pending);
+      streakEl.title = label;
+      streakEl.setAttribute("aria-label", label);
     } else {
       streakEl.hidden = true;
       streakEl.textContent = "";
@@ -276,6 +281,7 @@
       if (isAuthed()) refreshMe();
     });
     document.addEventListener("gym:workoutcomplete", function () { if (isAuthed()) refreshMe(); });
+    document.addEventListener("gym:restchange", function () { if (isAuthed()) refreshMe(); });
     // Language switches rewrite <html lang>; re-render our strings then.
     try {
       new MutationObserver(function () { render(); emitChange(); })

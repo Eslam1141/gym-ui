@@ -110,41 +110,35 @@
 
   function fetchServerCompletion(from, to) {
     var token = authToken();
-    return fetchTimeout(API_BASE + "/workouts/complete?from=" + from + "&to=" + to, {
+    return fetchTimeout(API_BASE + "/workouts/complete?from=" + from + "&to=" + to + "&today=" + todayKey(), {
       headers: { "Authorization": "Bearer " + token }
     })
       .then(function (res) { if (!res.ok) throw new Error("workouts " + res.status); return res.json(); })
       .then(function (doc) {
         var map = {};
         (doc.records || []).forEach(function (r) { map[r.date] = { complete: true, dayId: r.dayId }; });
+        if (window.GymRest) GymRest.setServer(from, to, doc.restDays, doc.restDaysLeftThisWeek);
         return map;
       })
       .catch(function () { return computeLocalCompletion(from, to); });
   }
 
+  // Rest days (rest-days.js) are layered on top as { rest:true } entries.
   function getCompletionMap(from, to) {
-    return isAuthed() ? fetchServerCompletion(from, to) : Promise.resolve(computeLocalCompletion(from, to));
+    var p = isAuthed() ? fetchServerCompletion(from, to) : Promise.resolve(computeLocalCompletion(from, to));
+    return p.then(function (map) { return window.GymRest ? GymRest.decorate(map, from, to) : map; });
   }
 
   // ---------------- POST-on-completion hook (called by app.js) ----------------
   var postedKeys = {}; // "date_dayId" -> true, in-session guard against duplicate POSTs
 
+  // rest-days.js sends the local `today` and owns retry (offline queue); it
+  // fires gym:workoutcomplete on success so header.js re-reads /me.
   function postCompletion(date, dayId) {
     var key = date + "_" + dayId;
-    if (postedKeys[key]) return;
+    if (postedKeys[key] || !window.GymRest) return;
     postedKeys[key] = true;
-    var token = authToken();
-    fetchTimeout(API_BASE + "/workouts/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify({ date: date, dayId: dayId })
-    }).then(function (res) {
-      // header.js re-reads /me so the streak badge updates right away
-      // instead of on the next 2-minute sync tick.
-      if (res.ok) {
-        try { document.dispatchEvent(new CustomEvent("gym:workoutcomplete", { detail: { date: date, dayId: dayId } })); } catch (e) {}
-      }
-    }).catch(function () { delete postedKeys[key]; });
+    GymRest.submit(date, dayId);
   }
 
   // app.js calls this right after updateProgress() on every checkbox toggle.
@@ -171,10 +165,14 @@
   var ICON_CLOSE = '<svg viewBox="0 0 24 24"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.3 19.7 2.89 18.29 9.17 12 2.89 5.71 4.3 4.3l6.29 6.29L16.89 4.3z"/></svg>';
   var ICON_EXPAND = '<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg>';
 
+  // Weeks run Saturday-Friday (Egypt), matching the server's rest-day week.
+  var WEEK_START = 6; // Date#getDay() of Saturday
+  function weekOffset(d) { return (d.getDay() - WEEK_START + 7) % 7; }
+
   // ---------------- week strip ----------------
   function weekDatesFor(d) {
     var start = new Date(d);
-    start.setDate(d.getDate() - d.getDay()); // back up to Sunday
+    start.setDate(d.getDate() - weekOffset(d)); // back up to Saturday
     var out = [];
     for (var i = 0; i < 7; i++) {
       var day = new Date(start);
@@ -194,11 +192,13 @@
       var entry = map[key];
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (key === tKey ? " today" : "");
+      var rest = !!(entry && entry.rest && !entry.complete);
+      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (rest ? " rest" : "") + (key === tKey ? " today" : "");
       btn.dataset.date = key;
       btn.innerHTML =
         '<span class="cal-dow">' + dowShort(d.getDay()) + '</span>' +
-        '<span class="cal-num">' + d.getDate() + '</span>';
+        '<span class="cal-num">' + d.getDate() + '</span>' +
+        (rest ? '<span class="cal-rest-mark" aria-hidden="true"></span><span class="sr-only">' + s("restBadge") + '</span>' : '');
       btn.onclick = function () { openModal(d); };
       stripDays.appendChild(btn);
     });
@@ -208,7 +208,10 @@
     if (!stripDays) return;
     updateStripI18n();
     var week = weekDatesFor(todayDate());
-    getCompletionMap(fmtDate(week[0]), fmtDate(week[6])).then(renderStrip);
+    getCompletionMap(fmtDate(week[0]), fmtDate(week[6])).then(function (map) {
+      renderStrip(map);
+      if (window.GymRest) GymRest.renderCard(map);
+    });
   }
 
   // Re-applies translated text to the strip's static chrome (title, expand
@@ -242,7 +245,7 @@
     for (var i = 0; i < 7; i++) {
       var el = document.createElement("div");
       el.className = "cal-weekday";
-      el.textContent = dowShort(i);
+      el.textContent = dowShort((i + WEEK_START) % 7);
       weekdayRow.appendChild(el);
     }
   }
@@ -256,7 +259,7 @@
       monthLabel.textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString(loc, { month: "long", year: "numeric" });
     }
     var bounds = monthBounds(viewYear, viewMonth);
-    var leading = bounds.first.getDay();
+    var leading = weekOffset(bounds.first);
     var totalCells = Math.ceil((leading + bounds.last.getDate()) / 7) * 7;
     var tKey = todayKey();
     var reqId = ++monthReqSeq;
@@ -283,6 +286,7 @@
         var key = fmtDate(d);
         var entry = map[key];
         if (entry && entry.complete) cell.className += " complete";
+        else if (entry && entry.rest) cell.className += " rest";
         if (key === tKey) cell.className += " today";
         cell.textContent = String(dayNum);
         cell.dataset.date = key;
@@ -303,13 +307,15 @@
     var loc = lang() === "ar" ? "ar-EG" : "en-US";
     var label = new Date(dateKey + "T00:00:00").toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
     dayDetail.hidden = false;
+    var controls = function (e) { if (window.GymRest) GymRest.renderDetailControls(dayDetail, dateKey, e); };
 
-    if (!entry) {
+    if (!entry || (entry.rest && !entry.dayId)) {
       // Fall back to a local record for this exact date even when the map
       // came from the server (server only stores fully-complete days).
       var local = computeLocalCompletion(dateKey, dateKey)[dateKey];
       if (!local) {
-        dayDetail.innerHTML = '<div class="cal-detail-date">' + label + '</div><div class="cal-detail-empty">' + s("noWorkout") + '</div>';
+        dayDetail.innerHTML = '<div class="cal-detail-date">' + label + '</div>' + (entry ? '' : '<div class="cal-detail-empty">' + s("noWorkout") + '</div>');
+        controls(entry);
         return;
       }
       entry = local;
@@ -333,6 +339,7 @@
       '<div class="cal-detail-date">' + label + '</div>' +
       status +
       (exercises.length ? '<ul class="cal-detail-list">' + list + '</ul>' : '');
+    controls(entry);
   }
 
   function openModal(focusDate) {
@@ -370,7 +377,7 @@
   function fetchTrainingDays() {
     var token = authToken();
     if (!token) return Promise.resolve([]);
-    return fetchTimeout(API_BASE + "/me", { headers: { "Authorization": "Bearer " + token } })
+    return fetchTimeout(API_BASE + "/me?today=" + todayKey(), { headers: { "Authorization": "Bearer " + token } })
       .then(function (res) { if (!res.ok) throw new Error("me " + res.status); return res.json(); })
       .then(function (doc) { return Array.isArray(doc.trainingDays) ? doc.trainingDays : []; })
       .catch(function () { return []; });
@@ -491,9 +498,26 @@
     if (modal && !modal.hidden) { renderWeekdayRow(); renderMonth(); }
   }
 
+  // Re-reads the strip and, if the month overlay is open, the grid and the
+  // selected day's detail (after a rest day is marked/undone, etc.).
+  function reload() {
+    refreshStrip();
+    if (!modal || modal.hidden) return;
+    var sel = grid && grid.querySelector(".cal-grid-cell.selected");
+    var selKey = sel ? sel.dataset.date : null;
+    renderMonth().then(function (map) {
+      if (!selKey || !map || !grid) return;
+      var cell = grid.querySelector('.cal-grid-cell[data-date="' + selKey + '"]');
+      if (cell) cell.classList.add("selected");
+      renderDayDetail(selKey, map);
+    });
+  }
+
   window.GymCalendar = {
     onCheckChanged: onCheckChanged,
-    refresh: refresh
+    refresh: refresh,
+    reload: reload,
+    localEntry: function (date) { return computeLocalCompletion(date, date)[date]; }
   };
 
   if (document.readyState === "loading") {

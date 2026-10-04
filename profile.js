@@ -228,10 +228,13 @@
     var streak = (me && +me.currentStreak) || 0;
     var streakNum = el("profStreakNum");
     streakNum.textContent = streak > 0 ? ("🔥" + streak) : "—";
-    streakNum.setAttribute("aria-label", streak > 0 ? str("profStreakDays", { n: streak }) : str("profStreakNone"));
+    var pending = streak > 0 && me.todayDone === false && me.todayRested !== true;
+    streakNum.classList.toggle("is-pending", pending);
+    streakNum.setAttribute("aria-label", streak > 0 ? str(pending ? "hdrStreakPending" : "profStreakDays", { n: streak }) : str("profStreakNone"));
     var hint = el("profStreakHint");
-    hint.hidden = streak > 0;
+    hint.hidden = streak > 0 && !pending;
     if (streak <= 0) hint.textContent = str("profStreakNone");
+    else if (pending) hint.textContent = str("profStreakPending");
     el("profDaysNum").textContent = String((me && +me.totalDaysTrained) || 0);
   }
 

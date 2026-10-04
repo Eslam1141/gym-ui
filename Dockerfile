@@ -11,7 +11,7 @@ USER 101
 
 # Image layout: the landing page (repo landing/) at the html root, the PWA
 # (repo root files) under /app/. See docker/default.conf.
-COPY --chown=101:101 index.html theme-boot.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css signin-fx.js signin-fx.css calendar.js workout-builder.js header.js notifications.js profile.js hero-video.js metallic-button.js toast.js beams-bg.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
+COPY --chown=101:101 index.html theme-boot.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css signin-fx.js signin-fx.css rest-days.js calendar.js workout-builder.js header.js notifications.js profile.js hero-video.js metallic-button.js toast.js beams-bg.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
 COPY --chown=101:101 icons/ /usr/share/nginx/html/app/icons/
 COPY --chown=101:101 widgets/ /usr/share/nginx/html/app/widgets/
 COPY --chown=101:101 fonts/ /usr/share/nginx/html/app/fonts/
@@ -30,7 +30,7 @@ COPY --chown=101:101 icons/ /usr/share/nginx/html/icons/
 RUN cd /usr/share/nginx/html/app && \
     HASH=$(cat index.html theme-boot.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js \
         auth-email.js auth-email.css signin-fx.js signin-fx.css \
-        calendar.js workout-builder.js header.js notifications.js profile.js hero-video.js metallic-button.js toast.js beams-bg.js config.js manifest.json \
+        rest-days.js calendar.js workout-builder.js header.js notifications.js profile.js hero-video.js metallic-button.js toast.js beams-bg.js config.js manifest.json \
         icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \
         icons/icon-maskable-192-etq.png icons/icon-maskable-512-etq.png \
         icons/apple-touch-icon-etq.png icons/favicon-32-etq.png icons/favicon-16-etq.png \
