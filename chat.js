@@ -82,17 +82,9 @@
   }
 
   function mascotIcon() {
-    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 64 64");
-    svg.setAttribute("aria-hidden", "true");
-    svg.innerHTML =
-      '<circle cx="32" cy="10" r="3" fill="var(--accent-3)"/>' +
-      '<rect x="31" y="12" width="2" height="5" fill="var(--paper-dim)"/>' +
-      '<rect x="10" y="16" width="34" height="30" rx="10" fill="#fff" fill-opacity=".18"/>' +
-      '<circle cx="22" cy="30" r="4" fill="#fff"/><circle cx="22" cy="30" r="2" fill="#1b2430"/>' +
-      '<circle cx="36" cy="30" r="4" fill="#fff"/><circle cx="36" cy="30" r="2" fill="#1b2430"/>' +
-      '<path d="M23 39c3 3 9 3 12 0" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
-    return svg;
+    return window.EtqademMascot
+      ? EtqademMascot.create({ tone: "on-primary" })
+      : document.createElementNS("http://www.w3.org/2000/svg", "svg");
   }
 
   function loadJSON(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch (e) { return fb; } }

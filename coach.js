@@ -486,31 +486,13 @@
   }
 
   // ---------------- teaser ----------------
-  function mascot(size) {
-    var px = size || 96;
-    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 64 64");
-    svg.setAttribute("width", px); svg.setAttribute("height", px);
-    svg.setAttribute("class", "coach-mascot"); svg.setAttribute("aria-hidden", "true");
-    svg.innerHTML =
-      '<defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/>' +
-      '</linearGradient></defs>' +
-      '<rect x="10" y="16" width="34" height="30" rx="10" fill="url(#cg)"/>' +
-      '<circle cx="32" cy="10" r="3" fill="var(--accent-3)"/>' +
-      '<rect x="31" y="12" width="2" height="5" fill="var(--paper-dim)"/>' +
-      '<circle cx="22" cy="30" r="4" fill="#fff"/><circle cx="22" cy="30" r="2" fill="#1b2430"/>' +
-      '<circle cx="36" cy="30" r="4" fill="#fff"/><circle cx="36" cy="30" r="2" fill="#1b2430"/>' +
-      '<path d="M23 39c3 3 9 3 12 0" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
-      '<rect x="38" y="30" width="18" height="24" rx="3" fill="var(--panel2)" stroke="var(--line)" stroke-width="1.5"/>' +
-      '<rect x="44" y="27" width="6" height="5" rx="1.5" fill="var(--paper-dim)"/>' +
-      '<path d="M41 38h9M41 43h12M41 48h8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>';
+  function mascot(size, live) {
+    var svg = EtqademMascot.create({ size: size || 96, live: !!live });
+    svg.setAttribute("class", svg.getAttribute("class") + " coach-mascot");
     return svg;
   }
 
-  // small functional icon (e.g. for the "my plans" icon-button) — same
-  // inline-SVG construction as mascot(), but a plain currentColor glyph
-  // instead of the gradient mascot face.
+  // small functional icon (e.g. for the "my plans" icon-button) — plain currentColor glyph.
   function plansIcon(size) {
     var px = size || 22;
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -532,7 +514,7 @@
       on: { click: function () { if (window.GymUI) GymUI.promptSignIn(); } }
     }, s("signIn"));
     var card = h("div", { class: "coach-teaser card-fx" },
-      mascot(112),
+      mascot(112, true),
       h("h2", {}, s("teaseTitle")),
       h("p", { class: "coach-tease-body" }, s("teaseBody")),
       bullets, btn);
