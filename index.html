@@ -50,7 +50,9 @@
       </div>
       <div id="obStepChoices" class="ob-step ob-step-choices" inert>
         <div id="obGoogleBtn" class="ob-gbtn"></div>
-        <button id="obEmailBtn" class="ob-secondary" data-i18n="aeContinueEmail">Continue with email</button>
+        <!-- Email sign-in is paused until it is fixed: disabled + "Coming soon".
+             Re-enable by restoring data-i18n on the button and dropping disabled. -->
+        <button id="obEmailBtn" class="ob-secondary ob-soon" disabled aria-describedby="obEmailSoon"><span data-i18n="aeContinueEmail">Continue with email</span> <span id="obEmailSoon" class="ob-soon-badge" data-i18n="premiumComingSoon">Coming soon</span></button>
         <button id="obContinueBtn" class="ob-secondary" data-i18n="obContinue">Continue without signing in</button>
         <button id="obWhyToggle" class="ob-why-toggle" aria-expanded="false" data-i18n="obWhy">Why sign in?</button>
         <ul id="obWhy" class="ob-why">
