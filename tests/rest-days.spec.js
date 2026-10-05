@@ -166,6 +166,7 @@ test.describe("week starts on Saturday", () => {
     await cells.first().click();
     await expect(page.locator("#calWeekdayRow .cal-weekday").first()).toHaveText("Sat", T);
     await expect(page.locator("#calWeekdayRow .cal-weekday").last()).toHaveText("Fri");
+    await expect(page.locator("#calGrid .cal-grid-cell:not(.empty)").first()).toBeVisible(T); // month renders async
     const leading = await page.locator("#calGrid .cal-grid-cell").evaluateAll((els) => {
       let n = 0; for (const el of els) { if (!el.classList.contains("empty")) break; n++; } return n;
     });

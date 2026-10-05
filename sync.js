@@ -510,6 +510,7 @@
     startTriggers();
     syncNow(firstSignIn ? "signin-migrate" : "signin");
     scheduleTokenRefresh();
+    emit("gym:tokenaccepted", src); // privacy.js: a fresh sign-in during account deletion
   }
 
   function scheduleTokenRefresh() {
@@ -852,6 +853,8 @@
     signInWithToken: signInWithToken,
     profile: function () { return profile ? { email: profile.email, name: profile.name } : null; },
     signOut: signOut,
+    // Renders the Google button into `target` (privacy.js re-auth before account deletion).
+    renderGoogleButton: renderGoogleButton,
     // True when a sign-in was started on this tab (Google button tapped)
     // and hasn't yet resolved (success or definitive failure) — see
     // PENDING_KEY.
