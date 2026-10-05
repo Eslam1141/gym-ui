@@ -43,8 +43,11 @@
   // checked) — invaluable for testing, but not something to leave reachable
   // by any script on the real site real users visit. Gate it (and the
   // account-data wipe it can trigger) off the production origin.
+  // The production hostname comes from config.js (APP_HOST / Helm
+  // global.host); DEFAULT_PROD_HOST is only the fallback when it's unset.
+  var DEFAULT_PROD_HOST = "etqadem.cloider.app";
   var IS_PROD = (function () {
-    try { return location.hostname === "repvane.cloider.app"; } catch (e) { return false; }
+    try { return location.hostname === (window.GYM_APP_HOST || DEFAULT_PROD_HOST); } catch (e) { return false; }
   })();
   var META_KEY = "gym_meta_updatedAt";
   // Device-local cache of the last Google ID token (NOT gym_-prefixed => never
