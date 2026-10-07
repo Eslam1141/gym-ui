@@ -263,7 +263,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: keep[i] })
-      }).then(function (res) { return res.ok || res.status < 500 ? next(i + 1) : Promise.reject(new Error("rest " + res.status)); });
+      }).then(function (res) { return res.ok || (res.status < 500 && res.status !== 401) ? next(i + 1) : Promise.reject(new Error("rest " + res.status)); });
     }
     return next(0).then(function () {
       try { localStorage.removeItem(LS_REST); } catch (e) {}
@@ -283,19 +283,26 @@
     writeJSON(LS_PENDING, q.slice(-30));
   }
 
-  // Resolves "ok" | "queued" (will retry) | "rejected" (400, never retry).
-  function send(item) {
+  // Resolves "ok" | "queued" (will retry) | "rejected" (date_out_of_window, never retry).
+  function send(item, withToday) {
+    var payload = { date: item.date, dayId: item.dayId };
+    if (withToday !== false) payload.today = today();
     return fetchTimeout("/workouts/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: item.date, dayId: item.dayId, today: today() })
+      body: JSON.stringify(payload)
     }).then(function (res) {
       if (res.ok) {
         try { document.dispatchEvent(new CustomEvent("gym:workoutcomplete", { detail: { date: item.date, dayId: item.dayId } })); } catch (e) {}
         return "ok";
       }
-      if (res.status === 400) return "rejected"; // date_out_of_window / invalid_request: retrying can't help
-      return "queued";
+      if (res.status !== 400) return "queued";
+      return errCode(res).then(function (code) {
+        if (code === "date_out_of_window") return "rejected";
+        // A wrong device clock makes the server refuse our `today`; its legacy window is UTC+-1.
+        if (code === "invalid_request" && withToday !== false) return send(item, false);
+        return "queued";
+      });
     }).catch(function () { return "queued"; });
   }
 
@@ -307,23 +314,28 @@
     });
   }
 
+  function notifyDropped() { toast(str("queueDropped")); }
+
   function flushQueue() {
     if (flushing || !isAuthed()) return Promise.resolve();
     var q = queue();
     if (!q.length) return Promise.resolve();
     flushing = true;
     var dropped = false;
+    var settled = {}; // "date_dayId" of items the server accepted or refused for good
     function next(i) {
       if (i >= q.length) return Promise.resolve();
       return send(q[i]).then(function (r) {
-        if (r === "queued") { q = q.slice(i); return "stop"; }
+        if (r === "queued") return "stop";
+        settled[q[i].date + "_" + q[i].dayId] = true;
         if (r === "rejected") dropped = true;
         return next(i + 1);
       });
     }
-    return next(0).then(function (stop) {
-      writeJSON(LS_PENDING, stop === "stop" ? q : []);
-      if (dropped) toast(str("queueDropped"));
+    return next(0).then(function () {
+      // Re-read: submit() or another tab may have enqueued while we were posting.
+      writeJSON(LS_PENDING, queue().filter(function (x) { return !settled[x.date + "_" + x.dayId]; }));
+      if (dropped) notifyDropped();
     }).finally(function () { flushing = false; });
   }
 
@@ -462,6 +474,7 @@
     renderCard: renderCard,
     renderDetailControls: renderDetailControls,
     submit: submit,
+    notifyDropped: notifyDropped,
     flushQueue: flushQueue,
     maybePrompt: maybePrompt
   };

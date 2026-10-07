@@ -138,7 +138,7 @@
     var key = date + "_" + dayId;
     if (postedKeys[key] || !window.GymRest) return;
     postedKeys[key] = true;
-    GymRest.submit(date, dayId);
+    GymRest.submit(date, dayId).then(function (r) { if (r === "rejected") GymRest.notifyDropped(); });
   }
 
   // app.js calls this right after updateProgress() on every checkbox toggle.
