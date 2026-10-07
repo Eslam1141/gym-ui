@@ -283,7 +283,7 @@
     writeJSON(LS_PENDING, q.slice(-30));
   }
 
-  // Resolves "ok" | "queued" (will retry) | "rejected" (date_out_of_window, never retry).
+  // Resolves "ok" | "queued" (will retry) | "held" (400 that may never succeed: kept, but must not block others) | "rejected" (date_out_of_window, never retry).
   function send(item, withToday) {
     var payload = { date: item.date, dayId: item.dayId };
     if (withToday !== false) payload.today = today();
@@ -301,7 +301,7 @@
         if (code === "date_out_of_window") return "rejected";
         // A wrong device clock makes the server refuse our `today`; its legacy window is UTC+-1.
         if (code === "invalid_request" && withToday !== false) return send(item, false);
-        return "queued";
+        return "held";
       });
     }).catch(function () { return "queued"; });
   }
@@ -309,7 +309,7 @@
   // Posts a completion; a retryable failure is queued instead of lost.
   function submit(date, dayId) {
     return send({ date: date, dayId: dayId }).then(function (r) {
-      if (r === "queued") enqueue({ date: date, dayId: dayId });
+      if (r === "queued" || r === "held") enqueue({ date: date, dayId: dayId });
       return r;
     });
   }
@@ -327,6 +327,7 @@
       if (i >= q.length) return Promise.resolve();
       return send(q[i]).then(function (r) {
         if (r === "queued") return "stop";
+        if (r === "held") return next(i + 1);
         settled[q[i].date + "_" + q[i].dayId] = true;
         if (r === "rejected") dropped = true;
         return next(i + 1);

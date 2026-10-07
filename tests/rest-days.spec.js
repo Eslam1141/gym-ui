@@ -137,8 +137,8 @@ test.describe("rest days (signed in)", () => {
     expect(await page.evaluate((d) => window.GymRest.submit(d, "m_lowerA"), TODAY)).toBe("queued");
     release();
     await flush;
-    const q = await page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending")));
-    expect(q).toEqual([{ date: TODAY, dayId: "m_lowerA" }]);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending"))), T)
+      .toEqual([{ date: TODAY, dayId: "m_lowerA" }]);
     await context.close();
   });
 
@@ -151,6 +151,35 @@ test.describe("rest days (signed in)", () => {
       { date: YESTERDAY, dayId: DAY_ID }
     ]);
     expect(await page.evaluate(() => localStorage.getItem("gymrest_pending"))).toBeNull();
+    await context.close();
+  });
+
+  test("a poison 400 is kept but does not block valid items behind it", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, {
+      signedIn: true,
+      server: { poisonDay: "bad_day" },
+      ls: { gymrest_pending: [{ date: YESTERDAY, dayId: "bad_day" }, { date: YESTERDAY, dayId: DAY_ID }] }
+    });
+    await page.evaluate(() => window.GymRest.flushQueue());
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending"))), T)
+      .toEqual([{ date: YESTERDAY, dayId: "bad_day" }]);
+    expect(server.records).toEqual([{ date: YESTERDAY, dayId: DAY_ID }]);
+    // The today-less retry happens once per attempt, not in a loop.
+    const poison = posts(server, "/workouts/complete").filter((r) => r.body.dayId === "bad_day");
+    expect(poison.map((r) => "today" in r.body)).toEqual([true, false]);
+    await context.close();
+  });
+
+  test("migrating local rest days keeps them on a 401", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, {
+      signedIn: true,
+      server: { restStatus: 401 },
+      ls: { gymrest_days: [TODAY] }
+    });
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect.poll(() => posts(server, "/workouts/rest").length, T).toBeGreaterThan(0);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_days")))).toEqual([TODAY]);
     await context.close();
   });
 
