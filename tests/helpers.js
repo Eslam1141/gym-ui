@@ -34,8 +34,11 @@ async function mockApi(context, s) {
       return json(200, { records: s.records.filter(inR), restDays: s.restDays.filter(inR), restDaysLeftThisWeek: s.left });
     }
     if (path === "/workouts/complete" && req.method() === "POST") {
-      if (s.completeStatus !== 200) return json(s.completeStatus, { error: { code: s.completeError, message: "x" } });
+      const status = s.completeStatus; // decided on arrival, before any gate
+      if (s.gate) await s.gate;
       const b = body();
+      if (s.rejectToday && b.today) return json(400, { error: { code: "invalid_request", message: "today" } });
+      if (status !== 200) return json(status, { error: { code: s.completeError, message: "x" } });
       s.records.push({ date: b.date, dayId: b.dayId });
       if (b.date === TODAY) s.todayDone = true;
       return json(200, { ok: true });

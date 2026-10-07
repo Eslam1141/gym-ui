@@ -122,6 +122,49 @@ test.describe("rest days (signed in)", () => {
     await context.close();
   });
 
+  test("a workout queued while the flush is in flight survives it", async ({ browser }) => {
+    let release;
+    const { context, page, server } = await openApp(browser, {
+      signedIn: true,
+      server: { gate: new Promise((r) => { release = r; }) },
+      ls: { gymrest_pending: [{ date: YESTERDAY, dayId: DAY_ID }] }
+    });
+    const flush = page.evaluate(() => window.GymRest.flushQueue());
+    await expect.poll(() => posts(server, "/workouts/complete").length, T).toBe(1);
+    // The first POST is held open; a second workout fails offline-style and is queued.
+    server.gate = null;
+    server.completeStatus = 503;
+    expect(await page.evaluate((d) => window.GymRest.submit(d, "m_lowerA"), TODAY)).toBe("queued");
+    release();
+    await flush;
+    const q = await page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending")));
+    expect(q).toEqual([{ date: TODAY, dayId: "m_lowerA" }]);
+    await context.close();
+  });
+
+  test("400 invalid_request retries once without today", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, { signedIn: true, server: { rejectToday: true } });
+    expect(await page.evaluate((d) => window.GymRest.submit(d, "m_upperA"), YESTERDAY)).toBe("ok");
+    const p = posts(server, "/workouts/complete");
+    expect(p.map((r) => r.body)).toEqual([
+      { date: YESTERDAY, dayId: DAY_ID, today: TODAY },
+      { date: YESTERDAY, dayId: DAY_ID }
+    ]);
+    expect(await page.evaluate(() => localStorage.getItem("gymrest_pending"))).toBeNull();
+    await context.close();
+  });
+
+  test("a rejected live submit shows the dropped toast", async ({ browser }) => {
+    const { context, page } = await openApp(browser, {
+      signedIn: true,
+      server: { completeStatus: 400, completeError: "date_out_of_window" },
+      checks: { [YESTERDAY + "_" + DAY_ID]: Object.fromEntries(EX_IDS.map((id) => [id, true])) }
+    });
+    await page.evaluate(([d, day]) => window.GymCalendar.onCheckChanged(day, d), [YESTERDAY, DAY_ID]);
+    await expect(page.locator("#gymToast")).toContainText("wasn't saved", T);
+    await context.close();
+  });
+
   test("streak badge stays visible, dimmed, until today is trained", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true });
     const badge = page.locator("#tbStreak");
