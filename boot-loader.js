@@ -16,7 +16,12 @@
   "use strict";
   var el = document.getElementById("bootLoader");
   var root = document.documentElement;
-  var MIN_MS = 650;         // let the intro (steps rise, head drops) read on fast loads
+  // Shortest time on screen, so the intro (steps rise, head drops) reads
+  // even on a fast load. Longer in the native app, where this loader IS the
+  // launch animation; short on the web so a refresh isn't held up.
+  var native = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
+    (function () { try { return window.Capacitor.isNativePlatform(); } catch (e) { return false; } })());
+  var MIN_MS = native ? 1300 : 650;
   var BACKSTOP_MS = 12000;  // nothing may hold the loader longer than this
   var holds = {};
   var shownAt = Date.now();
@@ -26,7 +31,16 @@
   function hideNativeSplash() {
     try {
       var p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen;
-      if (p && typeof p.hide === "function") p.hide({ fadeOutDuration: 150 });
+      if (!p || typeof p.hide !== "function") return;
+      // The splash covered the loader until now: start the intro from the
+      // top as it is revealed, and count the minimum time from here.
+      if (el && !el.hidden && !el.classList.contains("bl-out")) {
+        el.classList.remove("bl-play");
+        void el.offsetWidth;
+        el.classList.add("bl-play");
+        shownAt = Date.now();
+      }
+      p.hide({ fadeOutDuration: 150 });
     } catch (e) {}
   }
 
@@ -53,15 +67,25 @@
     if (hideTimer) return;
     var wait = Math.max(0, MIN_MS - (Date.now() - shownAt));
     hideTimer = setTimeout(function () {
-      hideTimer = null;
-      if (pending()) return;
-      if (backstop) { clearTimeout(backstop); backstop = null; }
-      root.classList.remove("boot-loading");
-      el.classList.add("bl-out");
-      el.setAttribute("aria-busy", "false");
-      // Hidden after the fade so it stops intercepting taps and animating.
-      setTimeout(function () { if (!pending()) el.hidden = true; }, 320);
+      // Fade only once the screen underneath has actually been painted (two
+      // frames after the release), or a slow device shows an empty page
+      // between the loader and the login/app.
+      afterPaint(function () {
+        hideTimer = null;
+        if (pending()) return;
+        if (backstop) { clearTimeout(backstop); backstop = null; }
+        root.classList.remove("boot-loading");
+        el.classList.add("bl-out");
+        el.setAttribute("aria-busy", "false");
+        // Hidden after the fade so it stops intercepting taps and animating.
+        setTimeout(function () { if (!pending()) el.hidden = true; }, 320);
+      });
     }, wait);
+  }
+
+  function afterPaint(fn) {
+    if (!window.requestAnimationFrame) { setTimeout(fn, 32); return; }
+    requestAnimationFrame(function () { requestAnimationFrame(fn); });
   }
 
   function hold(reason, capMs) {
@@ -104,9 +128,5 @@
   el.classList.add("bl-play");
   hold("boot", 10000);
   // Hand over from the native splash once this frame has actually painted.
-  if (window.requestAnimationFrame) {
-    requestAnimationFrame(function () { requestAnimationFrame(hideNativeSplash); });
-  } else {
-    setTimeout(hideNativeSplash, 50);
-  }
+  afterPaint(hideNativeSplash);
 })();
