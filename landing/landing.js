@@ -163,4 +163,61 @@
     }, { threshold: 0.6 });
     io.observe(document.querySelector(".chat"));
   }
+
+  // Scroll motion: sections rise in, the calorie example counts up, and the
+  // hero phones drift at different speeds. Off for reduced motion.
+  if (!reduce && "IntersectionObserver" in window) {
+    root.classList.add("motion");
+
+    var revealed = [];
+    [".features h2", ".bento .cell", ".coach-copy", ".chat", ".ramadan-in",
+      ".plans h2", ".plans-sub", ".plan", ".final"].forEach(function (sel) {
+      $all(sel).forEach(function (el, i) {
+        el.classList.add("reveal");
+        el.style.setProperty("--d", (i % 3) * 0.09 + "s");
+        revealed.push(el);
+      });
+    });
+    var rio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); rio.unobserve(e.target); }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -8% 0px" });
+    revealed.forEach(function (el) { rio.observe(el); });
+
+    var calc = document.querySelector(".calc");
+    var kcal = calc && calc.querySelector(".calc-kcal strong");
+    if (kcal) {
+      var total = parseInt(kcal.textContent, 10);
+      kcal.textContent = "0";
+      var cio = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting) return;
+        cio.disconnect();
+        calc.classList.add("in");
+        setTimeout(function () {
+          var t0 = 0;
+          requestAnimationFrame(function tick(t) {
+            if (!t0) t0 = t;
+            var p = Math.min(1, (t - t0) / 1100);
+            kcal.textContent = Math.round(total * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(tick);
+          });
+        }, 250);
+      }, { threshold: 0.6 });
+      cio.observe(calc);
+    }
+
+    var phones = $all(".stage .phone");
+    var ticking = false;
+    function drift() {
+      ticking = false;
+      var y = Math.min(window.scrollY, 700);
+      phones.forEach(function (p, i) {
+        p.style.setProperty("--py", (-y * (i === 0 ? 0.04 : 0.08)).toFixed(1) + "px");
+      });
+    }
+    window.addEventListener("scroll", function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(drift); }
+    }, { passive: true });
+  }
 })();

@@ -136,6 +136,18 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
   .stage .phone-front { animation: rise .9s .4s var(--ease) both; }
   @keyframes rise { from { opacity: 0; translate: 0 28px; } }
   @keyframes rise-back { from { opacity: 0; translate: 0 40px; } }
+
+  /* Scroll motion, switched on by landing.js (html.motion) so the page is
+     fully visible without JS. Reveals use `translate`; the hero phones'
+     scroll drift uses `transform`, so neither fights the entrance keyframes. */
+  html.motion .reveal { opacity: 0; translate: 0 26px; transition: opacity .8s var(--ease), translate .8s var(--ease); transition-delay: var(--d, 0s); }
+  html.motion .reveal.in { opacity: 1; translate: none; }
+  .stage .phone { transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
+  html.motion .calc-macros > span { opacity: 0; translate: 0 8px; transition: opacity .5s var(--ease), translate .5s var(--ease); }
+  html.motion .calc.in .calc-macros > span { opacity: 1; translate: none; }
+  html.motion .calc.in .calc-macros > span:nth-child(1) { transition-delay: .7s; }
+  html.motion .calc.in .calc-macros > span:nth-child(2) { transition-delay: .85s; }
+  html.motion .calc.in .calc-macros > span:nth-child(3) { transition-delay: 1s; }
 }
 
 /* Sections */
@@ -160,7 +172,7 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .calc-food { display: flex; justify-content: space-between; gap: 16px; font-weight: 600; }
 .calc-g { color: rgb(243 240 232 / .7); font-weight: 500; }
 .cell-food .calc-kcal { color: #fff; font-size: 1rem; }
-.calc-kcal strong { font-size: 2.25rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.calc-kcal strong { font-variant-numeric: tabular-nums; font-size: 2.25rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
 .calc-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .875rem; }
 .cell-video, .cell-streak { justify-content: flex-end; }
 .cell-streak { background: radial-gradient(90% 90% at 0% 0%, rgb(60 194 184 / .14), transparent 70%), var(--ink-2); }
