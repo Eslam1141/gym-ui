@@ -5,7 +5,7 @@ module.exports = defineConfig({
   testDir: ".",
   testMatch: "*.spec.js",
   webServer: {
-    command: "python -m http.server 4173 --directory ..",
+    command: "python static-server.py 4173 ..",
     url: "http://127.0.0.1:4173/index.html",
     reuseExistingServer: true,
     stdout: "ignore",
