@@ -577,7 +577,9 @@
   function nativeSignIn(silent) {
     var opts = silent
       ? { style: "bottom", filterByAuthorizedAccounts: true, autoSelectEnabled: true }
-      : { scopes: ["email", "profile"] };
+      // No `scopes`: the ID token already carries email + name, and custom
+      // scopes need extra MainActivity wiring in the plugin.
+      : {};
     return nativeInit()
       .then(function () { return nativePlugin().login({ provider: "google", options: opts }); })
       .then(function (res) {

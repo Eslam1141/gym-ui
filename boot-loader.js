@@ -40,7 +40,7 @@
         el.classList.add("bl-play");
         shownAt = Date.now();
       }
-      p.hide({ fadeOutDuration: 150 });
+      p.hide();
     } catch (e) {}
   }
 
