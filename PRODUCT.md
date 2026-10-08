@@ -6,7 +6,7 @@
 
 web
 
-Installable PWA (vanilla JS, no framework), served at https://repvane.cloider.app. A Trusted Web Activity (TWA) APK wrapper for Google Play is planned; it wraps this same web app and does not make the design language native Android.
+Installable PWA (vanilla JS, no framework), served at https://etqadem.cloider.app (the host comes from config.js / Helm `global.host`, never hardcoded). A Trusted Web Activity (TWA) APK wrapper for Google Play is planned; it wraps this same web app and does not make the design language native Android.
 
 ## Users
 
