@@ -25,7 +25,7 @@ async function mockApi(context, s) {
     if (path === "/me") {
       return json(200, {
         id: "u1", email: "t@example.com", displayName: "Tester", currentStreak: s.streak, totalDaysTrained: 5,
-        todayDone: s.todayDone, todayRested: s.restDays.includes(TODAY), trainingDays: []
+        todayDone: s.todayDone, todayRested: s.restDays.includes(TODAY), trainingDays: [], isAdmin: !!s.isAdmin
       });
     }
     if (path === "/workouts/complete" && req.method() === "GET") {

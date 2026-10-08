@@ -1602,6 +1602,9 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
   background:transparent; border:none; color:var(--paper);
   display:flex; align-items:center; min-height:44px; box-sizing:border-box; /* P0-4 */
 }
+/* display:flex above beats the UA [hidden] rule; keep hidden items (the admin
+   entry for non-admins) hidden. */
+.tb-menu button[hidden]{ display:none; }
 .tb-menu button:hover, .tb-menu button:focus-visible{ background:var(--panel2); outline:none; }
 
 /* ---- notification bell (in tb-slot) + inbox panel (notifications.js) ---- */
