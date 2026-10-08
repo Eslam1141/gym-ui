@@ -164,7 +164,6 @@
       Object.keys(attrs).forEach(function (k) {
         if (k === "class") node.className = attrs[k];
         else if (k === "text") node.textContent = attrs[k];
-        else if (k === "html") node.innerHTML = attrs[k];
         else if (k === "on" && attrs[k]) {
           Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
         } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);

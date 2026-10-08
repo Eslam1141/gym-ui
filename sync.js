@@ -201,7 +201,10 @@
   function nowMs() { return Date.now(); }
 
   // Wipe this browser's per-user data so a different account doesn't inherit it.
-  // Keeps device/UI-only prefs. Called on sign-out and on an account switch.
+  // Keeps device/UI-only prefs. Called on sign-out and on an account switch,
+  // synchronously before any rest-queue flush can run under the new token, so
+  // the non-gym_ prefixes (gymrest_pending is a completion queue) go too.
+  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_"];
   function clearUserData() {
     clearCachedSession(); // don't let a stale cached token restore the old account
     var keep = { gym_onboarded: 1, gym_lang: 1, gym_tab: 1, gym_anon: 1 };
@@ -210,7 +213,8 @@
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
         if (!k) continue;
-        if ((k.indexOf("gym_") === 0 && !keep[k]) || k.indexOf("gymcoach_") === 0) rm.push(k);
+        if ((k.indexOf("gym_") === 0 && !keep[k]) ||
+            USER_KEY_PREFIXES.some(function (p) { return k.indexOf(p) === 0; })) rm.push(k);
       }
       rm.forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}

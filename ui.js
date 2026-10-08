@@ -313,7 +313,16 @@
     }
   };
 
+  // HTML-escape for template strings that reach innerHTML (plan/AI/server text).
+  // Quotes are escaped so the result is safe in attribute values too.
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   window.GymUI = {
+    esc: esc,
     isAuthed: isAuthed,
     isAnon: isAnon,
     onboarded: onboarded,
