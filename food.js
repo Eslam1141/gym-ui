@@ -5,7 +5,7 @@
  * Mirrors coach.js's shape: renders into #foodBody, owns its own small i18n
  * table (STR/s()/lang()) instead of reaching into app.js's global T (kept
  * separate so this file has zero overlap with the parallel rebrand branch's
- * edits inside app.js), its own tiny h() DOM helper, and exposes
+ * edits inside app.js), builds DOM with GymDom.h (dom.js), and exposes
  * window.GymFood.refresh() the same way ui.js already calls
  * window.GymCoach.refresh() on tab navigation and language switches.
  *
@@ -33,10 +33,8 @@
   var MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack", "suhoor", "iftar"];
 
   // ---------------- i18n ----------------
-  function lang() {
-    try { if (window.activeLang === "ar") return "ar"; } catch (e) {}
-    try { return localStorage.getItem("gym_lang") === "ar" ? "ar" : "en"; } catch (e) { return "en"; }
-  }
+  if (!window.GymDom) throw new Error("food.js: dom.js must load first");
+  var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     teaseTitle: ["Track your meals", "تابع وجباتك"],
     teaseBody: ["Search a local food catalog, log a portion and see your daily totals against your coach targets.",
@@ -84,35 +82,8 @@
     suhoor: ["Suhoor", "سحور"],
     iftar: ["Iftar", "إفطار"]
   };
-  function s(k) {
-    var e = STR[k];
-    return e ? e[lang() === "ar" ? 1 : 0] : k;
-  }
+  var s = GymDom.makeT(STR);
 
-  // ---------------- tiny DOM helper (same shape as coach.js's) ----------------
-  function h(tag, attrs) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") node.className = attrs[k];
-        else if (k === "text") node.textContent = attrs[k];
-        else if (k === "on" && attrs[k]) {
-          Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
-        } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
-      });
-    }
-    var put = function (x) {
-      if (x == null || x === false) return;
-      if (typeof x === "string") node.appendChild(document.createTextNode(x));
-      else if (x && x.nodeType) node.appendChild(x);
-    };
-    for (var i = 2; i < arguments.length; i++) {
-      var c = arguments[i];
-      if (Array.isArray(c)) c.forEach(put);
-      else put(c);
-    }
-    return node;
-  }
   function mount(el) {
     var body = document.getElementById("foodBody");
     if (!body) return;

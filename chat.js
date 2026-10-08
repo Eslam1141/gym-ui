@@ -25,10 +25,8 @@
   var TIP_LEAVE_MS = 1200;  // grace delay once the cursor actually leaves it
 
   // ---------------- i18n ----------------
-  function lang() {
-    try { if (window.activeLang === "ar") return "ar"; } catch (e) {}
-    try { return localStorage.getItem("gym_lang") === "ar" ? "ar" : "en"; } catch (e) { return "en"; }
-  }
+  if (!window.GymDom) throw new Error("chat.js: dom.js must load first");
+  var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
     title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
@@ -43,7 +41,7 @@
     refused: ["Let's keep this to nutrition & training — for anything medical, please see a professional.",
       "لنُبقِ الحديث عن التغذية والتمرين — لأي أمر طبي، يُرجى مراجعة مختص."]
   };
-  function s(k) { var e = STR[k]; return e ? e[lang() === "ar" ? 1 : 0] : k; }
+  var s = GymDom.makeT(STR);
   function fmt(t, params) { return t.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? params[k] : ""; }); }
 
   var TIPS = [
@@ -56,32 +54,6 @@
     ["Consistency beats intensity — a doable plan you repeat wins over a perfect one you quit.", "الثبات أهم من الشدة — خطة قابلة للتنفيذ تكررها أفضل من خطة مثالية تتوقف عنها."],
     ["Warm up the specific lift, not just cardio — light sets of the first exercise reduce injury risk.", "سخّن للتمرين المحدد لا الكارديو فقط — مجموعات خفيفة من أول تمرين تقلّل خطر الإصابة."]
   ];
-
-  // ---------------- tiny DOM helper (mirrors coach.js) ----------------
-  function h(tag, attrs) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") node.className = attrs[k];
-        else if (k === "text") node.textContent = attrs[k];
-        else if (k === "on" && attrs[k]) {
-          Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
-        } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
-      });
-    }
-    var put = function (x) {
-      if (x == null || x === false) return;
-      if (typeof x === "string") node.appendChild(document.createTextNode(x));
-      else if (x && x.nodeType) node.appendChild(x);
-      else node.appendChild(document.createTextNode(String(x)));
-    };
-    for (var i = 2; i < arguments.length; i++) {
-      var c = arguments[i];
-      if (Array.isArray(c)) c.forEach(put);
-      else put(c);
-    }
-    return node;
-  }
 
   function mascotIcon() {
     return window.EtqademMascot

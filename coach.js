@@ -31,10 +31,8 @@
   var SAVED_MAX = 3;
 
   // ---------------- i18n ----------------
-  function lang() {
-    try { if (window.activeLang === "ar") return "ar"; } catch (e) {}
-    try { return localStorage.getItem("gym_lang") === "ar" ? "ar" : "en"; } catch (e) { return "en"; }
-  }
+  if (!window.GymDom) throw new Error("coach.js: dom.js must load first");
+  var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     teaseTitle: ["Meet your AI coach", "تعرّف على مدرّبك الذكي"],
     teaseBody: ["A diet and training plan calculated from your body numbers and goal — then filled in by Claude. Free with a Google account.",
@@ -152,36 +150,8 @@
     ramadanSuggest: ["It's Ramadan — we've turned this on for you",
       "إنه رمضان — قمنا بتفعيل هذا الخيار لك"]
   };
-  function s(k) {
-    var e = STR[k];
-    return e ? e[lang() === "ar" ? 1 : 0] : k;
-  }
+  var s = GymDom.makeT(STR);
 
-  // ---------------- tiny DOM helper ----------------
-  function h(tag, attrs) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") node.className = attrs[k];
-        else if (k === "text") node.textContent = attrs[k];
-        else if (k === "on" && attrs[k]) {
-          Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
-        } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
-      });
-    }
-    var put = function (x) {
-      if (x == null || x === false) return;
-      if (typeof x === "string") node.appendChild(document.createTextNode(x));
-      else if (x && x.nodeType) node.appendChild(x);
-      else node.appendChild(document.createTextNode(String(x))); // tolerate odd model output
-    };
-    for (var i = 2; i < arguments.length; i++) {
-      var c = arguments[i];
-      if (Array.isArray(c)) c.forEach(put);
-      else put(c);
-    }
-    return node;
-  }
   function mount(el) {
     var body = document.getElementById("coachBody");
     if (!body) return;

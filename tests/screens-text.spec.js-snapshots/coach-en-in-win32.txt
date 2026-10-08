@@ -1,0 +1,60 @@
+I want
+Both
+Diet
+Workout
+You
+Age
+*
+Required
+Sex
+Male
+From your plan — change it on the Plan screen
+Height
+*
+Required
+Weight
+*
+Required
+Goal
+Goal
+*
+Lose fat
+Build muscle
+Maintain
+Check both to recomposition (lose fat while building muscle)
+Daily activity
+*
+Sedentary
+Lightly active
+Moderately active
+Very active
+Athlete
+Training
+Training days / week
+*
+Equipment
+*
+Full gym
+Home basics
+Bodyweight only
+Ramadan mode
+Plan meals around suhoor & iftar and train around your fast
+Diet
+Eating style
+*
+Balanced
+High protein
+Keto
+Mediterranean
+Vegetarian
+Vegan
+Halal
+Low carb
+Allergies
+Foods to avoid
+InBody / DEXA (optional)
+Anything else? (injuries, schedule…)
+Notes
+Fill the required fields to continue
+Generate my plan
+Customize your own plan

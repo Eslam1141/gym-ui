@@ -2,7 +2,7 @@
  *
  * A small card that lives inside #coachBody, hooked in by two lines in
  * coach.js's renderForm()/renderResult() (GymCheckin.renderCard()). Mirrors
- * coach.js/food.js's shape: its own tiny i18n table + DOM helper, reads
+ * coach.js/food.js's shape: its own tiny i18n table (h/lang/s from dom.js), reads
  * window.GymSync.token()/window.GYM_API_BASE the same way coach.js does,
  * and hands off to coach.js's own screens (window.GymCoach.showResult /
  * .newAssessment / .refresh) instead of duplicating the result renderer.
@@ -30,10 +30,8 @@
   var STATUS_TTL_MS = 30000;
 
   // ---------------- i18n ----------------
-  function lang() {
-    try { if (window.activeLang === "ar") return "ar"; } catch (e) {}
-    try { return localStorage.getItem("gym_lang") === "ar" ? "ar" : "en"; } catch (e) { return "en"; }
-  }
+  if (!window.GymDom) throw new Error("checkin.js: dom.js must load first");
+  var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     cardTitle: ["Weekly check-in", "تسجيل أسبوعي"],
     dueBody: ["How did this week go? A quick check-in adjusts next week's plan.",
@@ -79,40 +77,13 @@
     quotaBodyGeneric: ["You've used today's assessments. Try again tomorrow.", "لقد استخدمت تقييمات اليوم. حاول مجدداً غداً."],
     refusedTitle: ["Let's keep this safe", "لنُبقِ الأمر آمناً"]
   };
-  function s(k) {
-    var e = STR[k];
-    return e ? e[lang() === "ar" ? 1 : 0] : k;
-  }
+  var s = GymDom.makeT(STR);
   function msg(entry) {
     if (!entry) return "";
     var t = s(entry[0]), p = entry[1] || {};
     return t.replace(/\{(\w+)\}/g, function (_, k) { return p[k] != null ? p[k] : ""; });
   }
 
-  // ---------------- tiny DOM helper (same shape as coach.js's/food.js's own) ----------------
-  function h(tag, attrs) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") node.className = attrs[k];
-        else if (k === "text") node.textContent = attrs[k];
-        else if (k === "on" && attrs[k]) {
-          Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
-        } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
-      });
-    }
-    var put = function (x) {
-      if (x == null || x === false) return;
-      if (typeof x === "string") node.appendChild(document.createTextNode(x));
-      else if (x && x.nodeType) node.appendChild(x);
-    };
-    for (var i = 2; i < arguments.length; i++) {
-      var c = arguments[i];
-      if (Array.isArray(c)) c.forEach(put);
-      else put(c);
-    }
-    return node;
-  }
   function mount(el) {
     var body = document.getElementById("coachBody");
     if (!body) return;
