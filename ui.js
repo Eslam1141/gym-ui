@@ -300,7 +300,43 @@
     }
   };
 
+  // HTML-escape for template strings that reach innerHTML (plan/AI/server text).
+  // Quotes are escaped so the result is safe in attribute values too.
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // Explicit sign-out: drop the device-local keys sync.js's clearUserData()
+  // does not cover (none are gym_-prefixed). gymrest_pending is a completion
+  // queue that must never flush under the next user's token. Only a
+  // signed-in -> signed-out transition with gym_user_sub gone counts: an
+  // expired session keeps gym_user_sub, and an anonymous visitor's first
+  // authchange(false) at load must not wipe their local rest days.
+  var wasSignedIn = false;
+  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_"];
+  function wipeUserKeys() {
+    try {
+      var rm = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && USER_KEY_PREFIXES.some(function (p) { return k.indexOf(p) === 0; })) rm.push(k);
+      }
+      rm.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  }
+  document.addEventListener("gym:authchange", function (e) {
+    var signedIn = !!(e && e.detail);
+    var was = wasSignedIn;
+    wasSignedIn = signedIn;
+    if (signedIn || !was) return;
+    // sync.js removes gym_user_sub right after emitting; look once it has.
+    setTimeout(function () { if (!ls("gym_user_sub")) wipeUserKeys(); }, 0);
+  });
+
   window.GymUI = {
+    esc: esc,
     isAuthed: isAuthed,
     isAnon: isAnon,
     onboarded: onboarded,

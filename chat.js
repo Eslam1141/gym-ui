@@ -6,14 +6,16 @@
  * (no network call). Anonymous taps prompt sign-in, same as the Coach tab.
  *
  * Local keys (NOT synced — deliberately not gym_-prefixed, device-local):
- *   gymchat_history   the visible transcript (trimmed), restored on reopen
+ *   gymcoach_chat_history   the visible transcript (trimmed), restored on reopen;
+ *                           gymcoach_ is wiped by sync.js on sign-out / account switch
  */
 (function () {
   "use strict";
 
   var ASSIST_BASE = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "") + "/assistant";
   var CALL_TIMEOUT_MS = 30000;
-  var HIST_KEY = "gymchat_history";
+  var HIST_KEY = "gymcoach_chat_history";
+  var OLD_HIST_KEY = "gymchat_history"; // pre-rename key, survived sign-out (audit M4)
   var HIST_MAX = 30;      // kept for display
   var SEND_WINDOW = 8;    // most recent turns actually sent to the API
   var MSG_MAX = 600;      // mirrors the backend's per-message cap
@@ -102,6 +104,19 @@
   }
 
   // ---------------- state ----------------
+  // One-time migration: keep the old transcript only when a session is cached
+  // for this tab (it is that user's own); otherwise it may belong to a
+  // previous account, so drop it.
+  (function migrateHistory() {
+    try {
+      var old = localStorage.getItem(OLD_HIST_KEY);
+      if (old === null) return;
+      if (sessionStorage.getItem("gymauth_session") && localStorage.getItem(HIST_KEY) === null) {
+        localStorage.setItem(HIST_KEY, old);
+      }
+      localStorage.removeItem(OLD_HIST_KEY);
+    } catch (e) {}
+  })();
   var history = loadJSON(HIST_KEY, []); // [{role:'user'|'assistant', content}]
   var open = false;
   var sending = false;
@@ -423,6 +438,12 @@
     startTipCycle();
 
     document.addEventListener("gym:lang-changed", renderStatic);
+    // Sign-out wipes the stored transcript (ui.js / sync.js, on a later tick):
+    // re-read it so the previous user's messages leave memory and the DOM.
+    document.addEventListener("gym:authchange", function (e) {
+      if (e.detail) return;
+      setTimeout(function () { history = loadJSON(HIST_KEY, []); renderHistory(); }, 0);
+    });
   }
 
   function boot() {
