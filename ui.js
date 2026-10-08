@@ -404,6 +404,8 @@
     } else {
       promptSignIn(); // returning, signed-out, no active choice: straight to login
     }
+    // Routed: the app may paint now (index.html's pre-paint hid it while signed out).
+    document.documentElement.classList.remove("pre-auth");
   }
 
   if (document.readyState === "loading") {

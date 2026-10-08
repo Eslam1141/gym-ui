@@ -270,6 +270,20 @@
   // ui.js still runs its own navigate() afterward exactly as before — this
   // is purely an additive early-paint fix, not a replacement for it.
   (function(){
+    // Signed out (no live cached session, no "continue without signing in"
+    // choice): ui.js's boot() is about to cover everything with the login
+    // overlay, so don't paint the cached app screen first (it flashed for a
+    // moment on every signed-out refresh). ui.js removes the class; the
+    // timer is a backstop in case it never runs.
+    try {
+      var sess = JSON.parse(sessionStorage.getItem("gymauth_session") || "null");
+      var live = !!(sess && sess.token && sess.exp && sess.exp * 1000 > Date.now() + 30000);
+      if (!live && localStorage.getItem("gym_anon") !== "1") {
+        var root = document.documentElement;
+        root.classList.add("pre-auth");
+        setTimeout(function () { root.classList.remove("pre-auth"); }, 4000);
+      }
+    } catch (e) {}
     try {
       var tab = localStorage.getItem("gym_tab") || "plan";
       if (tab !== "plan") {
