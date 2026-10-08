@@ -6,12 +6,12 @@
   var STR = {
     en: {
       title: "Etqadem | Free gym tracker with an AI coach in Arabic",
-      desc: "Etqadem is one free app for your gym day: workout plan, set logging, rest timer, form videos, food log and an AI coach that answers in Arabic or English.",
+      desc: "Etqadem is one free app for your gym day: workout plan, set logging, rest timer, form videos, a food calorie calculator and an AI coach that answers in Arabic or English.",
       skip: "Skip to content",
       nav_features: "Features", nav_coach: "AI coach", nav_ramadan: "Ramadan", signin: "Sign in",
       lang_btn: "العربية", lang_label: "Switch to Arabic",
       hero_h1: "Your whole gym day, one free app",
-      hero_sub: "Workout plan, set logging, rest timer, form videos, food log and an AI coach that answers in Arabic or English.",
+      hero_sub: "Workout plan, set logging, rest timer, form videos, a food calorie calculator and an AI coach that answers in Arabic or English.",
       cta: "Start free", cta_how: "See how it works",
       photo_alt: "A lifter under a barbell in a squat rack",
       shot_top_alt: "Etqadem workout screen with the weekly calendar and workout timer",
@@ -22,7 +22,9 @@
       f1_h: "A plan for every day", f1_p: "Day templates with warm-ups, sets and reps already filled in. Or build your own.",
       f2_h: "Log sets, rest on time", f2_p: "Save the weight and reps of each set, and let the rest timer count you back in.",
       f3_h: "See the movement first", f3_p: "Exercises come with form videos, one tap away.",
-      f4_h: "Food from your kitchen", f4_p: "Search Egyptian and Gulf foods in Arabic or English and see your daily calories and macros.",
+      f4_h: "Calorie calculator for local food", f4_p: "Search Egyptian and Gulf foods in Arabic or English, enter the grams, and get the calories, protein, carbs and fat. Your daily total sits next to your coach's target.",
+      calc_label: "Example: 250 g of ful medames is 275 kcal, with 19 g protein, 37 g carbs and 8 g fat",
+      calc_food: "Ful medames", kcal: "kcal", g: "g", m_p: "Protein", m_c: "Carbs", m_f: "Fat",
       f5_h: "Keep the streak", f5_p: "Track your weight, check in weekly and watch your streak grow.",
       coach_h: "A coach that answers in Arabic",
       coach_p: "Ask about training or food in your own words. The AI coach builds a diet and training plan from your numbers and goal.",
@@ -39,12 +41,12 @@
     },
     ar: {
       title: "اتقدم | تطبيق جيم مجاني مع مدرب ذكي بالعربي",
-      desc: "اتقدم تطبيق واحد مجاني ليوم الجيم: خطة تمرين، تسجيل المجموعات، مؤقت راحة، فيديوهات أداء، سجل أكل ومدرب ذكي يرد بالعربي أو الإنجليزي.",
+      desc: "اتقدم تطبيق واحد مجاني ليوم الجيم: خطة تمرين، تسجيل المجموعات، مؤقت راحة، فيديوهات أداء، حاسبة سعرات للأكل ومدرب ذكي يرد بالعربي أو الإنجليزي.",
       skip: "انتقل إلى المحتوى",
       nav_features: "المميزات", nav_coach: "المدرب الذكي", nav_ramadan: "رمضان", signin: "تسجيل الدخول",
       lang_btn: "English", lang_label: "التبديل إلى الإنجليزية",
       hero_h1: "تطبيق واحد مجاني لكل يوم جيم",
-      hero_sub: "خطة تمرين، تسجيل المجموعات، مؤقت راحة، فيديوهات أداء، سجل أكل ومدرب ذكي يرد بالعربي أو الإنجليزي.",
+      hero_sub: "خطة تمرين، تسجيل المجموعات، مؤقت راحة، فيديوهات أداء، حاسبة سعرات للأكل ومدرب ذكي يرد بالعربي أو الإنجليزي.",
       cta: "ابدأ مجاناً", cta_how: "شاهد كيف يعمل",
       photo_alt: "لاعب تحت البار في قفص السكوات",
       shot_top_alt: "شاشة التمرين في اتقدم مع تقويم الأسبوع ومؤقت التمرين",
@@ -55,7 +57,9 @@
       f1_h: "خطة لكل يوم", f1_p: "قوالب أيام جاهزة بالإحماء والمجموعات والتكرارات. أو ابنِ خطتك بنفسك.",
       f2_h: "سجّل مجموعاتك وارتح في وقتك", f2_p: "احفظ وزن وتكرارات كل مجموعة، ودع مؤقت الراحة يعدّ لك الوقت.",
       f3_h: "شاهد الحركة قبل أن تبدأ", f3_p: "التمارين معها فيديوهات أداء بضغطة واحدة.",
-      f4_h: "أكل من مطبخك", f4_p: "ابحث عن الأكلات المصرية والخليجية بالعربية أو الإنجليزية وشاهد سعراتك وماكروز يومك.",
+      f4_h: "حاسبة سعرات لأكلك", f4_p: "ابحث عن الأكلات المصرية والخليجية بالعربية أو الإنجليزية، اكتب الجرامات، واعرف السعرات والبروتين والكارب والدهون. وإجمالي يومك يظهر جنب هدف مدربك.",
+      calc_label: "مثال: 250 جرام فول مدمس فيها 275 سعرة، و19 جرام بروتين و37 جرام كارب و8 جرام دهون",
+      calc_food: "فول مدمس", kcal: "سعرة", g: "جم", m_p: "بروتين", m_c: "كارب", m_f: "دهون",
       f5_h: "حافظ على استمرارك", f5_p: "تابع وزنك، وسجّل متابعتك الأسبوعية، وراقب سلسلة أيامك وهي تكبر.",
       coach_h: "مدرب يرد عليك بالعربي",
       coach_p: "اسأل عن التمرين أو الأكل بكلامك أنت. المدرب الذكي يبني لك خطة أكل وتمرين من أرقامك وهدفك.",
@@ -88,6 +92,7 @@
 
     $all("[data-i18n]").forEach(function (el) { el.textContent = s[el.getAttribute("data-i18n")]; });
     $all("[data-i18n-alt]").forEach(function (el) { el.alt = s[el.getAttribute("data-i18n-alt")]; });
+    $all("[data-i18n-label]").forEach(function (el) { el.setAttribute("aria-label", s[el.getAttribute("data-i18n-label")]); });
 
     // The other-language echo under the headline.
     var other = lang === "ar" ? "en" : "ar";

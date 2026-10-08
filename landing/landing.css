@@ -155,6 +155,13 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .cell-log .crop img { width: 330px; max-width: none; margin-top: -236px; margin-inline: auto; }
 .cell-food { background: linear-gradient(145deg, var(--teal), var(--teal-deep)); border-color: transparent; justify-content: flex-end; }
 .cell-food p { color: rgb(243 240 232 / .88); }
+.calc { margin-bottom: auto; align-self: start; min-width: min(100%, 260px); padding: 16px 18px; border-radius: 18px; background: rgb(13 17 23 / .32); border: 1px solid rgb(243 240 232 / .16); display: grid; gap: 6px; }
+.cell-food .calc p { max-width: none; }
+.calc-food { display: flex; justify-content: space-between; gap: 16px; font-weight: 600; }
+.calc-g { color: rgb(243 240 232 / .7); font-weight: 500; }
+.cell-food .calc-kcal { color: #fff; font-size: 1rem; }
+.calc-kcal strong { font-size: 2.25rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.calc-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .875rem; }
 .cell-video, .cell-streak { justify-content: flex-end; }
 .cell-streak { background: radial-gradient(90% 90% at 0% 0%, rgb(60 194 184 / .14), transparent 70%), var(--ink-2); }
 
