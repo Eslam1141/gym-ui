@@ -33,6 +33,39 @@ test.describe("sign-out wipes device-local user data (audit M4)", () => {
     await context.close();
   });
 
+  test("account switch (session expired, different sub) wipes A's keys before any flush under B", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, {
+      signedIn: true,
+      ls: {
+        gym_user_sub: "sub-A",
+        gymrest_days: ["2026-10-01"],
+        gymrest_pending: [{ date: "2026-10-01", dayId: "m_upperA" }],
+        gymday_last_completed: { date: "2026-10-01", dayId: "m_upperA" },
+        gymcoach_chat_history: [{ role: "user", content: "A's weight is 80kg" }]
+      }
+    });
+    await page.waitForFunction(() => window.GymSync && GymSync.isSignedIn(), null, T);
+    expect(await userKeys(page)).toContain("gymrest_pending");
+    server.log.length = 0;
+
+    const tokenB = await page.evaluate(() => {
+      const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+      return b64({ alg: "none" }) + "." + b64({ sub: "sub-B", email: "b@example.com", name: "B", exp: Math.floor(Date.now() / 1000) + 20 * 3600 }) + ".sig";
+    });
+    await Promise.all([
+      page.waitForNavigation({ timeout: 15000 }).catch(() => {}),
+      page.evaluate((t) => GymSync.signInWithToken(t), tokenB)
+    ]);
+    await page.waitForFunction(() => window.GymRest, null, { timeout: 15000 });
+    await page.waitForTimeout(1500);
+
+    expect(await page.evaluate(() => localStorage.getItem("gym_user_sub"))).toBe("sub-B");
+    expect(await userKeys(page)).toEqual([]);
+    const writes = server.log.filter((r) => r.method === "POST" && /\/workouts\/(rest|complete)/.test(r.path));
+    expect(writes).toEqual([]);
+    await context.close();
+  });
+
   test("anonymous visitor keeps local rest days across load (no authchange wipe)", async ({ browser }) => {
     const { context, page } = await openApp(browser, { ls: { gymrest_days: ["2026-10-01"] } });
     await page.waitForTimeout(800);
