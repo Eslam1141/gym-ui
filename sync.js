@@ -509,12 +509,20 @@
     } catch (e) {}
 
     saveCachedSession();
+    // Cover the switch from login to app with the logo loader until the
+    // first sync lands, so the app opens on this account's data (capped:
+    // a slow or failed sync just reveals the cached app).
+    if (window.GymBoot) GymBoot.hold("signin", 6000);
     if (window.GymUI && typeof GymUI.completeSignIn === "function") GymUI.completeSignIn();
     renderAuthUI();
     startTriggers();
-    syncNow(firstSignIn ? "signin-migrate" : "signin");
+    syncNow(firstSignIn ? "signin-migrate" : "signin").then(releaseSignInLoader, releaseSignInLoader);
     scheduleTokenRefresh();
     emit("gym:tokenaccepted", src); // privacy.js: a fresh sign-in during account deletion
+  }
+
+  function releaseSignInLoader() {
+    if (window.GymBoot) GymBoot.release("signin");
   }
 
   function scheduleTokenRefresh() {

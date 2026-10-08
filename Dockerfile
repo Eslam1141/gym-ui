@@ -11,7 +11,7 @@ USER 101
 
 # Image layout: the landing page (repo landing/) at the html root, the PWA
 # (repo root files) under /app/. See docker/default.conf.
-COPY --chown=101:101 index.html theme-boot.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css rest-days.js calendar.js workout-builder.js header.js notifications.js profile.js toast.js dom.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
+COPY --chown=101:101 index.html theme-boot.js boot-loader.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css rest-days.js calendar.js workout-builder.js header.js notifications.js profile.js toast.js dom.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
 COPY --chown=101:101 icons/ /usr/share/nginx/html/app/icons/
 COPY --chown=101:101 fonts/ /usr/share/nginx/html/app/fonts/
 COPY --chown=101:101 landing/ /usr/share/nginx/html/
@@ -27,7 +27,7 @@ COPY --chown=101:101 icons/ /usr/share/nginx/html/icons/
 # sha256sum/cut/sed are all busybox applets already present in this Alpine
 # base image, so no extra tooling is needed.
 RUN cd /usr/share/nginx/html/app && \
-    HASH=$(cat index.html theme-boot.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js \
+    HASH=$(cat index.html theme-boot.js boot-loader.js styles.css app.js ui.js mascot.js coach.js checkin.js chat.js food.js sync.js \
         auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css \
         rest-days.js calendar.js workout-builder.js header.js notifications.js profile.js toast.js dom.js config.js manifest.json \
         icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \

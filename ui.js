@@ -406,6 +406,7 @@
     }
     // Routed: the app may paint now (index.html's pre-paint hid it while signed out).
     document.documentElement.classList.remove("pre-auth");
+    if (window.GymBoot) GymBoot.release("boot");
   }
 
   if (document.readyState === "loading") {
