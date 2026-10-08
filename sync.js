@@ -446,6 +446,8 @@
   // detect an account switch by JWT `sub` (gym_user_sub), migrate anon data
   // on first sign-in, and start syncing.
   function acceptToken(token, src) {
+    // A token refresh while the app is in use must not flash the loader.
+    var wasSignedIn = isSignedIn();
     idToken = token;
     source = src;
     var p = parseJwt(idToken);
@@ -512,7 +514,7 @@
     // Cover the switch from login to app with the logo loader until the
     // first sync lands, so the app opens on this account's data (capped:
     // a slow or failed sync just reveals the cached app).
-    if (window.GymBoot) GymBoot.hold("signin", 6000);
+    if (window.GymBoot && !wasSignedIn) GymBoot.hold("signin", 6000);
     if (window.GymUI && typeof GymUI.completeSignIn === "function") GymUI.completeSignIn();
     renderAuthUI();
     startTriggers();
@@ -541,10 +543,86 @@
     var ms =tokenExpEpoch * 1000 - nowMs() - 120000;
     if (ms < 10000) ms = 10000;
     refreshTimer = setTimeout(function () {
-      if (window.google && google.accounts && google.accounts.id) {
+      if (isNative()) {
+        nativeSilentSignIn();
+      } else if (window.google && google.accounts && google.accounts.id) {
         google.accounts.id.prompt();
       }
     }, ms);
+  }
+
+  // ---- native Google sign-in (Capacitor app, etqadem-app) ----
+  // Google blocks Sign in with Google inside an Android/iOS WebView, so in
+  // the native app GIS is never loaded: the Capgo SocialLogin plugin shows
+  // the system account picker (Credential Manager on Android) and returns a
+  // Google ID token. initialize() gets the WEB client ID, so the token's
+  // `aud` is exactly what gym-be already verifies — no backend change. The
+  // Android OAuth client (package + signing SHA-1) only has to exist in the
+  // same Google Cloud project; it is never referenced here.
+  var nativeReady = null;
+  function nativePlugin() {
+    var c = window.Capacitor;
+    return c && c.Plugins && c.Plugins.SocialLogin;
+  }
+  function isNative() {
+    var c = window.Capacitor;
+    try { return !!(c && typeof c.isNativePlatform === "function" && c.isNativePlatform() && nativePlugin()); } catch (e) { return false; }
+  }
+  function nativeInit() {
+    if (!nativeReady) {
+      nativeReady = nativePlugin().initialize({ google: { webClientId: CLIENT_ID } });
+    }
+    return nativeReady;
+  }
+  function nativeSignIn(silent) {
+    var opts = silent
+      ? { style: "bottom", filterByAuthorizedAccounts: true, autoSelectEnabled: true }
+      : { scopes: ["email", "profile"] };
+    return nativeInit()
+      .then(function () { return nativePlugin().login({ provider: "google", options: opts }); })
+      .then(function (res) {
+        var token = res && res.result && res.result.idToken;
+        if (!token) throw new Error("no idToken");
+        clearSignInPending();
+        acceptToken(token, "google");
+        return true;
+      });
+  }
+  function nativeSilentSignIn() {
+    return nativeSignIn(true).catch(function (e) {
+      log("[sync] native silent sign-in failed", e && e.message);
+      abandonPendingSignIn();
+      return false;
+    });
+  }
+  function nativeButtonLabel() {
+    return appLang() === "ar" ? "المتابعة باستخدام Google" : "Continue with Google";
+  }
+  var GOOGLE_G = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">' +
+    '<path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/>' +
+    '<path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/>' +
+    '<path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/>' +
+    '<path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
+  function renderNativeButton(target, opts) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "native-gbtn" + (opts && opts.theme === "outline" ? " native-gbtn-outline" : "");
+    btn.innerHTML = '<span class="native-gbtn-g">' + GOOGLE_G + '</span><span class="native-gbtn-label"></span>';
+    btn.querySelector(".native-gbtn-label").textContent = nativeButtonLabel();
+    btn.addEventListener("click", function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      markSignInPending();
+      nativeSignIn(false)
+        .catch(function (e) {
+          // Cancelled or failed: the user is still on the login screen.
+          log("[sync] native sign-in failed", e && e.message);
+          clearSignInPending();
+        })
+        .then(function () { btn.disabled = false; });
+    });
+    target.innerHTML = "";
+    target.appendChild(btn);
   }
 
   // reason "expired" = the session died on its own (401 / token ran out), as
@@ -583,7 +661,10 @@
     // Anon mode is still available — just only via its own explicit
     // "Continue without signing in" button on that screen.
     try {
-      if (window.google && google.accounts && google.accounts.id) {
+      if (isNative()) {
+        // Forget the chosen account so the next sign-in shows the picker.
+        nativeInit().then(function () { return nativePlugin().logout({ provider: "google" }); }).catch(function () {});
+      } else if (window.google && google.accounts && google.accounts.id) {
         google.accounts.id.disableAutoSelect();
       }
     } catch (e) {}
@@ -604,6 +685,7 @@
   }
 
   function renderGoogleButton(target, opts) {
+    if (target && isNative()) { renderNativeButton(target, opts); return; }
     if (!target || !(window.google && google.accounts && google.accounts.id)) return;
     try {
       target.innerHTML = "";
@@ -782,6 +864,13 @@
       // GIS script hangs and neither onload nor onerror ever fires.
       if (window.GymUI && typeof GymUI.showResolvingSession === "function") GymUI.showResolvingSession();
       setTimeout(abandonPendingSignIn, 8000);
+    }
+
+    if (isNative()) {
+      gisLang = appLang();
+      renderAuthUI();
+      if (!isSignedIn() && shouldResolveSilently()) nativeSilentSignIn();
+      return;
     }
 
     var s = document.createElement("script");

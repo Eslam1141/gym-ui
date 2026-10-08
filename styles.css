@@ -748,6 +748,16 @@ body.onboarding-open #coachFabTip{ display:none !important; }
 .ob-title{ margin:4px 0 0; font-size:var(--text-xl); font-weight:var(--fw-black); line-height:1.25; }
 .ob-sub{ margin:0; color:var(--paper-dim); font-size:var(--text-base); max-width:32ch; }
 .ob-gbtn{ min-height:44px; display:flex; justify-content:center; margin-top:4px; width:100%; max-width:280px; }
+/* Native app (Capacitor) Google button: GIS can't run in a WebView, so sync.js
+   renders this instead and hands the tap to the system account picker. */
+.native-gbtn{ display:flex; align-items:center; gap:12px; width:100%; min-height:44px; padding:4px 20px 4px 4px;
+  border:1px solid #202124; border-radius:999px; background:#202124; color:#fff; font:inherit; font-weight:500;
+  font-size:15px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.native-gbtn:disabled{ opacity:.6; }
+.native-gbtn:focus-visible{ outline:2px solid var(--accent, #0B7A75); outline-offset:2px; }
+.native-gbtn-g{ display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:#fff; flex:none; }
+.native-gbtn-label{ flex:1; text-align:center; }
+.native-gbtn-outline{ background:#fff; color:#3c4043; border-color:#dadce0; max-width:280px; }
 .ob-secondary{
   background:transparent; border:1px solid var(--line); color:var(--paper);
   font-family:inherit; font-weight:700; font-size:var(--text-base);
