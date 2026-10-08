@@ -113,6 +113,23 @@
     try { return d.toLocaleDateString(AR ? "ar" : "en", { year: "numeric", month: "short", day: "numeric" }); } catch (e) { return iso.slice(0, 10); }
   }
   function fmtNum(n) { try { return Number(n || 0).toLocaleString(AR ? "ar" : "en"); } catch (e) { return String(n || 0); } }
+  var REDUCE = false;
+  try { REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  // Overview cards: count from 0 to n (ease-out, ~0.9 s); final text is
+  // exactly fmtNum(n). Reduced motion shows n at once.
+  function countUp(node, n) {
+    n = Number(n || 0);
+    if (REDUCE || !n || !window.requestAnimationFrame) { node.textContent = fmtNum(n); return node; }
+    node.textContent = fmtNum(0);
+    var t0 = 0;
+    requestAnimationFrame(function tick(t) {
+      if (!t0) t0 = t;
+      var p = Math.min(1, (t - t0) / 900);
+      node.textContent = fmtNum(p < 1 ? Math.round(n * (1 - Math.pow(1 - p, 3))) : n);
+      if (p < 1 && node.isConnected) requestAnimationFrame(tick);
+    });
+    return node;
+  }
 
   // ---- session + api ----
   function session() {
@@ -195,8 +212,10 @@
         ["cTotal", st.totalUsers], ["cToday", st.newUsers.today], ["c7", st.newUsers.d7], ["c30", st.newUsers.d30],
         ["cA7", st.activeUsers.d7], ["cA30", st.activeUsers.d30], ["cBlocked", st.blockedUsers]
       ];
-      main.appendChild(el("div", { class: "adm-cards" }, cards.map(function (c) {
-        return el("div", { class: "adm-card" }, [el("b", { text: fmtNum(c[1]) }), el("span", { text: s(c[0]) })]);
+      main.appendChild(el("div", { class: "adm-cards" }, cards.map(function (c, i) {
+        var card = el("div", { class: "adm-card" }, [countUp(el("b"), c[1]), el("span", { text: s(c[0]) })]);
+        card.style.setProperty("--i", i);
+        return card;
       })));
       main.appendChild(el("section", { class: "adm-section" }, [el("h2", { text: s("chartTitle") }), chart(st.signupsPerDay || [])]));
       var p = st.providers, total = (p.google + p.password + p.both) || 1;
@@ -230,6 +249,7 @@
       r.setAttribute("y", H - pad - h);
       r.setAttribute("width", Math.max(1, bw - 2));
       r.setAttribute("height", h);
+      r.style.setProperty("--i", i);
       var t = document.createElementNS(NS, "title");
       t.textContent = d.date + ": " + d.count;
       r.appendChild(t);
@@ -299,8 +319,8 @@
       if (!r.ok) { host.appendChild(el("p", { class: "adm-err", role: "alert", text: s("loadErr") })); return; }
       var d = r.data;
       if (!d.users.length) { host.appendChild(el("p", { class: "adm-msg", text: s("none") })); return; }
-      host.appendChild(el("div", { class: "adm-list" }, d.users.map(function (x) {
-        return el("button", { type: "button", class: "adm-row", onclick: function () { openUser(x.id); } }, [
+      host.appendChild(el("div", { class: "adm-list" }, d.users.map(function (x, i) {
+        var row = el("button", { type: "button", class: "adm-row", onclick: function () { openUser(x.id); } }, [
           avatar(x),
           el("span", null, [el("div", { class: "adm-email", text: x.email }), el("div", { class: "adm-sub", text: x.displayName || x.name || "" })]),
           el("span", { class: "adm-sub adm-col-hide", text: s("colJoined") + ": " + fmtDate(x.createdAt) }),
@@ -308,6 +328,8 @@
           el("span", { class: "adm-sub adm-col-hide", text: provLabel(x.provider) }),
           x.blocked ? el("span", { class: "adm-badge blocked", text: s("blocked") }) : el("span")
         ]);
+        row.style.setProperty("--i", Math.min(i, 12));
+        return row;
       })));
       var pages = Math.max(1, Math.ceil(d.total / d.pageSize));
       host.appendChild(el("div", { class: "adm-pager" }, [

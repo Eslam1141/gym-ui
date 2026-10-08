@@ -57,3 +57,31 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
   .adm-row{grid-template-columns:40px 1fr auto}
   .adm-row .adm-col-hide{display:none}
 }
+
+/* ---- motion: every tab render rises in; numbers count up (admin.js);
+   chart bars grow, provider bars fill, user rows cascade, the user panel
+   slides in. Off entirely under prefers-reduced-motion. ---- */
+.adm-tabs button{transition:background-color .2s ease,color .2s ease}
+.adm-row{transition:border-color .2s ease,translate .2s ease}
+@media (prefers-reduced-motion:no-preference){
+  #admMain > *{animation:adm-rise .45s cubic-bezier(.2,.7,.2,1) both}
+  #admMain > :nth-child(2){animation-delay:.08s}
+  #admMain > :nth-child(3){animation-delay:.16s}
+  #admMain > :nth-child(4){animation-delay:.24s}
+  .adm-card{animation:adm-rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 50ms)}
+  .adm-card:hover{translate:0 -2px;transition:translate .2s ease}
+  .adm-chart rect.bar{transform-box:fill-box;transform-origin:50% 100%;animation:adm-grow .6s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(.2s + var(--i,0) * 12ms)}
+  .adm-bars i{transform-origin:left center;animation:adm-fill .8s .3s cubic-bezier(.2,.7,.2,1) both}
+  [dir="rtl"] .adm-bars i{transform-origin:right center}
+  .adm-list .adm-row{animation:adm-rise .4s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 35ms)}
+  .adm-row:hover{translate:0 -1px}
+  .adm-panel:not([hidden]){animation:adm-slide .3s cubic-bezier(.2,.7,.2,1) both}
+  [dir="rtl"] .adm-panel:not([hidden]){animation-name:adm-slide-rtl}
+  .adm-panel-backdrop:not([hidden]){animation:adm-fade .25s ease both}
+}
+@keyframes adm-rise{from{opacity:0;translate:0 14px}}
+@keyframes adm-grow{from{transform:scaleY(0)}}
+@keyframes adm-fill{from{transform:scaleX(0)}}
+@keyframes adm-slide{from{translate:100% 0}}
+@keyframes adm-slide-rtl{from{translate:-100% 0}}
+@keyframes adm-fade{from{opacity:0}}
