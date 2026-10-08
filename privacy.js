@@ -14,7 +14,7 @@
 
   var API_BASE = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "");
   var TIMEOUT_MS = 20000;
-  var EXPORT_TIMEOUT_MS = 90000;   // the server may spend ~60s building the ZIP
+  var exportTimeoutMs = 90000;   // the server may spend ~60s building the ZIP
   // Device prefs that survive a deletion (everything else is wiped).
   var KEEP_KEYS = { gym_lang: 1, gym_theme: 1 };
 
@@ -27,7 +27,7 @@
     dlOk: ["Your data was downloaded.", "تم تنزيل بياناتك."],
     dlErr502: ["We couldn't collect your coach data, so the export was stopped instead of giving you an incomplete file. Try again in a minute.", "تعذّر جمع بيانات المدرب، فتم إيقاف التصدير بدل تسليمك ملفًا ناقصًا. حاول مرة أخرى بعد دقيقة."],
     dlWarnAssistant: ["Your file was saved, but your AI coach data couldn't be included. Try again later to get it.", "تم حفظ الملف، لكن تعذّر تضمين بيانات المدرب الذكي. حاول مرة أخرى لاحقًا للحصول عليها."],
-    dlWarnTruncated: ["Your file was saved. Your AI coach history was very large, so only the newest part is included and older items were left out. Check totalCount in the file.", "تم حفظ الملف. سجل المدرب الذكي كبير جدًا، لذلك يتضمن الملف الأحدث فقط وتم استبعاد العناصر الأقدم. راجع totalCount في الملف."],
+    dlWarnTruncated: ["Your file was saved. Your AI coach history was very large, so only the newest part is included; the file notes how many items there were in total.", "تم حفظ الملف. سجل المدرب الذكي كبير جدًا، لذلك يتضمن الملف الأحدث فقط، ويذكر الملف العدد الكلي للعناصر."],
     dlErrRate: ["You've reached the export limit. Try again in {t}.", "وصلت إلى حد التصدير. حاول مرة أخرى بعد {t}."],
     dlErrRateNoWait: ["You've reached the export limit. Try again in a few minutes.", "وصلت إلى حد التصدير. حاول مرة أخرى بعد بضع دقائق."],
     dlErrBusy: ["An export is already running. Try again in {t}.", "هناك عملية تصدير قيد التنفيذ بالفعل. حاول مرة أخرى بعد {t}."],
@@ -90,7 +90,8 @@
     var ctrl = new AbortController();
     opts = opts || {};
     var timer = setTimeout(function () { ctrl.abort(); }, opts.timeoutMs || TIMEOUT_MS);
-    delete opts.timeoutMs;
+    var hold = opts.holdTimer;
+    delete opts.timeoutMs; delete opts.holdTimer;
     opts.headers = opts.headers || {};
     opts.headers["Authorization"] = "Bearer " + token;
     opts.signal = ctrl.signal;
@@ -103,7 +104,12 @@
         });
       })
       .catch(function () { return { status: 0, code: "", res: null }; })
-      .then(function (r) { clearTimeout(timer); return r; });
+      .then(function (r) {
+        // holdTimer: the caller keeps the abort timer running while a body streams, then calls r.clear().
+        if (hold) r.clear = function () { clearTimeout(timer); };
+        else clearTimeout(timer);
+        return r;
+      });
   }
 
   // ---------------- export ----------------
@@ -164,38 +170,58 @@
 
   // Fetches and saves the ZIP. Resolves {status, res, code, warn, interrupted}.
   function fetchExport() {
-    return call("/me/export?format=zip", { timeoutMs: EXPORT_TIMEOUT_MS }).then(function (r) {
-      if (r.status !== 200 || !r.res) return r;
+    return call("/me/export?format=zip", { timeoutMs: exportTimeoutMs, holdTimer: true }).then(function (r) {
+      if (r.status !== 200 || !r.res) { if (r.clear) r.clear(); return r; }
       var res = r.res;
       return res.blob().then(function (blob) {
+        r.clear();
         saveBlob(blob, filenameFrom(res));
         r.warn = res.headers.get("X-Export-Assistant-Unavailable") === "1" ? "dlWarnAssistant"
           : res.headers.get("X-Export-Truncated") === "1" ? "dlWarnTruncated" : "";
         return r;
-      }, function () { return { status: 0, interrupted: true }; });
+      }, function () { r.clear(); return { status: 0, interrupted: true }; });
     });
   }
 
   var exporting = false;
-  // setStatus(kind, key, text?): where to report; used by the section and the sheet.
-  function doExport(btns, setStatus) {
+
+  // The section button and the delete sheet's link share one export, so both
+  // show its state. The sheet is built lazily; nodes are looked up each time.
+  function exportBtns() { return [el("pvDownload"), el("pvShDl")].filter(Boolean); }
+  function exportStatuses() { return [el("pvStatus"), el("pvShStatus")].filter(Boolean); }
+
+  function setBusy(on) {
+    exportBtns().forEach(function (b) {
+      b.disabled = on;
+      if (on) b.setAttribute("aria-busy", "true"); else b.removeAttribute("aria-busy");
+      b.classList.toggle("is-busy", on);
+    });
+  }
+
+  // build: optional fn returning an already-built message (waits with a number);
+  // it is re-run on a language switch.
+  function report(kind, key, build) {
+    exportStatuses().forEach(function (n) { setStatus(n, kind, key, build); });
+  }
+
+  function doExport() {
     if (exporting) return;
     exporting = true;
-    btns.forEach(function (b) { b.disabled = true; b.setAttribute("aria-busy", "true"); b.classList.add("is-busy"); });
-    setStatus("busy", "dlBusy");
+    setBusy(true);
+    report("busy", "dlBusy");
     fetchExport().catch(function () { return { status: 0 }; }).then(function (r) {
       exporting = false;
-      btns.forEach(function (b) { b.disabled = false; b.removeAttribute("aria-busy"); b.classList.remove("is-busy"); });
+      setBusy(false);
       if (r.status === 200) {
-        if (r.warn) return setStatus("warn", r.warn);
-        setStatus("ok", "dlOk");
+        if (r.warn) return report("warn", r.warn);
+        report("ok", "dlOk");
         if (window.GymToast) GymToast.show({ message: tr("dlOk") });
       } else if (r.interrupted) {
-        setStatus("err", "dlErrCut");
+        report("err", "dlErrCut");
       } else if (r.status === 429) {
-        setStatus("err", "errGeneric", rateLimitMsg(r));
+        report("err", "errGeneric", function () { return rateLimitMsg(r); });
       } else {
-        setStatus("err", exportErrorKey(r));
+        report("err", exportErrorKey(r));
       }
     });
   }
@@ -248,26 +274,29 @@
         '</div>' +
       '</div>';
     section = host;
-    el("pvDownload").addEventListener("click", function () {
-      doExport([el("pvDownload")], function (kind, key, text) { setStatus(el("pvStatus"), kind, key, text); });
-    });
+    el("pvDownload").addEventListener("click", doExport);
     el("pvDelete").addEventListener("click", openSheet);
     paint();
   }
 
-  // text: an already-built message (waits with a number); it carries no
-  // data-pk, so a language switch leaves it as is.
-  function setStatus(node, kind, key, text) {
+  // build: fn returning an already-built message (waits with a number). It is
+  // stored on the node and re-run by paintNode so a language switch re-translates it.
+  function setStatus(node, kind, key, build) {
     if (!node) return;
     node.className = node.className.replace(/\s*is-(busy|ok|warn|err)/g, "") + " is-" + kind;
-    if (text) { delete node.dataset.pk; node.textContent = text; return; }
+    if (build) { delete node.dataset.pk; node._pvText = build; node.textContent = build(); return; }
+    node._pvText = null;
     node.dataset.pk = key;
     node.textContent = tr(key);
   }
 
   function paintNode(root) {
-    var nodes = root.querySelectorAll("[data-pk]");
-    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = tr(nodes[i].dataset.pk);
+    var nodes = root.querySelectorAll("[data-pk], .pv-status");
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n._pvText) n.textContent = n._pvText();
+      else if (n.dataset.pk) n.textContent = tr(n.dataset.pk);
+    }
   }
 
   function paint() {
@@ -338,9 +367,7 @@
     el("pvCancel").addEventListener("click", closeSheet);
     el("pvRaCancel").addEventListener("click", closeSheet);
     el("pvGo").addEventListener("click", runDelete);
-    el("pvShDl").addEventListener("click", function () {
-      doExport([el("pvShDl")], function (kind, key, text) { setStatus(el("pvShStatus"), kind, key, text); });
-    });
+    el("pvShDl").addEventListener("click", doExport);
     el("pvRaForm").addEventListener("submit", reauthLocal);
     sheet.addEventListener("cancel", function (e) { if (deleting) e.preventDefault(); });
     sheet.addEventListener("click", function (e) { if (e.target === sheet && !deleting) closeSheet(); });
@@ -360,7 +387,10 @@
     el("pvInput").value = "";
     el("pvGo").disabled = true;
     el("pvErr").textContent = "";
-    el("pvShStatus").textContent = ""; el("pvShStatus").className = "pv-status";
+    var shs = el("pvShStatus");
+    if (exporting) setStatus(shs, "busy", "dlBusy");
+    else { shs.textContent = ""; shs.className = "pv-status"; delete shs.dataset.pk; shs._pvText = null; }
+    setBusy(exporting);
     showView("confirm");
     if (!sheet.open) sheet.showModal();
     el("pvInput").focus();
@@ -470,8 +500,7 @@
 
   function backToConfirm() {
     showView("confirm");
-    var s = el("pvShStatus");
-    s.className = "pv-status is-ok"; s.dataset.pk = "raDone"; s.textContent = tr("raDone");
+    setStatus(el("pvShStatus"), "ok", "raDone");
     el("pvGo").disabled = !matches(el("pvInput").value);
     el("pvInput").focus();
   }
@@ -514,5 +543,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  window.GymPrivacy = { wipeLocal: wipeLocal, _test: { matches: matches, filenameFrom: filenameFrom, waitText: waitText } };
+  window.GymPrivacy = { wipeLocal: wipeLocal, _test: { matches: matches, filenameFrom: filenameFrom, waitText: waitText, setExportTimeout: function (ms) { exportTimeoutMs = ms; }, setApiBase: function (b) { API_BASE = b; } } };
 })();
