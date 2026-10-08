@@ -1245,7 +1245,11 @@ function startRestTimer(seconds, name){
   const total = seconds;
   timerLabel.textContent = t("restTimer").replace("{name}", name);
   timerBar.classList.add("show");
+  // Jump to full without animating the bar back up from the previous timer.
+  timerFill.style.transition = "none";
   renderRestTime(remaining, total);
+  void timerFill.offsetWidth;
+  timerFill.style.transition = "";
 
   restInterval = setInterval(()=>{
     remaining -= 1;
