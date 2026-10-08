@@ -39,6 +39,7 @@
 .pv-status{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); }
 .pv-status:empty{ display:none; }
 .pv-status.is-ok{ color:var(--success-text); }
+.pv-status.is-warn{ color:var(--warn); font-weight:var(--fw-medium); }
 .pv-status.is-err{ color:var(--danger); font-weight:var(--fw-medium); }
 .pv-err{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); font-weight:var(--fw-medium); color:var(--danger); }
 .pv-err:empty{ display:none; }
