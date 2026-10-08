@@ -303,6 +303,7 @@
     });
   }
 
+  var photoBusy = false; // one photo upload at a time
   function onPhotoChosen(e) {
     var input = e.target;
     var file = input.files && input.files[0];
@@ -318,6 +319,8 @@
       setPhotoStatus(str("profPhotoTooBig"), true);
       return;
     }
+    if (photoBusy) return;
+    photoBusy = true;
     setPhotoStatus(str("profUploading"), false);
     downscaleImage(file)
       .then(function (blob) {
@@ -335,7 +338,8 @@
         if (err && err.status === 413) { setPhotoStatus(str("profPhotoTooBig"), true); return; }
         if (err && err.status === 422) { setPhotoStatus(str("profPhotoType"), true); return; }
         setPhotoStatus(str("profPhotoErr"), true);
-      });
+      })
+      .then(function () { photoBusy = false; });
   }
 
   // ---------------- save form ----------------

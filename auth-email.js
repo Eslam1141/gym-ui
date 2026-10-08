@@ -215,12 +215,12 @@
     var cls = o.cls ? ' class="' + o.cls + '"' : "";
     var extra = o.extra || "";
     var hint = o.hintKey ? '<p class="ae-hint" data-i18n="' + o.hintKey + '">' + escHtml(tr(o.hintKey)) + '</p>' : "";
-    // .ae-glow wraps the input for the mouse-follow border glow (signin-fx.css);
-    // password fields also get the show/hide eye (toggled by signin-fx.js).
+    // .ae-wrap positions the show/hide eye on password fields (onboarding.css,
+    // toggled by onboarding.js).
     var isPw = type === "password";
     var eye = isPw ? '<button type="button" class="ae-eye" aria-pressed="false" data-i18n-aria="aeShowPw" aria-label="' + escAttr(typeof t === "function" ? t("aeShowPw") : "Show password") + '"></button>' : "";
     return '<label class="ae-field"><span id="' + id + 'Lbl" data-i18n="' + labelKey + '">' + escHtml(tr(labelKey)) + '</span>' +
-      '<span class="ae-glow' + (isPw ? ' ae-glow-eye' : '') + '">' +
+      '<span class="ae-wrap' + (isPw ? ' ae-wrap-eye' : '') + '">' +
       '<input id="' + id + '" name="' + id + '" type="' + type + '" aria-labelledby="' + id + 'Lbl"' + cls + val + ac + extra + ' required>' + eye +
       '</span></label>' + hint;
   }

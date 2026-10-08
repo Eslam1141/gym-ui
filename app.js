@@ -1010,6 +1010,7 @@ function renderExercises(){
       saveJSON("gym_checks", checks);
       const on = !!checks[k][id];
       el.classList.toggle("on", on);
+      if(on && window.GymMotion) GymMotion.pop(el);
       const card = el.closest(".ex-card");
       if(card) card.classList.toggle("done", on);
       updateProgress();
@@ -1114,8 +1115,10 @@ function isDayComplete(dayId){
 function updateProgress(){
   const { done, total } = dayProgress(activeDay);
   progressPill.textContent = `${done}/${total}`;
+  const wasDone = progressPill.classList.contains("done");
   progressPill.classList.toggle("done", done===total && total>0);
-  barFill.style.width = total ? (done/total*100)+"%" : "0%";
+  if(!wasDone && done===total && total>0 && window.GymMotion) GymMotion.pop(progressPill);
+  barFill.style.setProperty("--p", total ? done/total : 0);
 }
 
 function renderAll(){
@@ -1257,7 +1260,7 @@ function renderRestTime(remaining, total){
   const m = Math.max(0,Math.floor(remaining/60)).toString().padStart(2,"0");
   const s = Math.max(0,remaining%60).toString().padStart(2,"0");
   timerTime.textContent = `${m}:${s}`;
-  timerFill.style.width = Math.max(0,(remaining/total*100))+"%";
+  timerFill.style.setProperty("--p", Math.max(0, remaining/total));
 }
 document.getElementById("timerSkip").onclick = ()=>{
   clearInterval(restInterval);
@@ -1282,9 +1285,6 @@ const sessionTimeEl = document.getElementById("sessionTime");
 const sessionHintEl = document.getElementById("sessionHint");
 const sessionBtn = document.getElementById("sessionBtn");
 const sessionPauseBtn = document.getElementById("sessionPauseBtn");
-if (sessionBtn && window.MetallicButton) {
-  window.MetallicButton.enhance(sessionBtn, { shellClass: "metallic-shell--session", themeVar: "--accent" });
-}
 const miniTimer = document.getElementById("miniTimer");
 const miniLabel = document.getElementById("miniLabel");
 const miniTime = document.getElementById("miniTime");
@@ -1383,7 +1383,8 @@ miniTimer.onclick = ()=>{
   catch(e){ window.scrollTo(0,0); }
 };
 
-sessionBtn.onclick = ()=>{
+// Guarded: a double tap must not start-then-immediately-stop (or double-log) a session.
+sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){
     const durationSec = sessionElapsedSec();
     sessions[activeDay] = sessions[activeDay] || [];
@@ -1401,7 +1402,7 @@ sessionBtn.onclick = ()=>{
     saveJSON("gym_session_active", activeSession);
   }
   updateSessionUI();
-};
+}, { cooldown: 500 });
 
 // ---------------- INSTALL TIP ----------------
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;

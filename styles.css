@@ -24,6 +24,11 @@
   --radius-sm:8px; --radius:14px; --radius-lg:20px; --radius-pill:999px;
   /* motion */
   --dur-fast:.14s; --dur-med:.28s; --dur-slow:.5s; --ease:cubic-bezier(.22,.61,.36,1);
+  /* motion system (motion.css / motion.js): entrance curve, springy settle,
+     per-item stagger step, slide distance, and the inline direction sign
+     (flipped under [dir=rtl] so slides always travel along reading order). */
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-stagger:45ms; --m-dist:14px; --m-dir:1; --nav-sign:1;
 
   /* dark / men (default) */
   --surface:#10171f; --surface-2:#1b2633; --surface-3:#283648;
@@ -104,8 +109,9 @@
 /* Reduced motion collapses every tokenised duration; rules with hard-coded
    timings keep their own guards below. */
 @media (prefers-reduced-motion: reduce){
-  :root{ --dur-fast:.01s; --dur-med:.01s; --dur-slow:.01s; }
+  :root{ --dur-fast:.01s; --dur-med:.01s; --dur-slow:.01s; --dur-stagger:0s; --m-dist:0px; }
 }
+[dir="rtl"]{ --m-dir:-1; }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 /* P1-5: baseline visible focus ring for every interactive control, keyboard-
    only (:focus-visible, so a mouse/touch tap never gets an unwanted ring).
@@ -210,53 +216,6 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   color:#fff; background:var(--rust); white-space:nowrap;
 }
 
-/* --- metallic-button.js: WebGL shader sheen behind session-btn / obStartBtn --- */
-.metallic-shell{
-  position:relative; display:inline-block; flex:none; border-radius:10px;
-  box-shadow:0 0 0 1px rgba(0,0,0,.3), 0 20px 12px rgba(0,0,0,.08), 0 9px 9px rgba(0,0,0,.12), 0 2px 5px rgba(0,0,0,.15);
-  transition:box-shadow .15s ease;
-}
-.metallic-shell.is-hovered{
-  box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 12px 6px rgba(0,0,0,.05), 0 8px 5px rgba(0,0,0,.1), 0 4px 4px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.2);
-}
-.metallic-shell.is-pressed{
-  box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.3);
-}
-.metallic-shell--start{ width:100%; max-width:280px; border-radius:14px; }
-/* Light theme: the chrome shader is black/white stripes, which fights the
-   cream surface and the white label. Swap it for a solid deep-primary face
-   with a soft sheen; white on --primary is >= 5.16:1 and on the pressed tone
-   darker still. The canvas stays mounted but hidden. */
-:root[data-theme="light"] .metallic-canvas-wrap{ display:none; }
-:root[data-theme="light"] .metallic-shell{
-  background:var(--sheen), linear-gradient(135deg, var(--primary), var(--primary-pressed));
-  box-shadow:var(--elev-1);
-}
-:root[data-theme="light"] .metallic-shell.is-hovered{ background:var(--sheen), linear-gradient(135deg, var(--primary-hover), var(--primary-pressed)); }
-:root[data-theme="light"] .metallic-shell.is-pressed{ background:var(--primary-pressed); box-shadow:none; }
-.metallic-canvas-wrap{
-  position:absolute; inset:0; overflow:hidden; border-radius:inherit; pointer-events:none;
-}
-.metallic-canvas-wrap canvas{ position:absolute; inset:0; width:100%!important; height:100%!important; display:block; }
-.metallic-ripple{
-  position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
-  background:radial-gradient(circle, rgba(255,255,255,.4) 0%, rgba(255,255,255,0) 70%);
-  animation:metallic-ripple .6s ease-out; pointer-events:none;
-}
-@keyframes metallic-ripple{
-  0%{ transform:scale(0); opacity:.6; }
-  100%{ transform:scale(4); opacity:0; }
-}
-.metallic-face{
-  position:relative; z-index:1; background:transparent!important; background-image:none!important;
-  transition:transform .15s ease;
-}
-.metallic-shell.is-pressed .metallic-face{ transform:translateY(1px) scale(.98); }
-@media (prefers-reduced-motion: reduce){
-  .metallic-shell{ transition:none; }
-  .metallic-shell.is-pressed .metallic-face{ transform:none; }
-  .metallic-ripple{ animation:none; display:none; }
-}
 .session-btn.stop{ background:var(--rust-soft); }
 .session-btn.ghost{
   background:transparent; border:1px solid var(--green);
@@ -281,7 +240,8 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   height:6px; background:var(--panel); border-radius:99px; overflow:hidden;
   margin:8px 4px 18px;
 }
-.bar-fill{ height:100%; background:var(--rust); width:0%; transition:width .3s; }
+.bar-fill{ height:100%; background:var(--rust); width:100%; transform:scaleX(var(--p,0)); transform-origin:0 50%; transition:transform var(--dur-slow) var(--ease-out); }
+[dir="rtl"] .bar-fill{ transform-origin:100% 50%; }
 
 .ex-card{
   background:var(--panel);
@@ -428,7 +388,8 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 .timer-info .label{ font-size:var(--text-sm); color:var(--paper-dim); }
 .timer-info .time{ font-size:var(--text-2xl); font-weight:var(--fw-black); color:var(--paper); font-variant-numeric:tabular-nums; }
 .timer-track{ height:5px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:8px; max-width:640px; }
-.timer-fill{ height:100%; background:var(--rust); width:100%; }
+.timer-fill{ height:100%; background:var(--rust); width:100%; transform:scaleX(var(--p,1)); transform-origin:0 50%; transition:transform 1s linear; }
+[dir="rtl"] .timer-fill{ transform-origin:100% 50%; }
 .timer-skip{
   background:transparent; border:1px solid var(--line); color:var(--paper-dim);
   font-size:var(--text-sm); font-weight:700; padding:8px 14px; border-radius:8px; cursor:pointer; font-family:inherit;
@@ -584,7 +545,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
   display:flex; align-items:center; gap:12px;
   max-width:calc(100% - 32px);
   background:var(--panel2); border:1px solid var(--line); border-radius:12px;
-  padding:6px 8px 6px 16px; box-shadow:var(--elev-2, 0 14px 40px rgba(0,0,0,.45));
+  padding-block:6px; padding-inline:16px 8px; box-shadow:var(--elev-2, 0 14px 40px rgba(0,0,0,.45));
   opacity:0; pointer-events:none;
   transition:opacity .22s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
 }
@@ -746,37 +707,6 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
 }
 #onboarding[hidden]{ display:none; }
 
-/* --- beams-bg.js: shared canvas-backdrop host (in-app #bgfx + coach teaser) ---
-   .beams-bg-host is applied by beams-bg.js itself on mount; the host just
-   needs to be a positioned element so the canvas (inserted as its first
-   child) can sit absolutely behind everything else in it. */
-.beams-bg-host{ position:relative; }
-.beams-bg-canvas{
-  position:absolute; inset:0; width:100%; height:100%;
-  /* -1, not 0: guarantees it paints behind the host's OWN static (non-
-     positioned) children too — a negative z-index descendant is painted
-     before both the in-flow content step and the z-index:0/auto step, so
-     this works whether or not the host's other children are positioned
-     (.coach-teaser's are not; #onboarding's siblings are). */
-  z-index:-1; pointer-events:none; filter:blur(15px); border-radius:inherit;
-}
-@media (prefers-reduced-motion: reduce){
-  /* The JS already freezes the animation loop; drop the blur too so the
-     static frame doesn't cost a blur-filter repaint on every scroll/resize. */
-  .beams-bg-canvas{ filter:none; }
-}
-.ob-video{
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-  opacity:0; transition:opacity .8s ease; z-index:0; pointer-events:none;
-}
-.ob-video.is-ready{ opacity:.55; }
-.ob-video-overlay{
-  position:absolute; inset:0; z-index:0; pointer-events:none;
-  background:linear-gradient(180deg,
-    color-mix(in srgb, var(--bg) 35%, transparent),
-    color-mix(in srgb, var(--bg) 15%, transparent) 45%,
-    color-mix(in srgb, var(--bg) 65%, transparent));
-}
 body.onboarding-open .wrap,
 body.onboarding-open #timerBar,
 body.onboarding-open #miniTimer,
@@ -870,7 +800,7 @@ body.onboarding-open #coachFabTip{ display:none !important; }
 }
 .ob-why.open{ max-height:200px; }
 .ob-why li{
-  font-size:var(--text-sm); color:var(--paper-dim); padding:6px 0 6px 22px; position:relative;
+  font-size:var(--text-sm); color:var(--paper-dim); padding-block:6px; padding-inline-start:22px; position:relative;
 }
 .ob-why li::before{
   content:"\2713"; position:absolute; inset-inline-start:0; color:var(--green); font-weight:var(--fw-black);
@@ -894,7 +824,6 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
 @media (prefers-reduced-motion: reduce){
   .ob-why{ transition:none; }
   .ob-fx{ filter:none; }
-  .ob-video{ transition:none; }
   .ob-inner{ animation:none; }
 }
 
@@ -1281,6 +1210,14 @@ body.onboarding-open #appNav{ display:none !important; }
   animation:coachspin .9s linear infinite;
 }
 @keyframes coachspin{ to{ transform:rotate(360deg); } }
+/* "Generating..." line under the spinner: three dots rise in turn. */
+.coach-ai-loading{ margin:0 0 16px; font-weight:700; color:var(--paper); }
+.coach-dots{ display:inline-flex; gap:3px; margin-inline-start:6px; vertical-align:middle; }
+.coach-dots i{ width:4px; height:4px; border-radius:50%; background:currentColor; animation:coachdot 1.2s var(--ease) infinite; }
+.coach-dots i:nth-child(2){ animation-delay:.15s; }
+.coach-dots i:nth-child(3){ animation-delay:.3s; }
+@keyframes coachdot{ 0%, 60%, 100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+@media (prefers-reduced-motion:reduce){ .coach-dots i{ animation:none; opacity:.7; } }
 
 /* ---- Coach: result ---- */
 .coach-result{ margin-bottom:26px; display:flex; flex-direction:column; gap:16px; }
@@ -1770,7 +1707,8 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 .food-progress{ display:flex; flex-direction:column; gap:5px; }
 .food-progress-label{ font-size:var(--text-xs); color:var(--paper-dim); font-variant-numeric:tabular-nums; }
 .food-progress-track{ height:8px; border-radius:5px; background:var(--panel2); overflow:hidden; }
-.food-progress-fill{ height:100%; border-radius:5px; background:var(--accent); transition:width var(--dur-med) var(--ease); }
+.food-progress-fill{ height:100%; width:100%; border-radius:5px; background:var(--accent); transform:scaleX(var(--p,1)); transform-origin:0 50%; animation:m-fill var(--dur-slow) var(--ease-out) backwards; }
+[dir="rtl"] .food-progress-fill{ transform-origin:100% 50%; }
 .food-approx-note{ font-size:var(--text-xs); color:var(--paper-dim); }
 .food-search{ padding:14px; border-radius:var(--radius); background:var(--panel); border:1px solid var(--line); }
 .food-search-hint{ font-size:var(--text-sm); color:var(--paper-dim); padding:10px 2px; }
@@ -1808,7 +1746,7 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 .food-del-btn:hover, .food-del-btn:focus-visible{ color:var(--danger); border-color:var(--danger); }
 .food-del-btn:disabled{ opacity:.5; cursor:default; }
 @media (prefers-reduced-motion: reduce){
-  .food-progress-fill{ transition:none; }
+  .food-progress-fill{ animation:none; }
 }
 
 /* ============================================================

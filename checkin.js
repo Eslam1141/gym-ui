@@ -363,11 +363,13 @@
     ]);
   }
 
-  function submitCheckIn(reqBody) {
+  // One check-in request at a time (GymAct.once holds until the promise settles).
+  var submitCheckIn = GymAct.once(function (reqBody) { return submitCheckInRaw(reqBody); });
+  function submitCheckInRaw(reqBody) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     renderLoading();
-    fetchTimeout(CHECKIN_URL, {
+    return fetchTimeout(CHECKIN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
       body: JSON.stringify(reqBody)
