@@ -24,15 +24,11 @@
  * Loads after app.js (reads its DAYS_* and MUSCLE_SHAPES globals) and
  * after ui.js. No external deps.
  *
- * NOTE on i18n/DOM helpers: h()/lang()/s()/mount() are NOT shared globals
- * anywhere in this codebase — coach.js and calendar.js each define their
- * own local copies inside their own IIFE (verified by reading both files;
- * app.js's own string table is a *different* object, `const T`, read via
- * `t()`, used only for static data-i18n HTML bindings — no dynamically
- * rendered screen module reads from it). This module follows that same
- * established convention: its own local STR/s()/lang()/h(), matching
- * calendar.js's exact pattern, and its own local mount() into #coachBody,
- * matching coach.js's exact pattern.
+ * i18n/DOM helpers: h(), lang() and s() come from dom.js (window.GymDom,
+ * shared with chat/checkin/coach/food); this module keeps its own STR table
+ * and its own mount() into #coachBody, matching coach.js. app.js's string
+ * table is a different object (`const T`, read via `t()`) used only for
+ * static data-i18n HTML bindings.
  *
  * Public API: window.GymWorkoutBuilder = { open, exportAsWorkoutPlan }.
  * exportAsWorkoutPlan() -> { split: "Custom", days: [{day, exercises:
@@ -43,10 +39,8 @@
   "use strict";
 
   // ---------------- i18n (same local pattern as coach.js/calendar.js) ----------------
-  function lang() {
-    try { if (window.activeLang === "ar") return "ar"; } catch (e) {}
-    try { return localStorage.getItem("gym_lang") === "ar" ? "ar" : "en"; } catch (e) { return "en"; }
-  }
+  if (!window.GymDom) throw new Error("workout-builder.js: dom.js must load first");
+  var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     wbTitle: ["Build Your Own Plan", "ابنِ خطتك الخاصة"],
     wbEasy: ["easy", "سهل"],
@@ -63,36 +57,7 @@
     wbExercisesShort: ["exercises", "تمارين"],
     wbDropRejected: ["Can't add — this day already has an exercise for that muscle area", "تعذّرت الإضافة — هذا اليوم يحتوي بالفعل على تمرين لهذه المنطقة العضلية"]
   };
-  function s(k) {
-    var e = STR[k];
-    return e ? e[lang() === "ar" ? 1 : 0] : k;
-  }
-
-  // ---------------- tiny DOM helper (same pattern as coach.js's h()) ----------------
-  function h(tag, attrs) {
-    var node = document.createElement(tag);
-    if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") node.className = attrs[k];
-        else if (k === "text") node.textContent = attrs[k];
-        else if (k === "on" && attrs[k]) {
-          Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
-        } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
-      });
-    }
-    var put = function (x) {
-      if (x == null || x === false) return;
-      if (typeof x === "string") node.appendChild(document.createTextNode(x));
-      else if (x && x.nodeType) node.appendChild(x);
-      else node.appendChild(document.createTextNode(String(x))); // tolerate odd model output
-    };
-    for (var i = 2; i < arguments.length; i++) {
-      var c = arguments[i];
-      if (Array.isArray(c)) c.forEach(put);
-      else put(c);
-    }
-    return node;
-  }
+  var s = GymDom.makeT(STR);
 
   // ---------------- exercise index, deduplicated by shape ----------------
   // one entry per unique exercise (by `en` name) — the same exercise
