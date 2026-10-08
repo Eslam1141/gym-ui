@@ -136,6 +136,27 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
   .stage .phone-front { animation: rise .9s .4s var(--ease) both; }
   @keyframes rise { from { opacity: 0; translate: 0 28px; } }
   @keyframes rise-back { from { opacity: 0; translate: 0 40px; } }
+
+  /* Scroll motion, switched on by landing.js (html.motion) so the page is
+     fully visible without JS. Reveals use `translate`; the hero phones'
+     scroll drift uses `transform`, so neither fights the entrance keyframes. */
+  html.motion .reveal { opacity: 0; translate: 0 26px; transition: opacity .8s var(--ease), translate .8s var(--ease); transition-delay: var(--d, 0s); }
+  html.motion .reveal.in { opacity: 1; translate: none; }
+  .stage .phone { transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
+  html.motion .calc-macros > span { opacity: 0; translate: 0 8px; transition: opacity .5s var(--ease), translate .5s var(--ease); }
+  html.motion .calc.in .calc-macros > span { opacity: 1; translate: none; }
+  html.motion .calc.in .calc-macros > span:nth-child(1) { transition-delay: .7s; }
+  html.motion .calc.in .calc-macros > span:nth-child(2) { transition-delay: .85s; }
+  html.motion .calc.in .calc-macros > span:nth-child(3) { transition-delay: 1s; }
+  html.motion .weeks span { transform: scaleX(0); transform-origin: left; transition: transform .45s var(--ease); }
+  html.motion[dir="rtl"] .weeks span { transform-origin: right; }
+  html.motion .weeks b { opacity: 0; scale: .6; transition: opacity .4s var(--ease), scale .4s var(--ease); transition-delay: 1.7s; }
+  html.motion .cell-streak.in .weeks span { transform: none; }
+  html.motion .cell-streak.in .weeks b { opacity: 1; scale: 1; }
+  html.motion .cell-streak.in .weeks span:nth-child(1) { transition-delay: .3s; }
+  html.motion .cell-streak.in .weeks span:nth-child(2) { transition-delay: .65s; }
+  html.motion .cell-streak.in .weeks span:nth-child(3) { transition-delay: 1s; }
+  html.motion .cell-streak.in .weeks span:nth-child(4) { transition-delay: 1.35s; }
 }
 
 /* Sections */
@@ -155,7 +176,18 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .cell-log .crop img { width: 330px; max-width: none; margin-top: -236px; margin-inline: auto; }
 .cell-food { background: linear-gradient(145deg, var(--teal), var(--teal-deep)); border-color: transparent; justify-content: flex-end; }
 .cell-food p { color: rgb(243 240 232 / .88); }
+.calc { margin-bottom: auto; align-self: start; min-width: min(100%, 260px); padding: 16px 18px; border-radius: 18px; background: rgb(13 17 23 / .32); border: 1px solid rgb(243 240 232 / .16); display: grid; gap: 6px; }
+.cell-food .calc p { max-width: none; }
+.calc-food { display: flex; justify-content: space-between; gap: 16px; font-weight: 600; }
+.calc-g { color: rgb(243 240 232 / .7); font-weight: 500; }
+.cell-food .calc-kcal { color: #fff; font-size: 1rem; }
+.calc-kcal strong { font-variant-numeric: tabular-nums; font-size: 2.25rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.calc-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .875rem; }
 .cell-video, .cell-streak { justify-content: flex-end; }
+.weeks { margin-bottom: auto; display: flex; align-items: center; gap: 6px; }
+.weeks span { flex: 1; height: 10px; border-radius: var(--r-pill); background: var(--teal-lit); }
+.weeks b { margin-inline-start: 6px; padding: 4px 10px; border-radius: var(--r-pill); background: rgb(60 194 184 / .16); color: var(--teal-lit); font-size: .8125rem; font-weight: 700; white-space: nowrap; }
+.cell .soon { color: var(--teal-lit); font-weight: 600; font-size: .9375rem; }
 .cell-streak { background: radial-gradient(90% 90% at 0% 0%, rgb(60 194 184 / .14), transparent 70%), var(--ink-2); }
 
 /* Coach: the focal moment. */

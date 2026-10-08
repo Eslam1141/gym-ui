@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Etqadem | Free gym tracker with an AI coach in Arabic</title>
-  <meta name="description" content="Etqadem is one free app for your gym day: workout plan, set logging, rest timer, form videos, food log and an AI coach that answers in Arabic or English.">
+  <meta name="description" content="Etqadem is one free app for your gym day: workout plan, set logging, rest timer, form videos, a food calorie calculator and an AI coach that answers in Arabic or English.">
   <meta name="theme-color" content="#0d1117">
   <meta name="color-scheme" content="dark">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-etq.png">
@@ -41,7 +41,7 @@
       <div class="hero-copy">
         <h1 data-i18n="hero_h1">Your whole gym day, one free app</h1>
         <p class="echo" data-echo="hero_h1" aria-hidden="true"></p>
-        <p class="lede" data-i18n="hero_sub">Workout plan, set logging, rest timer, form videos, food log and an AI coach that answers in Arabic or English.</p>
+        <p class="lede" data-i18n="hero_sub">Workout plan, set logging, rest timer, form videos, a food calorie calculator and an AI coach that answers in Arabic or English.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="/app/" data-i18n="cta">Start free</a>
           <a class="btn btn-ghost" href="#features" data-i18n="cta_how">See how it works</a>
@@ -76,16 +76,23 @@
           <div class="crop"><img data-shot="m-top" src="assets/app-m-en-top.webp" width="390" height="844" alt="" loading="lazy" decoding="async" data-i18n-alt="shot_top_alt"></div>
         </article>
         <article class="cell cell-food">
-          <h3 data-i18n="f4_h">Food from your kitchen</h3>
-          <p data-i18n="f4_p">Search Egyptian and Gulf foods in Arabic or English and see your daily calories and macros.</p>
+          <div class="calc" role="img" data-i18n-label="calc_label" aria-label="Example: 250 g of ful medames is 275 kcal, with 19 g protein, 37 g carbs and 8 g fat">
+            <p class="calc-food" aria-hidden="true"><span data-i18n="calc_food">Ful medames</span><span class="calc-g">250 <span data-i18n="g">g</span></span></p>
+            <p class="calc-kcal" aria-hidden="true"><strong>275</strong> <span data-i18n="kcal">kcal</span></p>
+            <p class="calc-macros" aria-hidden="true"><span><span data-i18n="m_p">Protein</span> 19<span data-i18n="g">g</span></span><span><span data-i18n="m_c">Carbs</span> 37<span data-i18n="g">g</span></span><span><span data-i18n="m_f">Fat</span> 8<span data-i18n="g">g</span></span></p>
+          </div>
+          <h3 data-i18n="f4_h">Calorie calculator for local food</h3>
+          <p data-i18n="f4_p">Search Egyptian and Gulf foods in Arabic or English, enter the grams, and get the calories, protein, carbs and fat. Your daily total sits next to your coach's target.</p>
         </article>
         <article class="cell cell-video">
           <h3 data-i18n="f3_h">See the movement first</h3>
           <p data-i18n="f3_p">Exercises come with form videos, one tap away.</p>
         </article>
         <article class="cell cell-streak">
-          <h3 data-i18n="f5_h">Keep the streak</h3>
-          <p data-i18n="f5_p">Track your weight, check in weekly and watch your streak grow.</p>
+          <div class="weeks" aria-hidden="true"><span></span><span></span><span></span><span></span><b data-i18n="wk_gift">+1 week</b></div>
+          <h3 data-i18n="f5_h">Keep the streak, earn Premium</h3>
+          <p data-i18n="f5_p">Train, log your weight and check in each week. Rest days keep your streak alive.</p>
+          <p class="soon" data-i18n="f5_soon">Coming soon: every 4-week streak earns you a free week of Premium.</p>
         </article>
       </div>
     </section>
