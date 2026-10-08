@@ -85,3 +85,11 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 @keyframes adm-slide{from{translate:100% 0}}
 @keyframes adm-slide-rtl{from{translate:-100% 0}}
 @keyframes adm-fade{from{opacity:0}}
+
+/* live refresh + clearer chart */
+.adm-quiet *{animation:none !important}
+.adm-live{color:var(--paper-dim);font-size:var(--text-xs);white-space:nowrap}
+.adm-live:not(:empty)::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-inline-end:6px;vertical-align:middle}
+.adm-hint{margin:-4px 0 6px;color:var(--paper-dim);font-size:var(--text-sm)}
+.adm-sum{margin:0 0 10px;font-size:var(--text-sm);font-weight:700}
+.adm-axis{display:flex;justify-content:space-between;color:var(--paper-dim);font-size:var(--text-xs);margin-top:4px}

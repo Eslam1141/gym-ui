@@ -28,7 +28,11 @@
     cA7: ["Active · 7 days", "نشطون · 7 أيام"],
     cA30: ["Active · 30 days", "نشطون · 30 يومًا"],
     cBlocked: ["Blocked", "محظورون"],
-    chartTitle: ["Signups per day (last 90 days)", "التسجيلات يوميًا (آخر 90 يومًا)"],
+    chartTitle: ["New sign-ups per day — last 90 days", "الحسابات الجديدة يوميًا — آخر 90 يومًا"],
+    chartHint: ["Each bar is one day: how many new accounts were created that day. Hover or tap a bar for its date and count.",
+      "كل عمود يمثل يومًا واحدًا: عدد الحسابات الجديدة التي أُنشئت في ذلك اليوم. مرّر أو اضغط على العمود لرؤية التاريخ والعدد."],
+    chartSum: ["{n} sign-ups in total · Busiest day: {d} ({m}) · Today: {t}", "{n} تسجيلًا إجمالًا · أكثر يوم: {d} ({m}) · اليوم: {t}"],
+    updated: ["Live · updated {t}", "مباشر · آخر تحديث {t}"],
     chartAlt: ["{n} signups in the last 90 days; busiest day {d} with {m}.", "{n} تسجيلًا في آخر 90 يومًا؛ أكثر يوم {d} بعدد {m}."],
     provTitle: ["Sign-in methods", "طرق تسجيل الدخول"],
     pGoogle: ["Google", "Google"],
@@ -196,28 +200,44 @@
   }
   var views = {}; // tab -> function(main)
   function render(tab) {
+    main.classList.remove("adm-quiet");
     main.textContent = "";
     main.appendChild(el("p", { class: "adm-msg", text: s("loading") }));
     views[tab](main);
   }
 
   // ---- overview ----
-  views.overview = function () {
+  views.overview = function () { loadOverview(false); };
+  // quiet = live refresh: keep what's on screen if it fails, no loading
+  // placeholder, no entrance animation or count-up.
+  function loadOverview(quiet) {
     api("/stats").then(function (r) {
       if (authFailed(r)) return;
-      if (!r.ok) return showError(function () { render("overview"); });
+      if (state.tab !== "overview") return; // switched tabs while loading
+      if (!r.ok) { if (!quiet) showError(function () { render("overview"); }); return; }
       var st = r.data;
+      main.classList.toggle("adm-quiet", quiet);
       main.textContent = "";
       var cards = [
         ["cTotal", st.totalUsers], ["cToday", st.newUsers.today], ["c7", st.newUsers.d7], ["c30", st.newUsers.d30],
         ["cA7", st.activeUsers.d7], ["cA30", st.activeUsers.d30], ["cBlocked", st.blockedUsers]
       ];
       main.appendChild(el("div", { class: "adm-cards" }, cards.map(function (c, i) {
-        var card = el("div", { class: "adm-card" }, [countUp(el("b"), c[1]), el("span", { text: s(c[0]) })]);
+        var num = quiet ? el("b", { text: fmtNum(c[1]) }) : countUp(el("b"), c[1]);
+        var card = el("div", { class: "adm-card" }, [num, el("span", { text: s(c[0]) })]);
         card.style.setProperty("--i", i);
         return card;
       })));
-      main.appendChild(el("section", { class: "adm-section" }, [el("h2", { text: s("chartTitle") }), chart(st.signupsPerDay || [])]));
+      var series = st.signupsPerDay || [];
+      var sum = series.reduce(function (a, d) { return a + d.count; }, 0);
+      var peak = series.reduce(function (b, d) { return d.count > (b ? b.count : -1) ? d : b; }, null);
+      main.appendChild(el("section", { class: "adm-section" }, [
+        el("h2", { text: s("chartTitle") }),
+        el("p", { class: "adm-hint", text: s("chartHint") }),
+        el("p", { class: "adm-sum", text: s("chartSum", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? fmtNum(peak.count) : 0, t: fmtNum(st.newUsers.today) }) }),
+        chart(series),
+        series.length ? el("div", { class: "adm-axis" }, [el("span", { text: series[0].date }), el("span", { text: series[series.length - 1].date })]) : null
+      ]));
       var p = st.providers, total = (p.google + p.password + p.both) || 1;
       main.appendChild(el("section", { class: "adm-section" }, [
         el("h2", { text: s("provTitle") }),
@@ -226,8 +246,30 @@
           return el("div", null, [el("span", { text: s(x[0]) }), el("span", null, [bar]), el("span", { text: fmtNum(x[1]) })]);
         }))
       ]));
+      stampUpdated();
     });
-  };
+  }
+
+  // ---- live refresh: overview and the users list re-fetch every 30 s while
+  // the page is visible (and right away when it becomes visible again), so
+  // the numbers track real users without a manual reload. Paused while a
+  // user panel is open so nothing moves under an admin action.
+  var LIVE_MS = 30000;
+  function stampUpdated() {
+    var u = document.getElementById("admUpdated");
+    if (!u) return;
+    var t;
+    try { t = new Date().toLocaleTimeString(AR ? "ar" : "en", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
+    catch (e) { t = new Date().toTimeString().slice(0, 8); }
+    u.textContent = s("updated", { t: t });
+  }
+  function liveTick() {
+    if (document.visibilityState === "hidden") return;
+    var panel = document.getElementById("admPanel");
+    if (panel && !panel.hidden) return;
+    if (state.tab === "overview") loadOverview(true);
+    else if (state.tab === "users") loadList(true);
+  }
   function chart(series) {
     var W = 900, H = 180, pad = 22, n = series.length || 1;
     var max = series.reduce(function (m, d) { return Math.max(m, d.count); }, 0);
@@ -307,7 +349,7 @@
     loadList();
   };
   var listSeq = 0;
-  function loadList() {
+  function loadList(quiet) {
     var u = state.users, seq = ++listSeq;
     var host = document.getElementById("admListHost");
     if (!host) return;
@@ -315,7 +357,10 @@
     api("/users" + qs).then(function (r) {
       if (seq !== listSeq) return; // a newer search superseded this one
       if (authFailed(r)) return;
+      if (quiet && !r.ok) return; // live refresh failed: keep the current list
+      main.classList.toggle("adm-quiet", !!quiet);
       host.textContent = "";
+      if (r.ok) stampUpdated();
       if (!r.ok) { host.appendChild(el("p", { class: "adm-err", role: "alert", text: s("loadErr") })); return; }
       var d = r.data;
       if (!d.users.length) { host.appendChild(el("p", { class: "adm-msg", text: s("none") })); return; }
@@ -586,10 +631,12 @@
     document.getElementById("admTabs").hidden = false;
     document.getElementById("admTabs").addEventListener("click", function (e) {
       var t = e.target.closest("[data-tab]");
-      if (t) setTab(t.getAttribute("data-tab"));
+      if (t && t.getAttribute("data-tab") !== state.tab) setTab(t.getAttribute("data-tab"));
     });
     var h = (location.hash || "").slice(1);
     setTab(views[h] ? h : "overview");
+    setInterval(liveTick, LIVE_MS);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") liveTick(); });
   }
   // Defer init until admin.js has registered every view (single file, so
   // DOMContentLoaded is enough: the whole script has run by then).
