@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ splash icon: the reversed Etqadem mark (icons/logo-etq-ondark.svg),
+     scaled to sit inside the splash icon's circular safe zone on the dark
+     #10171f background. Same mark, colours and centre as the web app's
+     animated #bootLoader, which takes over from this splash. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="144" android:viewportHeight="144">
+    <group android:translateX="24" android:translateY="24"
+        android:pivotX="48" android:pivotY="48" android:scaleX="0.72" android:scaleY="0.72">
+        <path android:fillColor="#F3F0E8"
+            android:pathData="M9,78h17a5,5 0,0 1,5 5v2a5,5 0,0 1,-5 5h-17a5,5 0,0 1,-5 -5v-2a5,5 0,0 1,5 -5z"/>
+        <path android:fillColor="#F3F0E8"
+            android:pathData="M39,68h17a5,5 0,0 1,5 5v12a5,5 0,0 1,-5 5h-17a5,5 0,0 1,-5 -5v-12a5,5 0,0 1,5 -5z"/>
+        <path android:fillColor="#F3F0E8"
+            android:pathData="M69,58h17a5,5 0,0 1,5 5v22a5,5 0,0 1,-5 5h-17a5,5 0,0 1,-5 -5v-22a5,5 0,0 1,5 -5z"/>
+        <path android:strokeColor="#F3F0E8" android:strokeWidth="10" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M43,30L36,51"/>
+        <path android:strokeColor="#F3F0E8" android:strokeWidth="9" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M36,51L52,54L50,65"/>
+        <path android:strokeColor="#F3F0E8" android:strokeWidth="9" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M36,51L28,65L21,75.5"/>
+        <path android:strokeColor="#F3F0E8" android:strokeWidth="8" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M43,30L55,36L63,28"/>
+        <path android:strokeColor="#F3F0E8" android:strokeWidth="8" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M43,30L33,39L27,47"/>
+        <path android:fillColor="#3CC2B8"
+            android:pathData="M48,6a8.5,8.5 0,1 1,0 17a8.5,8.5 0,1 1,0 -17z"/>
+    </group>
+</vector>
