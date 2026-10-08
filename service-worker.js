@@ -40,6 +40,7 @@ const ASSETS = [
   "./notifications.js",
   "./profile.js",
   "./toast.js",
+  "./dom.js",
   "./config.js",
   "./manifest.json",
   "./icons/logo-etq.svg",

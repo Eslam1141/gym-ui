@@ -32,3 +32,18 @@ test("GymDom.lang and makeT follow gym_lang and fall back to the key", async ({ 
   expect(r).toEqual({ ar: ["ar", "أهلاً", "nope"], en: ["en", "Hello"], other: "en" });
   await context.close();
 });
+
+const fs = require("fs");
+const path = require("path");
+
+test("dom.js is shipped and precached", () => {
+  const root = path.join(__dirname, "..");
+  const sw = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+  const docker = fs.readFileSync(path.join(root, "Dockerfile"), "utf8");
+  expect(sw).toContain('"./dom.js"');
+  const copyLine = docker.split("\n").find((l) => l.startsWith("COPY") && l.includes("toast.js") && l.includes("/app/"));
+  expect(copyLine).toContain(" dom.js ");
+  const start = docker.indexOf("HASH=$(cat");
+  const hashBlock = docker.slice(start, docker.indexOf("sha256sum", start));
+  expect(hashBlock).toContain(" dom.js ");
+});

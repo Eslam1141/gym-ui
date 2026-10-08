@@ -72,6 +72,7 @@ jobs:
           curl -fsS localhost:8080/ | grep -q 'landing.css'
           curl -fsS localhost:8080/app/ | grep -q 'id="onboarding"'
           curl -fsS localhost:8080/app/service-worker.js | grep -Eq 'etqadem-[0-9a-f]{12}'
+          curl -fsS localhost:8080/app/dom.js | grep -q 'window.GymDom'
           curl -fsS localhost:8080/service-worker.js | grep -q 'unregister'
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/index.html)" = "301"
           curl -sI localhost:8080/index.html | tr -d '\r' | grep -qi '^location: /app/$'
