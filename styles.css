@@ -122,6 +122,9 @@
   outline:2px solid var(--accent); outline-offset:2px;
 }
 html,body{margin:0; padding:0;}
+/* index.html's pre-paint script: signed out, so only the login overlay may
+   paint until ui.js's boot() has routed (it removes .pre-auth). */
+html.pre-auth body > :not(#onboarding){ visibility:hidden; }
 /* overflow-x:clip hides sideways overflow WITHOUT making the element a scroll
    container, so it never interferes with normal vertical / two-finger scroll. */
 html{ background:var(--bg); height:100%; overflow-x:clip; }
