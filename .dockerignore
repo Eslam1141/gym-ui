@@ -2,10 +2,4 @@
 .github
 .playwright-mcp
 node_modules
-# The widget sub-project's own node_modules/src (~86MB) are not matched by
-# the bare `node_modules` line above (Docker ignore patterns are relative-
-# path matches, not recursive globs). The Dockerfile only COPYs the
-# committed widgets/ output at repo root, never anything under web/, so
-# it's safe to exclude the whole tree from the build context.
-web/
 *.md

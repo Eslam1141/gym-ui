@@ -897,8 +897,8 @@ const IC_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/>
 function saveBtnInner(){ return IC_SAVE + " " + t("save"); }
 function videoBtnInner(open){ return IC_PLAY + " " + (open ? t("hideVideo") : t("video")); }
 function videoFrameInner(ex){
-  return `<iframe src="${ytEmbedSrc(ex.vid,false)}" allow="accelerometer; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>
-          <button class="expand-btn" data-expand="${ex.id}" aria-label="Fullscreen">
+  return `<iframe src="${GymUI.esc(ytEmbedSrc(ex.vid,false))}" allow="accelerometer; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <button class="expand-btn" data-expand="${GymUI.esc(ex.id)}" aria-label="Fullscreen">
             <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg>
           </button>`;
 }
@@ -946,13 +946,15 @@ function renderExercises(){
     if(animateCards) card.style.animationDelay = (i * 45) + "ms";
 
     const last = lastLog(ex.id);
-    const lastText = last ? t("lastLog").replace("{w}", last.w).replace("{r}", last.r) : t("noLog");
-    const nm = exName(ex);
+    const esc = GymUI.esc;
+    const lastText = esc(last ? t("lastLog").replace("{w}", last.w).replace("{r}", last.r) : t("noLog"));
+    const nm = esc(exName(ex));
+    const eid = esc(ex.id);
     const hasVid = !!ex.vid; // coach-generated plans have no demo clip
 
     card.innerHTML = `
       <div class="ex-top">
-        <div class="check ${done?'on':''}" data-id="${ex.id}">
+        <div class="check ${done?'on':''}" data-id="${eid}">
           <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
         </div>
         <div class="ex-title">
@@ -960,36 +962,36 @@ function renderExercises(){
         </div>
       </div>
       <div class="ex-meta">
-        <span><b>${ex.sets}</b> ${t("sets")}</span>
-        <span><b>${ex.reps}</b> ${t("reps")}</span>
-        <span><b>${ex.rest}s</b> ${t("rest")}</span>
+        <span><b>${esc(ex.sets)}</b> ${t("sets")}</span>
+        <span><b>${esc(ex.reps)}</b> ${t("reps")}</span>
+        <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
       <div class="ex-actions">
         <div class="log-box">
           <span class="log-field">
-            <input type="number" inputmode="decimal" placeholder="${last?last.w:t('wtPH')}" data-w="${ex.id}">
+            <input type="number" inputmode="decimal" placeholder="${esc(last?last.w:t('wtPH'))}" data-w="${eid}">
             <span class="unit">kg</span>
           </span>
           <span class="log-field">
-            <input type="number" inputmode="numeric" placeholder="${last?last.r:t('repPH')}" data-r="${ex.id}">
+            <input type="number" inputmode="numeric" placeholder="${esc(last?last.r:t('repPH'))}" data-r="${eid}">
             <span class="unit">${t('reps')}</span>
           </span>
         </div>
-        <button class="btn-sm" data-save="${ex.id}">
+        <button class="btn-sm" data-save="${eid}">
           <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
           ${t("save")}
         </button>
-        <button class="btn-sm rest" data-rest="${ex.rest}" data-name="${nm}">
+        <button class="btn-sm rest" data-rest="${esc(ex.rest)}" data-name="${nm}">
           <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11H8v-2h3V7h2z"/></svg>
           ${t("restBtn")}
         </button>
-        ${hasVid ? `<button class="btn-sm video-toggle ${isOpen?'on':''}" data-video="${ex.id}">
+        ${hasVid ? `<button class="btn-sm video-toggle ${isOpen?'on':''}" data-video="${eid}">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           ${isOpen ? t('hideVideo') : t('video')}
         </button>` : ``}
       </div>
-      ${hasVid ? `<div class="video-wrap ${isOpen?'open':''}" id="vwrap-${ex.id}">
-        <div class="video-frame" id="vframe-${ex.id}">
+      ${hasVid ? `<div class="video-wrap ${isOpen?'open':''}" id="vwrap-${eid}">
+        <div class="video-frame" id="vframe-${eid}">
           ${isOpen ? videoFrameInner(ex) : ''}
         </div>
       </div>` : ``}
@@ -1010,6 +1012,7 @@ function renderExercises(){
       saveJSON("gym_checks", checks);
       const on = !!checks[k][id];
       el.classList.toggle("on", on);
+      if(on && window.GymMotion) GymMotion.pop(el);
       const card = el.closest(".ex-card");
       if(card) card.classList.toggle("done", on);
       updateProgress();
@@ -1114,8 +1117,10 @@ function isDayComplete(dayId){
 function updateProgress(){
   const { done, total } = dayProgress(activeDay);
   progressPill.textContent = `${done}/${total}`;
+  const wasDone = progressPill.classList.contains("done");
   progressPill.classList.toggle("done", done===total && total>0);
-  barFill.style.width = total ? (done/total*100)+"%" : "0%";
+  if(!wasDone && done===total && total>0 && window.GymMotion) GymMotion.pop(progressPill);
+  barFill.style.setProperty("--p", total ? done/total : 0);
 }
 
 function renderAll(){
@@ -1216,7 +1221,7 @@ function openVideoModal(ex){
   // never leave a second player running underneath
   if(openVideoId){ closeInlineVideo(openVideoId); openVideoId = null; }
   modalTitle.textContent = exName(ex);
-  modalFrame.innerHTML = `<iframe src="${ytEmbedSrc(ex.vid,true)}" allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  modalFrame.innerHTML = `<iframe src="${GymUI.esc(ytEmbedSrc(ex.vid,true))}" allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   videoModal.classList.add("show");
 }
 function closeVideoModal(){
@@ -1240,7 +1245,11 @@ function startRestTimer(seconds, name){
   const total = seconds;
   timerLabel.textContent = t("restTimer").replace("{name}", name);
   timerBar.classList.add("show");
+  // Jump to full without animating the bar back up from the previous timer.
+  timerFill.style.transition = "none";
   renderRestTime(remaining, total);
+  void timerFill.offsetWidth;
+  timerFill.style.transition = "";
 
   restInterval = setInterval(()=>{
     remaining -= 1;
@@ -1257,7 +1266,7 @@ function renderRestTime(remaining, total){
   const m = Math.max(0,Math.floor(remaining/60)).toString().padStart(2,"0");
   const s = Math.max(0,remaining%60).toString().padStart(2,"0");
   timerTime.textContent = `${m}:${s}`;
-  timerFill.style.width = Math.max(0,(remaining/total*100))+"%";
+  timerFill.style.setProperty("--p", Math.max(0, remaining/total));
 }
 document.getElementById("timerSkip").onclick = ()=>{
   clearInterval(restInterval);
@@ -1282,9 +1291,6 @@ const sessionTimeEl = document.getElementById("sessionTime");
 const sessionHintEl = document.getElementById("sessionHint");
 const sessionBtn = document.getElementById("sessionBtn");
 const sessionPauseBtn = document.getElementById("sessionPauseBtn");
-if (sessionBtn && window.MetallicButton) {
-  window.MetallicButton.enhance(sessionBtn, { shellClass: "metallic-shell--session", themeVar: "--accent" });
-}
 const miniTimer = document.getElementById("miniTimer");
 const miniLabel = document.getElementById("miniLabel");
 const miniTime = document.getElementById("miniTime");
@@ -1383,7 +1389,8 @@ miniTimer.onclick = ()=>{
   catch(e){ window.scrollTo(0,0); }
 };
 
-sessionBtn.onclick = ()=>{
+// Guarded: a double tap must not start-then-immediately-stop (or double-log) a session.
+sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){
     const durationSec = sessionElapsedSec();
     sessions[activeDay] = sessions[activeDay] || [];
@@ -1401,7 +1408,7 @@ sessionBtn.onclick = ()=>{
     saveJSON("gym_session_active", activeSession);
   }
   updateSessionUI();
-};
+}, { cooldown: 500 });
 
 // ---------------- INSTALL TIP ----------------
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;

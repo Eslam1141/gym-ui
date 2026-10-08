@@ -164,7 +164,6 @@
       Object.keys(attrs).forEach(function (k) {
         if (k === "class") node.className = attrs[k];
         else if (k === "text") node.textContent = attrs[k];
-        else if (k === "html") node.innerHTML = attrs[k];
         else if (k === "on" && attrs[k]) {
           Object.keys(attrs[k]).forEach(function (ev) { node.addEventListener(ev, attrs[k][ev]); });
         } else if (attrs[k] != null && attrs[k] !== false) node.setAttribute(k, attrs[k]);
@@ -299,11 +298,12 @@
   // the PDF fallback (hide the on-screen action/link button rows, show the
   // "Etqadem Coach plan — <date>" print-head title) without ever touching the
   // live page, so there's nothing to clean up even if capture rejects. ----
-  function downloadResultImage() {
+  var downloadResultImage = GymAct.once(function () { return downloadResultImageRaw(); }, { cooldown: 1500 });
+  function downloadResultImageRaw() {
     var card = document.querySelector(".coach-result");
     if (!card || typeof html2canvas !== "function") { downloadPdfFallback(); return; }
     try {
-      html2canvas(card, {
+      return html2canvas(card, {
         backgroundColor: exportBgColor(),
         scale: exportScale(card),
         onclone: function (clonedDoc, clonedCard) {
@@ -503,10 +503,7 @@
     return svg;
   }
 
-  var teaserBeams = null; // EtqademBeams controller for the current teaser card
-
   function renderTeaser() {
-    if (teaserBeams) { teaserBeams.destroy(); teaserBeams = null; }
     var bullets = h("ul", { class: "coach-bullets" },
       h("li", {}, s("teaseB1")), h("li", {}, s("teaseB2")), h("li", {}, s("teaseB3")));
     var btn = h("button", {
@@ -519,7 +516,6 @@
       h("p", { class: "coach-tease-body" }, s("teaseBody")),
       bullets, btn);
     mount(card);
-    if (window.EtqademBeams) teaserBeams = EtqademBeams.mount(card, { intensity: "subtle" });
   }
 
   // ---------------- form ----------------
@@ -879,27 +875,21 @@
   function renderLoading() {
     var rows = [];
     for (var i = 0; i < 4; i++) rows.push(h("div", { class: "skeleton", style: "height:56px;margin-bottom:10px" }));
-    var aiLoadingHost = h("div", { class: "coach-ai-loading" });
     mount(h("div", { class: "coach-loading" },
       h("div", { class: "coach-spin", "aria-hidden": "true" }),
-      aiLoadingHost,
+      h("p", { class: "coach-ai-loading", role: "status" }, s("generating"),
+        h("span", { class: "coach-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i"))),
       h("div", {}, rows)));
-    // coach.js's own mount() above has already attached aiLoadingHost to
-    // the live DOM by the time we get here (it's synchronous), so it's
-    // safe to hand it to the widget now.
-    if (window.CoachLoadingWidget) {
-      window.CoachLoadingWidget.mount(aiLoadingHost, { texts: [s("generating")] });
-    } else {
-      aiLoadingHost.textContent = s("generating");
-    }
   }
 
-  function runAssessment(reqBody, strong) {
+  // One assessment request at a time (GymAct.once holds until the promise settles).
+  var runAssessment = GymAct.once(function (reqBody, strong) { return runAssessmentRaw(reqBody, strong); });
+  function runAssessmentRaw(reqBody, strong) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     renderLoading();
     var url = ASSIST_BASE + "/assessment" + (strong ? "?model=strong" : "");
-    fetchTimeout(url, {
+    return fetchTimeout(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
       body: JSON.stringify(reqBody)
@@ -1249,10 +1239,6 @@
   // ---------------- entry ----------------
   function refresh() {
     if (!document.getElementById("coachBody")) return;
-    // Any refresh replaces #coachBody's content (see mount()); a teaser
-    // beams instance from a prior render would otherwise keep animating
-    // (rAF, ResizeObserver) against a canvas already detached from the DOM.
-    if (teaserBeams) { teaserBeams.destroy(); teaserBeams = null; }
     var authed = window.GymUI && GymUI.isAuthed && GymUI.isAuthed();
     if (!authed) { renderTeaser(); return; }
     var last = loadJSON(LAST_KEY, null);

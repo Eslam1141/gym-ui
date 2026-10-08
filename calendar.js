@@ -332,7 +332,7 @@
 
     var list = exercises.map(function (ex) {
       var on = entry.complete || !!checks[ex.id];
-      return '<li class="' + (on ? "on" : "") + '">' + (ex.en || ex.id) + '</li>';
+      return '<li class="' + (on ? "on" : "") + '">' + GymUI.esc(ex.en || ex.id) + '</li>';
     }).join("");
 
     dayDetail.innerHTML =

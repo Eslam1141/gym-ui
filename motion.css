@@ -1,0 +1,109 @@
+/* motion.css — the shared motion system (tokens live in styles.css :root:
+ * --dur-*, --ease*, --dur-stagger, --m-dist, --m-dir). Rules of the house:
+ * animate transform and opacity only, never layout; entrances use `backwards`
+ * fill so a finished animation never pins a transform over hover/press
+ * states; slides use --m-dir so they follow reading order in RTL.
+ * prefers-reduced-motion switches everything here off (see the last block;
+ * the tokens also collapse in styles.css). */
+
+/* ---- keyframes ---- */
+@keyframes m-rise{
+  from{ opacity:0; transform:translate3d(0, var(--m-dist), 0); }
+}
+@keyframes m-fill{ from{ transform:scaleX(0); } }
+@keyframes m-pop{
+  0%{ transform:scale(1); }
+  40%{ transform:scale(1.14); }
+  100%{ transform:scale(1); }
+}
+@keyframes m-slide-out{
+  to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--nav-sign) * var(--m-dist) * -1.2), 0, 0); }
+}
+@keyframes m-slide-in{
+  from{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--nav-sign) * var(--m-dist) * 1.2), 0, 0); }
+}
+@keyframes m-sweep{
+  from{ transform:translate3d(-120%, 0, 0) skewX(-18deg); }
+  to{ transform:translate3d(320%, 0, 0) skewX(-18deg); }
+}
+
+/* ---- staggered entrance (GymMotion.enter) ---- */
+.m-enter > *{
+  animation:m-rise var(--dur-slow) var(--ease-out) backwards;
+  animation-delay:calc(var(--i, 0) * var(--dur-stagger));
+}
+
+/* ---- completion pop (GymMotion.pop) ---- */
+.m-pop{ animation:m-pop var(--dur-med) var(--ease-spring); }
+
+/* ---- screen / view transitions ----
+   Every screen is its own view-transition group, so a tab swap is a short
+   directional slide + fade instead of one flat root cross-dissolve. The
+   direction (--nav-sign) is set by ui.js navigate(): moving forward along
+   the tab order slides in from the inline-end edge. */
+@media (prefers-reduced-motion:no-preference){
+  #screen-plan{ view-transition-name:screen-plan; }
+  #screen-coach{ view-transition-name:screen-coach; }
+  #screen-food{ view-transition-name:screen-food; }
+  #screen-more{ view-transition-name:screen-more; }
+  #screen-profile{ view-transition-name:screen-profile; }
+  ::view-transition-old(root), ::view-transition-new(root){ animation:none; }
+  ::view-transition-old(screen-plan), ::view-transition-old(screen-coach), ::view-transition-old(screen-food),
+  ::view-transition-old(screen-more), ::view-transition-old(screen-profile){
+    animation:var(--dur-fast) var(--ease) both m-slide-out;
+  }
+  ::view-transition-new(screen-plan), ::view-transition-new(screen-coach), ::view-transition-new(screen-food),
+  ::view-transition-new(screen-more), ::view-transition-new(screen-profile){
+    animation:var(--dur-med) var(--ease-out) both m-slide-in;
+  }
+  .screen-fade-out-fallback{ animation:var(--dur-fast) var(--ease) both m-slide-out; }
+  .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease-out) both m-slide-in; }
+}
+
+/* ---- buttons: one press/hover language for every button ----
+   :where() keeps specificity at zero, so any component that already defines
+   its own :active/:hover look keeps it. */
+:where(button, [role="button"], summary){
+  transition:transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease),
+             background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+             color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease);
+}
+:where(button:not(:disabled):not([aria-disabled="true"])):active{ transform:scale(.97); }
+@media (hover:hover) and (pointer:fine){
+  :where(.session-btn:not(.stop), .coach-primary, .prof-btn, .ob-start-btn, .ae-submit, .anon-lock-btn, .rest-btn):not(:disabled):hover{
+    filter:brightness(1.08);
+  }
+}
+/* In-flight action (GymAct.run): dimmed, ignores taps, keeps focus. */
+.is-busy{ pointer-events:none; opacity:.72; }
+
+/* primary-button light sweep, on hover only (never autoplays) */
+.session-btn:not(.stop), .coach-primary, .ob-start-btn, .ae-submit{ position:relative; overflow:hidden; isolation:isolate; }
+.session-btn:not(.stop)::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{
+  content:""; position:absolute; inset-block:0; inset-inline-start:0; width:30%; z-index:-1; pointer-events:none;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  transform:translate3d(-120%, 0, 0) skewX(-18deg); opacity:0;
+}
+@media (hover:hover) and (pointer:fine){
+  .session-btn:not(.stop):hover::after, .coach-primary:hover::after, .ob-start-btn:hover::after, .ae-submit:hover::after{
+    opacity:1; animation:m-sweep .7s var(--ease) 1 both;
+  }
+}
+
+/* ---- skeletons: the shimmer sweep is transform-only ---- */
+.skeleton::after{ animation-timing-function:var(--ease); }
+
+/* ---- toast: rises from the bottom edge with a springy settle ---- */
+.gym-toast{
+  transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease-spring);
+}
+
+/* ---- reduced motion: no movement, no looping, state changes are instant ---- */
+@media (prefers-reduced-motion:reduce){
+  .m-enter > *, .m-pop{ animation:none; }
+  .session-btn::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{ display:none; }
+  :where(button:not(:disabled)):active{ transform:none; }
+  .bar-fill, .timer-fill{ transition:none; }
+  .skeleton::after{ animation:none; }
+  .gym-toast, .gym-toast.show{ transition:opacity var(--dur-fast) linear; transform:translateX(-50%); }
+}

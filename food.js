@@ -503,7 +503,7 @@
         h("div", { class: "food-progress-label" },
           "⁦" + Math.round(totals.kcal) + " / " + Math.round(target.targetKcal) + "⁩ " + s("kcal")),
         h("div", { class: "food-progress-track" },
-          h("div", { class: "food-progress-fill", style: "width:" + pct + "%" }))));
+          h("div", { class: "food-progress-fill", style: "--p:" + (pct / 100) }))));
     }
     if (totals.approximate) {
       kids.push(h("div", { class: "food-approx-note" }, s("approxNote")));
@@ -713,5 +713,10 @@
     if (needsLoad) loadMeals();
   }
 
-  window.GymFood = { refresh: refresh };
+  // Re-tap on the active Food tab: retry only when the last meals load failed.
+  function retryFailed() {
+    if (state.mealsError && !state.loadingMeals && authToken()) loadMeals();
+  }
+
+  window.GymFood = { refresh: refresh, retryFailed: retryFailed };
 })();

@@ -194,6 +194,8 @@
       if (window.GymUI && typeof GymUI.navigate === "function") {
         // profile.js reads this to send "Back" to wherever the user
         // actually came from instead of always landing on "plan".
+        // Already on Profile: nothing to do (and __gymPrevTab must not become "profile").
+        if (GymUI.currentTab && GymUI.currentTab() === "profile") return;
         try { window.__gymPrevTab = (typeof GymUI.currentTab === "function") ? GymUI.currentTab() : "plan"; } catch (e) {}
         GymUI.navigate("profile");
       }
@@ -202,10 +204,10 @@
       setMenuOpen(false);
       window.location.href = "admin.html"; // relative (app lives at /app/); same tab: sessionStorage session carries over
     });
-    document.getElementById("tbMenuSignOut").addEventListener("click", function () {
+    GymAct.bind(document.getElementById("tbMenuSignOut"), function () {
       setMenuOpen(false);
       if (window.GymSync && typeof GymSync.signOut === "function") GymSync.signOut();
-    });
+    }, { cooldown: 1000 });
     document.addEventListener("click", function (e) {
       if (menu && !menu.hidden && !menu.contains(e.target)) setMenuOpen(false);
     });

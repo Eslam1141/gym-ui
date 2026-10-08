@@ -23,17 +23,6 @@
   function onboarded() { return ls("gym_onboarded") === "1"; }
 
   var ob = null;
-  var heroVideo = null;
-  // EtqademBeams controller for the in-app backdrop (#bgfx). Runs only while the
-  // app itself is showing: the onboarding/landing screen has its own hero video.
-  var appBeams = null;
-  function startAppBeams() {
-    var host = el("bgfx");
-    if (!appBeams && host && window.EtqademBeams) appBeams = EtqademBeams.mount(host, { intensity: "subtle" });
-  }
-  function stopAppBeams() {
-    if (appBeams) { appBeams.destroy(); appBeams = null; }
-  }
 
   // ---------------- navigation ----------------
   // "profile" is reached only via the avatar menu in #topBar (header.js),
@@ -110,9 +99,23 @@
     if (stillFadingOut) stillFadingOut.classList.remove("screen-fade-out-fallback");
   }
 
+  // Returns false (and does nothing at all: no re-render, no refetch, no
+  // transition, no scroll jump) when `tab` is already the visible view, so a
+  // second tap on the active nav item / menu entry is a true no-op. Pass
+  // { force: true } to re-apply it anyway (boot does, to sync the DOM).
+  // One exception: tapping the active Food tab after its meals failed to
+  // load retries the load (it is the only way back besides the retry link).
   function navigate(tab, opts) {
     if (TABS.indexOf(tab) === -1) tab = "plan";
     opts = opts || {};
+    if (!opts.force && tab === curTab && document.body.getAttribute("data-tab") === tab) {
+      if (tab === "food" && window.GymFood && typeof GymFood.retryFailed === "function") {
+        try { GymFood.retryFailed(); } catch (e) { if (window.console) console.warn("food retry failed", e); }
+      }
+      return false;
+    }
+    // Slide direction follows the tab order (and flips in RTL via --m-dir).
+    document.documentElement.style.setProperty("--nav-sign", TABS.indexOf(tab) >= TABS.indexOf(curTab) ? 1 : -1);
     curTab = tab;
     set("gym_tab", tab);
     cancelPendingFallback();
@@ -124,7 +127,11 @@
       });
       updateNavHighlight(tab);
       document.body.setAttribute("data-tab", tab);
+      // Fallback path: the screen only becomes visible here, so the entrance
+      // stagger (and its cleanup timer) must start now, not at navigate() time.
+      if (inSwap && window.GymMotion) GymMotion.enter(screenEl(tab));
     };
+    var inSwap = false;
 
     var reduce = window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -140,6 +147,7 @@
       if (outgoing) outgoing.classList.add("screen-fade-out-fallback");
       pendingFallbackTimer = setTimeout(function () {
         pendingFallbackTimer = null;
+        inSwap = true;
         swap();
         var incoming = document.querySelector(".screen:not([hidden])");
         if (incoming) {
@@ -165,6 +173,9 @@
     if (tab === "food" && window.GymFood && typeof GymFood.refresh === "function") {
       try { GymFood.refresh(); } catch (e) { if (window.console) console.warn("food refresh failed", e); }
     }
+    // Fallback transition enters from inside swap() once the screen is revealed.
+    if (window.GymMotion && !opts.instant && (reduce || document.startViewTransition)) GymMotion.enter(screenEl(tab));
+    return true;
   }
 
   function wireNav() {
@@ -204,15 +215,11 @@
     // first screen instead of gated behind a "Start Changing Yourself" tap
     // — one fewer step between a new visitor and signing in.
     showObStep("choices");
-    if (heroVideo) { heroVideo.start(); heroVideo.play(); }
-    stopAppBeams();
   }
   function hideOnboarding() {
     if (ob) ob.hidden = true;
     document.body.classList.remove("onboarding-open");
     document.body.style.overflow = "";
-    if (heroVideo) heroVideo.pause();
-    startAppBeams();
   }
 
   function rebuild() {
@@ -251,6 +258,9 @@
     hideOnboarding();
     rebuild();
     refreshCoach();
+    // Signing back in after a sign-out from Profile must not reopen Profile
+    // (its "Back" target and data belong to the previous visit).
+    if (curTab === "profile") navigate("plan", { instant: true });
   }
 
   // A locked control (or a lost session) asks the user to sign in: bring the
@@ -303,7 +313,16 @@
     }
   };
 
+  // HTML-escape for template strings that reach innerHTML (plan/AI/server text).
+  // Quotes are escaped so the result is safe in attribute values too.
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   window.GymUI = {
+    esc: esc,
     isAuthed: isAuthed,
     isAnon: isAnon,
     onboarded: onboarded,
@@ -318,7 +337,6 @@
 
   function boot() {
     ob = el("onboarding");
-    if (window.HeroVideo) heroVideo = window.HeroVideo.init(".ob-video");
     wireNav();
     // The inline pre-paint script in index.html already applied gym_tab to
     // the DOM before this ran (to avoid a flash of #screen-plan). Only call
@@ -329,7 +347,7 @@
     var targetTab = ls("gym_tab") || "plan";
     curTab = targetTab;
     if (document.body.getAttribute("data-tab") !== targetTab) {
-      navigate(targetTab, { instant: true, keepScroll: true });
+      navigate(targetTab, { instant: true, keepScroll: true, force: true });
     } else {
       // navigate()/swap() were skipped, but swap() is also the only thing
       // that sets aria-current on the #appNav buttons — without this, the
@@ -341,9 +359,6 @@
     var startBtn = el("obStartBtn");
     if (startBtn) {
       startBtn.addEventListener("click", function () { showObStep("choices"); });
-      if (window.MetallicButton) {
-        window.MetallicButton.enhance(startBtn, { shellClass: "metallic-shell--start", themeVar: "--accent" });
-      }
     }
     var cont = el("obContinueBtn");
     if (cont) cont.addEventListener("click", startAnon);
@@ -389,9 +404,6 @@
     } else {
       promptSignIn(); // returning, signed-out, no active choice: straight to login
     }
-    // Signed-in / anon boot never goes through hideOnboarding(), so start the
-    // in-app backdrop here when the app (not the landing screen) is showing.
-    if (ob && ob.hidden) startAppBeams();
   }
 
   if (document.readyState === "loading") {

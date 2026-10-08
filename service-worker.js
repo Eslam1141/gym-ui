@@ -29,18 +29,17 @@ const ASSETS = [
   "./auth-email.css",
   "./privacy.js",
   "./privacy.css",
-  "./signin-fx.js",
-  "./signin-fx.css",
+  "./onboarding.js",
+  "./onboarding.css",
+  "./motion.js",
+  "./motion.css",
   "./rest-days.js",
   "./calendar.js",
   "./workout-builder.js",
   "./header.js",
   "./notifications.js",
   "./profile.js",
-  "./hero-video.js",
-  "./metallic-button.js",
   "./toast.js",
-  "./beams-bg.js",
   "./config.js",
   "./manifest.json",
   "./icons/logo-etq.svg",
@@ -76,7 +75,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
-  // Cross-origin requests (Google avatars, cdnjs, onboarding video) go
+  // Cross-origin requests (Google avatars, cdnjs) go
   // straight to the network: this worker's own CSP connect-src would block
   // them if it fetched them itself.
   if (url.origin !== self.location.origin) return;
@@ -109,6 +108,16 @@ self.addEventListener("fetch", (event) => {
         }
         return networkResponse;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request).then((hit) => {
+          if (hit) return hit;
+          // Offline launch/refresh of the app shell: start_url "./" and the
+          // password-reset route are not cache keys themselves (the ASSETS
+          // list holds ./index.html), so serve the cached shell for any
+          // page navigation instead of the browser's offline error page.
+          if (event.request.mode === "navigate") return caches.match("./index.html");
+          return hit;
+        })
+      )
   );
 });

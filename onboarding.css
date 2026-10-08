@@ -1,0 +1,123 @@
+/* onboarding.css — the sign-in screen's own visual layer (#onboarding).
+ *
+ * The stage is an original piece for Etqadem: a rising staircase (the steps
+ * from the logo mark) that a dot climbs, one landing per rep, then starts
+ * over. Pure SVG + CSS, transform/opacity only, tokens from styles.css so
+ * both themes work. Below 1024px it is a faint backdrop behind the card; at
+ * 1024px+ it becomes the left half of a split layout. */
+
+/* ---------- layout ---------- */
+.ob-stage{
+  position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+}
+.ob-hero{ display:none; }
+
+@media (max-width:1023.98px){
+  #onboarding{ min-height:100dvh; padding-inline:10%; }
+  .ob-inner{ padding-inline:20px; }
+  .ob-stair{ width:min(92vw, 440px); margin-block-end:max(12px, env(safe-area-inset-bottom)); opacity:.32; }
+}
+@media (max-width:479.98px){
+  #onboarding{ padding-inline:16px; }
+}
+
+@media (min-width:1024px){
+  #onboarding{
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:minmax(100dvh, auto);
+    padding:0; align-items:stretch;
+  }
+  .ob-fx{ display:none; }
+  .ob-inner{
+    align-self:center; justify-self:center; max-width:400px; margin-block:32px;
+    background:none; border:0; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+  .ob-stage{
+    position:relative; min-height:100dvh; justify-content:center; gap:28px;
+    background:
+      radial-gradient(60% 50% at 50% 55%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      var(--bg-alt);
+    border-inline-end:1px solid var(--line);
+  }
+  .ob-stair{ width:min(78%, 520px); }
+  .ob-hero{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .ob-headline{ font-size:clamp(44px, 5.4vw, 80px); font-weight:var(--fw-black); line-height:1.1; letter-spacing:-.02em; color:var(--paper); }
+  /* Arabic wordmark: tracking would break the letter joins, and the dots
+     need the taller line box. */
+  html[lang="ar"] .ob-headline{ letter-spacing:0; line-height:1.4; }
+  .ob-tagline{ font-size:var(--text-md); font-weight:700; color:var(--paper-dim); }
+}
+
+/* ---------- the staircase ---------- */
+.ob-stair{ display:block; overflow:visible; }
+.ob-step-bar{ fill:var(--accent); opacity:.4; }
+.ob-climber{ fill:var(--accent-tint); transform:translate(238px, 123px); }
+/* Steps ascend toward the reading direction's end edge. */
+[dir="rtl"] .ob-stair{ transform:scaleX(-1); }
+
+@media (prefers-reduced-motion:no-preference){
+  .ob-climber{ animation:ob-climb 6s linear infinite; }
+  .ob-step-bar{ animation:ob-land 6s var(--ease) infinite; animation-delay:calc(var(--k) * 1.2s - 6s); }
+}
+/* One cycle: land on each step 1.2s apart (hop arcs between), then fade out
+   at the top and reappear at the bottom. */
+@keyframes ob-climb{
+  0%{ transform:translate(62px, 223px); opacity:0; animation-timing-function:var(--ease-out); }
+  3%{ transform:translate(62px, 223px); opacity:1; }
+  10%{ transform:translate(106px, 139px); animation-timing-function:var(--ease); }
+  20%{ transform:translate(150px, 173px); }
+  30%{ transform:translate(194px, 89px); animation-timing-function:var(--ease); }
+  40%{ transform:translate(238px, 123px); }
+  50%{ transform:translate(282px, 39px); animation-timing-function:var(--ease); }
+  60%{ transform:translate(326px, 73px); }
+  70%{ transform:translate(370px, -11px); animation-timing-function:var(--ease); }
+  80%{ transform:translate(414px, 23px); opacity:1; }
+  92%{ transform:translate(414px, 23px); opacity:0; }
+  100%{ transform:translate(62px, 223px); opacity:0; }
+}
+@keyframes ob-land{
+  0%{ opacity:.95; }
+  18%{ opacity:.4; }
+  100%{ opacity:.4; }
+}
+
+/* ---------- form entrance: one staggered rise per step showing ---------- */
+.ob-step > :nth-child(1), .ob-step-email form > :nth-child(1){ --i:0; }
+.ob-step > :nth-child(2), .ob-step-email form > :nth-child(2){ --i:1; }
+.ob-step > :nth-child(3), .ob-step-email form > :nth-child(3){ --i:2; }
+.ob-step > :nth-child(4), .ob-step-email form > :nth-child(4){ --i:3; }
+.ob-step > :nth-child(5), .ob-step-email form > :nth-child(5){ --i:4; }
+.ob-step > :nth-child(6), .ob-step-email form > :nth-child(6){ --i:5; }
+.ob-step > :nth-child(7), .ob-step-email form > :nth-child(7){ --i:6; }
+.ob-step > :nth-child(8), .ob-step-email form > :nth-child(8){ --i:7; }
+.ob-title{ --i:0; }
+.ob-sub{ --i:1; }
+@media (prefers-reduced-motion:no-preference){
+  #onboarding:not([hidden]) :is(.ob-title, .ob-sub),
+  .ob-step:not([inert]) > *, .ob-step-email:not([inert]) form > *{
+    animation:m-rise var(--dur-slow) var(--ease-out) backwards;
+    animation-delay:calc(var(--i, 0) * var(--dur-stagger) + 60ms);
+  }
+}
+
+/* ---------- inputs: wrapper (focus ring lives on the input itself) ---------- */
+.ae-wrap{ position:relative; display:block; }
+
+/* ---------- password eye ---------- */
+.ae-wrap-eye input{ padding-inline-end:48px; }
+.ae-eye{
+  position:absolute; inset-block:2px; inset-inline-end:2px; width:44px; padding:0; border:0;
+  background:none; color:var(--paper-dim); cursor:pointer; border-radius:11px;
+  display:grid; place-items:center;
+}
+.ae-eye::before{
+  content:""; width:18px; height:18px; background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.ae-eye[aria-pressed="true"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.88 9.88a3 3 0 1 0 4.24 4.24'/%3E%3Cpath d='M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68'/%3E%3Cpath d='M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61'/%3E%3Cline x1='2' x2='22' y1='2' y2='22'/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.88 9.88a3 3 0 1 0 4.24 4.24'/%3E%3Cpath d='M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68'/%3E%3Cpath d='M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61'/%3E%3Cline x1='2' x2='22' y1='2' y2='22'/%3E%3C/svg%3E");
+}
+.ae-eye:hover{ color:var(--paper); }
+/* The RTL input is forced direction:ltr (auth-email.css), which flips what
+   the logical padding properties mean, so pad the physical left there. */
+[dir="rtl"] .ae-wrap-eye input{ padding-inline:48px 13px; }

@@ -388,12 +388,12 @@
   ],
   "narrative": {
     "northStar": "The Coach's Clipboard",
-    "overview": "Etqadem is the clipboard a good coach carries across the gym floor: every exercise is its own card, every set gets a checkmark, and the coach is always one tap away in the corner. The interface is practical first. A beginner standing at a rack, phone in one sweaty hand, sees what to do next, logs the weight, starts the rest timer, and moves on. Nothing on a training screen should make them think about the app instead of the lift.\n\nThe clipboard sits in a lively room. The app is dark (ink-night backgrounds, slate cards) and lit by one teal light source that warms the buttons, the active day and the coach. Depth and motion are part of the identity, not garnish: cards lift and carry a faint top sheen, the main Start button has a WebGL metallic shine, and soft light beams drift behind the screens. Liveliness serves energy and encouragement; clarity of the next action always wins when the two compete.\n\nThe system ships two official persona palettes with identical structure: Vane Teal (the default, and the brand) and Rose & Violet (applied when the user picks the female plan). Arabic right-to-left and English are equal citizens; every layout uses logical properties so it mirrors cleanly.",
+    "overview": "Etqadem is the clipboard a good coach carries across the gym floor: every exercise is its own card, every set gets a checkmark, and the coach is always one tap away in the corner. The interface is practical first. A beginner standing at a rack, phone in one sweaty hand, sees what to do next, logs the weight, starts the rest timer, and moves on. Nothing on a training screen should make them think about the app instead of the lift.\n\nThe clipboard sits in a lively room. The app is dark (ink-night backgrounds, slate cards) and lit by one teal light source that warms the buttons, the active day and the coach. Depth and motion are part of the identity, not garnish: cards lift and carry a faint top sheen, primary buttons catch a CSS light sweep on hover, and the sign-in screen is staged by a rising staircase that a dot climbs. Liveliness serves energy and encouragement; clarity of the next action always wins when the two compete.\n\nThe system ships two official persona palettes with identical structure: Vane Teal (the default, and the brand) and Rose & Violet (applied when the user picks the female plan). Arabic right-to-left and English are equal citizens; every layout uses logical properties so it mirrors cleanly.",
     "keyCharacteristics": [
       "Dark-only, single-column, phone-first (640px content column), bottom tab bar on phones, side rail at 900px and up.",
       "One accent family per persona; the accent marks the next action and the current state.",
       "Cards are the unit of work: one exercise, one card, one checkmark.",
-      "Lively depth: lifted cards, sheen, gradient primary fills, metallic Start button, beams backdrop, springy press feedback.",
+      "Lively depth: lifted cards, sheen, gradient primary fills, hover light sweep on primary buttons, onboarding staircase stage, springy press feedback.",
       "44px minimum tap targets everywhere, including small controls (invisible hit areas where the visual is smaller).",
       "System font stack; weight does the hierarchy (700 for controls, 900 for headings and big numbers)."
     ],
@@ -445,7 +445,7 @@
       },
       {
         "name": "The Lively, Not Loud Rule",
-        "body": "Effects are welcome: lift, sheen, gradient, glow, springy press. But a signature effect never sits on top of text the user must read mid-set, and every effect has a `prefers-reduced-motion` fallback (beams freeze, presses stop scaling, cards stop moving).",
+        "body": "Effects are welcome: lift, sheen, gradient, glow, springy press. But a signature effect never sits on top of text the user must read mid-set, and every effect has a `prefers-reduced-motion` fallback (the sweep and staircase freeze, presses stop scaling, cards stop moving).",
         "section": "elevation"
       },
       {
