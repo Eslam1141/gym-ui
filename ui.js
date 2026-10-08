@@ -103,10 +103,17 @@
   // transition, no scroll jump) when `tab` is already the visible view, so a
   // second tap on the active nav item / menu entry is a true no-op. Pass
   // { force: true } to re-apply it anyway (boot does, to sync the DOM).
+  // One exception: tapping the active Food tab after its meals failed to
+  // load retries the load (it is the only way back besides the retry link).
   function navigate(tab, opts) {
     if (TABS.indexOf(tab) === -1) tab = "plan";
     opts = opts || {};
-    if (!opts.force && tab === curTab && document.body.getAttribute("data-tab") === tab) return false;
+    if (!opts.force && tab === curTab && document.body.getAttribute("data-tab") === tab) {
+      if (tab === "food" && window.GymFood && typeof GymFood.retryFailed === "function") {
+        try { GymFood.retryFailed(); } catch (e) { if (window.console) console.warn("food retry failed", e); }
+      }
+      return false;
+    }
     // Slide direction follows the tab order (and flips in RTL via --m-dir).
     document.documentElement.style.setProperty("--nav-sign", TABS.indexOf(tab) >= TABS.indexOf(curTab) ? 1 : -1);
     curTab = tab;
@@ -120,7 +127,11 @@
       });
       updateNavHighlight(tab);
       document.body.setAttribute("data-tab", tab);
+      // Fallback path: the screen only becomes visible here, so the entrance
+      // stagger (and its cleanup timer) must start now, not at navigate() time.
+      if (inSwap && window.GymMotion) GymMotion.enter(screenEl(tab));
     };
+    var inSwap = false;
 
     var reduce = window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -136,6 +147,7 @@
       if (outgoing) outgoing.classList.add("screen-fade-out-fallback");
       pendingFallbackTimer = setTimeout(function () {
         pendingFallbackTimer = null;
+        inSwap = true;
         swap();
         var incoming = document.querySelector(".screen:not([hidden])");
         if (incoming) {
@@ -161,7 +173,8 @@
     if (tab === "food" && window.GymFood && typeof GymFood.refresh === "function") {
       try { GymFood.refresh(); } catch (e) { if (window.console) console.warn("food refresh failed", e); }
     }
-    if (window.GymMotion && !opts.instant) GymMotion.enter(screenEl(tab));
+    // Fallback transition enters from inside swap() once the screen is revealed.
+    if (window.GymMotion && !opts.instant && (reduce || document.startViewTransition)) GymMotion.enter(screenEl(tab));
     return true;
   }
 

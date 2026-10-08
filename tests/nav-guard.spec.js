@@ -108,3 +108,65 @@ test.describe("double-submit guard (GymAct)", () => {
     await context.close();
   });
 });
+
+test.describe("review fixes", () => {
+  test("re-tapping the active Food tab retries a failed meals load, and is a no-op otherwise", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true });
+    let hits = 0, fail = true;
+    await page.route("**/api/v1/meals*", (route) => {
+      hits++;
+      return fail
+        ? route.fulfill({ status: 500, contentType: "application/json", body: "{}" })
+        : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ meals: [] }) });
+    });
+    const foodBtn = page.locator('#appNav button[data-tab="food"]');
+    await foodBtn.click();
+    await expect(page.locator("#foodMealsHost .food-error")).toBeVisible(T);
+    const afterFail = hits;
+    fail = false;
+    await foodBtn.click();   // active tab + last load failed: retries
+    await expect(page.locator("#foodMealsHost .food-error")).toHaveCount(0, T);
+    expect(hits).toBe(afterFail + 1);
+    await foodBtn.click();   // loaded fine: true no-op
+    await page.waitForTimeout(400);
+    expect(hits).toBe(afterFail + 1);
+    await context.close();
+  });
+
+  test("without View Transitions the entrance stagger starts only after the screen is revealed", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true });
+    await page.evaluate(() => { document.startViewTransition = undefined; });
+    const r = await page.evaluate(() => new Promise((resolve) => {
+      const scr = document.getElementById("screen-coach");
+      const t0 = Date.now();
+      let shown = 0, entered = 0;
+      const poll = setInterval(() => {
+        const now = Date.now();
+        if (!shown && !scr.hidden) shown = now;
+        if (shown && !entered && scr.classList.contains("m-enter")) entered = now;
+        if (entered && !scr.classList.contains("m-enter")) {
+          clearInterval(poll);
+          resolve({ lead: shown - t0, enterFor: now - shown });
+        }
+      }, 20);
+      GymUI.navigate("coach");
+    }));
+    expect(r.lead).toBeGreaterThan(100);        // the fallback swap really is delayed
+    expect(r.enterFor).toBeGreaterThan(450);    // and the stagger runs its full length after the reveal
+    await context.close();
+  });
+
+  test("a new rest timer starts the bar full without animating it back up", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true });
+    const x = await page.evaluate(async () => {
+      const f = document.getElementById("timerFill");
+      document.getElementById("timerBar").classList.add("show");
+      f.style.setProperty("--p", 0.2);
+      await new Promise((r) => setTimeout(r, 1300));
+      startRestTimer(60, "Test");
+      return new DOMMatrix(getComputedStyle(f).transform).a;
+    });
+    expect(x).toBeGreaterThan(0.99);
+    await context.close();
+  });
+});

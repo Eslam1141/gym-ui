@@ -713,5 +713,10 @@
     if (needsLoad) loadMeals();
   }
 
-  window.GymFood = { refresh: refresh };
+  // Re-tap on the active Food tab: retry only when the last meals load failed.
+  function retryFailed() {
+    if (state.mealsError && !state.loadingMeals && authToken()) loadMeals();
+  }
+
+  window.GymFood = { refresh: refresh, retryFailed: retryFailed };
 })();
