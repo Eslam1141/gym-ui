@@ -11,6 +11,7 @@ on:
       - "graphify-out/**"
       - "tools/**"
       - "screenshots/**"
+      - "native/**"   # Capacitor shell: never in the web image
   # Manual redeploy from the Actions tab.
   workflow_dispatch:
   pull_request:

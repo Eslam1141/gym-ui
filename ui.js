@@ -406,6 +406,26 @@
     }
     // Routed: the app may paint now (index.html's pre-paint hid it while signed out).
     document.documentElement.classList.remove("pre-auth");
+    releaseBootLoader();
+  }
+
+  // The logo loader (boot-loader.js) covers boot. Over the app it can leave
+  // right away; over the login screen it waits for the card's entrance
+  // animation to finish (capped), so it never fades onto a half-drawn card
+  // — that card's blur/backdrop effects are slow to first paint on weak GPUs.
+  function releaseBootLoader() {
+    if (!window.GymBoot) return;
+    var inner = ob && !ob.hidden && ob.querySelector(".ob-inner");
+    if (!inner) { GymBoot.release("boot"); return; }
+    var done = false;
+    function release(e) {
+      if (done || (e && e.target !== inner)) return;
+      done = true;
+      inner.removeEventListener("animationend", release);
+      GymBoot.release("boot");
+    }
+    inner.addEventListener("animationend", release);
+    setTimeout(release, 900);
   }
 
   if (document.readyState === "loading") {
