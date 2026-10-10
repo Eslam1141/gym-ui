@@ -98,9 +98,56 @@
   transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease-spring);
 }
 
+/* ---- custom plan builder (workout-builder.js) ----
+   The builder rebuilds its whole screen on every change, so these are
+   one-shot classes the script puts only on what just changed: .wb-in for
+   something new (exercise, day, message), .wb-out on the way out (the script
+   waits for it before removing), .wb-shake for a refused drop or save,
+   .wb-picked when a day becomes the tap-to-add target. */
+@keyframes wb-out{
+  to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--m-dist) * 1.2), 0, 0) scale(.97); }
+}
+@keyframes wb-shake{
+  0%, 100%{ transform:translate3d(0, 0, 0); }
+  20%{ transform:translate3d(-6px, 0, 0); }
+  40%{ transform:translate3d(5px, 0, 0); }
+  60%{ transform:translate3d(-3px, 0, 0); }
+  80%{ transform:translate3d(2px, 0, 0); }
+}
+@keyframes wb-picked{
+  0%{ transform:scale(.985); }
+  60%{ transform:scale(1.01); }
+  100%{ transform:scale(1); }
+}
+.wb-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
+.wb-out{ animation:wb-out var(--dur-med) var(--ease) forwards; pointer-events:none; }
+.wb-shake{ animation:wb-shake .42s var(--ease) 1; }
+.wb-picked{ animation:wb-picked var(--dur-med) var(--ease-spring) 1; }
+
+.wb-ex{ transition:transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.wb-ex:not(.wb-ex-disabled):active{ transform:scale(.96); }
+@media (hover:hover) and (pointer:fine){
+  .wb-ex:not(.wb-ex-disabled):hover{ transform:translate3d(0, -2px, 0); border-color:var(--green); }
+  .wb-remove-btn:hover{ opacity:1; transform:scale(1.15); }
+}
+.wb-ex.wb-dragging{ opacity:.45; transform:scale(.96); }
+.wb-day, .wb-sticky-day{
+  transition:transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease),
+             background-color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease);
+}
+.wb-day.wb-drop-over, .wb-sticky-day.wb-drop-over{
+  border-style:solid; border-color:var(--green); transform:translate3d(0, -2px, 0);
+  box-shadow:0 0 0 3px var(--green-soft), var(--elev-1);
+}
+.wb-sticky-day-count{ display:inline-block; }
+
 /* ---- reduced motion: no movement, no looping, state changes are instant ---- */
 @media (prefers-reduced-motion:reduce){
   .m-enter > *, .m-pop{ animation:none; }
+  .wb-in, .wb-out, .wb-shake, .wb-picked{ animation:none; }
+  .wb-ex, .wb-day, .wb-sticky-day{ transition:none; }
+  .wb-ex:active, .wb-ex:hover, .wb-ex.wb-dragging, .wb-remove-btn:hover,
+  .wb-day.wb-drop-over, .wb-sticky-day.wb-drop-over{ transform:none; }
   .session-btn::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{ display:none; }
   :where(button:not(:disabled)):active{ transform:none; }
   .bar-fill, .timer-fill{ transition:none; }
