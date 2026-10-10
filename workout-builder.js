@@ -107,6 +107,31 @@
   // message so a failed drag-drop (duplicate muscle area for that day) isn't silent — auto-clears after DROP_REJECT_MS.
   var DROP_REJECT_MS = 1800;
 
+  // ---------------- motion (motion.js / motion.css) ----------------
+  // Every rerender() rebuilds the whole screen, so CSS transitions can't run
+  // across a change. Instead each change sets a one-shot `fx` describing what
+  // just happened; the next render tags only those elements, then clears it,
+  // so unrelated rerenders (filter, rename, select) never replay anything.
+  var fx = null; // { added: {day, ex}, newDay, reject, select, palette, saveErr, count }
+  function setFx(o) { fx = o; }
+  function takeFx(key) { return fx && fx[key]; }
+  function reduced() { return !window.GymMotion || GymMotion.reduced(); }
+
+  // Play the exit animation on `el`, then run `done` (the real state change +
+  // rerender). Reduced motion, or no element, skips straight to `done`.
+  var OUT_MS = 280; // --dur-med; the timeout below is the fallback if animationend never fires
+  function animateOut(el, done) {
+    if (!el || reduced()) { done(); return; }
+    if (el.classList.contains("wb-out")) return; // a second tap while leaving
+    el.classList.add("wb-out");
+    var finished = false;
+    function finish() { if (finished) return; finished = true; done(); }
+    el.addEventListener("animationend", finish, { once: true });
+    setTimeout(finish, OUT_MS + 80);
+  }
+
+  function closestEl(e, sel) { return e && e.currentTarget && e.currentTarget.closest ? e.currentTarget.closest(sel) : null; }
+
   function newPlan() {
     return { days: [{ name: "Day 1", exercises: [] }] };
   }
@@ -154,9 +179,11 @@
     if (!ex) return;
     if (placeExercise(dayIndex, ex)) {
       dropRejectDayIndex = -1;
+      setFx({ added: { day: dayIndex, ex: plan.days[dayIndex].exercises.length - 1 }, count: true });
       rerender();
     } else {
       dropRejectDayIndex = dayIndex;
+      setFx({ reject: dayIndex });
       rerender();
       setTimeout(function () {
         if (dropRejectDayIndex === dayIndex) { dropRejectDayIndex = -1; rerender(); }
@@ -175,12 +202,12 @@
         h("button", {
           type: "button", class: "wb-filter-btn" + (!easyOnly ? " active" : ""),
           "aria-pressed": easyOnly ? "false" : "true",
-          on: { click: function () { if (easyOnly) { setEasyOnly(false); rerender(); } } }
+          on: { click: function () { if (easyOnly) { setEasyOnly(false); setFx({ palette: true }); rerender(); } } }
         }, s("wbFilterAll")),
         h("button", {
           type: "button", class: "wb-filter-btn" + (easyOnly ? " active" : ""),
           "aria-pressed": easyOnly ? "true" : "false",
-          on: { click: function () { if (!easyOnly) { setEasyOnly(true); rerender(); } } }
+          on: { click: function () { if (!easyOnly) { setEasyOnly(true); setFx({ palette: true }); rerender(); } } }
         }, s("wbFilterEasyOnly"))));
     var groups = {};
     MUSCLE_SHAPES.forEach(function (shape) {
@@ -204,8 +231,19 @@
         var optionEls = options.length
           ? options.map(function (ex) {
               var disabled = !canPlace(ex, selectedDayIndex);
-              var onHandlers = { dragstart: function (e) { e.dataTransfer.setData("text/plain", ex.en); } };
-              if (!disabled) onHandlers.click = function () { if (placeExercise(selectedDayIndex, ex)) rerender(); };
+              var onHandlers = {
+                dragstart: function (e) {
+                  e.dataTransfer.setData("text/plain", ex.en);
+                  var chip = e.currentTarget; // dim after the browser has taken the drag image
+                  setTimeout(function () { chip.classList.add("wb-dragging"); }, 0);
+                },
+                dragend: function (e) { e.currentTarget.classList.remove("wb-dragging"); }
+              };
+              if (!disabled) onHandlers.click = function () {
+                if (!placeExercise(selectedDayIndex, ex)) return;
+                setFx({ added: { day: selectedDayIndex, ex: plan.days[selectedDayIndex].exercises.length - 1 }, count: true });
+                rerender();
+              };
               return h("div", {
                 class: "wb-ex" + (ex.tier === "easy" ? " wb-ex-easy" : "") + (disabled ? " wb-ex-disabled" : ""),
                 draggable: "true",
@@ -224,15 +262,38 @@
       var groupLabel = lang() === "ar" ? groups[groupName][0].groupAr : groupName;
       return h("div", { class: "wb-group" }, h("h4", {}, groupLabel), h.apply(null, ["div", {}].concat(shapeEls)));
     });
-    return h.apply(null, ["div", { class: "wb-palette" }, legend].concat(sections));
+    // Sections sit in their own wrapper so the filter toggle can replay their
+    // entrance without the legend (and the button just tapped) moving too.
+    return h("div", { class: "wb-palette" }, legend, h.apply(null, ["div", { class: "wb-groups" }].concat(sections)));
   }
 
   // ---------------- day-builder UI (drop targets, day add/rename/remove) ----------------
+  // Drop handlers shared by a day card and the sticky bar. While an exercise
+  // is dragged over a target it carries .wb-drop-over (lift + green ring);
+  // dragleave ignores moves between the target's own children.
+  function dropTargetOn(dayIndex) {
+    return {
+      dragover: function (e) {
+        e.preventDefault();
+        if (!e.currentTarget.classList.contains("wb-drop-over")) e.currentTarget.classList.add("wb-drop-over");
+      },
+      dragleave: function (e) {
+        if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget)) return;
+        e.currentTarget.classList.remove("wb-drop-over");
+      },
+      drop: function (e) { e.currentTarget.classList.remove("wb-drop-over"); handleDrop(dayIndex, e); }
+    };
+  }
+
   function dayEl(day, dayIndex) {
+    var added = takeFx("added");
     var exList = day.exercises.map(function (ex, exIndex) {
-      return h("div", { class: "wb-placed-ex" },
+      var isNew = added && added.day === dayIndex && added.ex === exIndex;
+      return h("div", { class: "wb-placed-ex" + (isNew ? " wb-in" : "") },
         h("span", {}, window.exName(ex)),
-        h("button", { type: "button", class: "wb-remove-btn", on: { click: function () { removeExercise(dayIndex, exIndex); rerender(); } } }, "×"));
+        h("button", { type: "button", class: "wb-remove-btn", on: { click: function (e) {
+          animateOut(closestEl(e, ".wb-placed-ex"), function () { removeExercise(dayIndex, exIndex); setFx({ count: true }); rerender(); });
+        } } }, "×"));
     });
     var isSelected = dayIndex === selectedDayIndex;
     // Tap-to-add target: tapping this header selects the day so the palette's
@@ -241,24 +302,25 @@
     // day's rename input doesn't rerender and steal focus mid-edit.
     var head = h("div", {
       class: "wb-day-head",
-      on: { click: function () { if (selectedDayIndex !== dayIndex) { selectedDayIndex = dayIndex; rerender(); } } }
+      on: { click: function () { if (selectedDayIndex !== dayIndex) { selectedDayIndex = dayIndex; setFx({ select: true }); rerender(); } } }
     },
       h("input", {
         class: "wb-day-name", value: day.name,
         on: { input: function (e) { day.name = e.target.value; } }
       }));
-    return h("div", {
-      class: "wb-day" + (isSelected ? " wb-day-selected" : ""),
-      on: {
-        dragover: function (e) { e.preventDefault(); },
-        drop: function (e) { handleDrop(dayIndex, e); }
-      }
-    },
+    var cls = "wb-day" + (isSelected ? " wb-day-selected" : "");
+    var rejected = takeFx("reject") === dayIndex;
+    if (takeFx("newDay") === dayIndex) cls += " wb-in";
+    else if (rejected) cls += " wb-shake";
+    else if (isSelected && takeFx("select")) cls += " wb-picked";
+    return h("div", { class: cls, on: dropTargetOn(dayIndex) },
       head,
       h.apply(null, ["div", { class: "wb-day-list" }].concat(exList)),
-      dropRejectDayIndex === dayIndex ? h("p", { class: "coach-err", role: "alert" }, s("wbDropRejected")) : null,
+      dropRejectDayIndex === dayIndex ? h("p", { class: "coach-err" + (rejected ? " wb-in" : ""), role: "alert" }, s("wbDropRejected")) : null,
       plan.days.length > 1 ? h("button", {
-        type: "button", class: "wb-remove-day", on: { click: function () { plan.days.splice(dayIndex, 1); rerender(); } }
+        type: "button", class: "wb-remove-day", on: { click: function (e) {
+          animateOut(closestEl(e, ".wb-day"), function () { plan.days.splice(dayIndex, 1); rerender(); });
+        } }
       }, s("wbRemoveDay")) : null);
   }
 
@@ -271,14 +333,8 @@
   function stickyDayEl() {
     var day = plan.days[selectedDayIndex];
     if (!day) return null;
-    return h("div", {
-      class: "wb-sticky-day",
-      on: {
-        dragover: function (e) { e.preventDefault(); },
-        drop: function (e) { handleDrop(selectedDayIndex, e); }
-      }
-    },
-      h("span", { class: "wb-sticky-day-name" }, day.name),
+    return h("div", { class: "wb-sticky-day", on: dropTargetOn(selectedDayIndex) },
+      h("span", { class: "wb-sticky-day-name" + (takeFx("select") ? " wb-in" : "") }, day.name),
       h("span", { class: "wb-sticky-day-count" }, day.exercises.length + " " + s("wbExercisesShort")));
   }
 
@@ -286,7 +342,11 @@
     var dayEls = plan.days.map(function (d, i) { return dayEl(d, i); });
     var addBtn = h("button", {
       type: "button", class: "wb-add-day",
-      on: { click: function () { plan.days.push({ name: "Day " + (plan.days.length + 1), exercises: [] }); rerender(); } }
+      on: { click: function () {
+        plan.days.push({ name: "Day " + (plan.days.length + 1), exercises: [] });
+        setFx({ newDay: plan.days.length - 1 });
+        rerender();
+      } }
     }, s("wbAddDay"));
     return h.apply(null, ["div", { class: "wb-days" }].concat(dayEls).concat([addBtn]));
   }
@@ -303,8 +363,25 @@
     if (resetScroll) { try { window.scrollTo(0, 0); } catch (e) {} }
   }
 
+  // Effects that need the element in the DOM (stagger timing, pop restart).
+  // Runs after mount; always clears `fx` so the next render starts clean.
+  function playFx(root) {
+    var f = fx;
+    fx = null;
+    if (!f || !window.GymMotion) return;
+    if (f.open) {
+      GymMotion.enter(root, { max: 3 }); // back, title, sticky bar; the layout's own lists stagger below
+      GymMotion.enter(root.querySelector(".wb-groups"), { max: 6 });
+      GymMotion.enter(root.querySelector(".wb-days"), { max: 6 });
+    }
+    if (f.palette) GymMotion.enter(root.querySelector(".wb-groups"), { max: 6 });
+    if (f.count) GymMotion.pop(root.querySelector(".wb-sticky-day-count"));
+  }
+
   function rerender() {
-    mount(screenEl(), false);
+    var el = screenEl();
+    mount(el, false);
+    playFx(el);
   }
 
   function screenEl() {
@@ -336,12 +413,13 @@
             saveFailedMsg = false; // navigates away (renderMyPlans) — no rerender here
           } else {
             saveFailedMsg = true;
+            setFx({ saveErr: true });
             rerender();
           }
         } }
       }, s("wbSaveBtn"))
     ];
-    if (saveFailedMsg) children.push(h("p", { class: "coach-err" }, s("wbSaveFull")));
+    if (saveFailedMsg) children.push(h("p", { class: "coach-err" + (takeFx("saveErr") ? " wb-shake" : "") }, s("wbSaveFull")));
     return h.apply(null, ["div", { class: "wb-screen" }].concat(children));
   }
 
@@ -351,7 +429,10 @@
     selectedDayIndex = 0;
     saveFailedMsg = false;
     dropRejectDayIndex = -1;
-    mount(screenEl(), true);
+    setFx({ open: true });
+    var el = screenEl();
+    mount(el, true);
+    playFx(el);
   }
 
   function exportAsWorkoutPlan() {
