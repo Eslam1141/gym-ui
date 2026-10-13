@@ -103,7 +103,8 @@
    one-shot classes the script puts only on what just changed: .wb-in for
    something new (exercise, day, message), .wb-out on the way out (the script
    waits for it before removing), .wb-shake for a refused drop or save,
-   .wb-picked when a day becomes the tap-to-add target. */
+   .wb-picked when a day becomes the tap-to-add target. Only transform and
+   opacity move; the reduced-motion block at the bottom turns all of it off. */
 @keyframes wb-out{
   to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--m-dist) * 1.2), 0, 0) scale(.97); }
 }
@@ -124,30 +125,47 @@
 .wb-shake{ animation:wb-shake .42s var(--ease) 1; }
 .wb-picked{ animation:wb-picked var(--dur-med) var(--ease-spring) 1; }
 
-.wb-ex{ transition:transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
-.wb-ex:not(.wb-ex-disabled):active{ transform:scale(.96); }
-@media (hover:hover) and (pointer:fine){
-  .wb-ex:not(.wb-ex-disabled):hover{ transform:translate3d(0, -2px, 0); border-color:var(--green); }
-  .wb-remove-btn:hover{ opacity:1; transform:scale(1.15); }
-}
-.wb-ex.wb-dragging{ opacity:.45; transform:scale(.96); }
-.wb-day, .wb-sticky-day{
+.wb-ex{ transition:transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease); }
+.wb-ex-main:active{ transform:scale(.98); }
+.wb-ex.wb-dragging{ opacity:.45; transform:scale(.97); }
+.wb-tab, .wb-tray, .wb-panel{
   transition:transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease),
              background-color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease);
 }
-.wb-day.wb-drop-over, .wb-sticky-day.wb-drop-over{
-  border-style:solid; border-color:var(--green); transform:translate3d(0, -2px, 0);
-  box-shadow:0 0 0 3px var(--green-soft), var(--elev-1);
+.wb-tray.wb-drop-over, .wb-panel.wb-drop-over{
+  transform:translate3d(0, -2px, 0); box-shadow:0 0 0 3px var(--primary-soft), var(--elev-1);
 }
-.wb-sticky-day-count{ display:inline-block; }
+.wb-tray-count, .wb-panel-count{ display:inline-block; }
+@media (hover:hover) and (pointer:fine){
+  .wb-remove-btn:hover, .wb-preview:hover{ transform:scale(1.12); }
+}
+
+/* just-added row: the + crossfades to the check with a springy settle */
+@keyframes wb-check-in{
+  from{ opacity:0; transform:scale(.8); }
+  to{ opacity:1; transform:scale(1); }
+}
+.wb-added-row .wb-add{ animation:wb-check-in var(--dur-med) var(--ease-spring) backwards; }
+.wb-review-chev, .wb-group-chev{ transition:transform var(--dur-fast) var(--ease); }
+
+/* Review sheet: slides up over a fading scrim; the script waits for -out */
+@keyframes wb-sheet-up{ from{ transform:translate3d(0, 100%, 0); } to{ transform:none; } }
+@keyframes wb-sheet-down{ to{ transform:translate3d(0, 100%, 0); } }
+@keyframes wb-fade-in{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes wb-fade-out{ to{ opacity:0; } }
+.wb-sheet.wb-sheet-in{ animation:wb-sheet-up var(--dur-med) var(--ease-out) backwards; }
+.wb-sheet.wb-sheet-out{ animation:wb-sheet-down var(--dur-med) var(--ease-out) forwards; pointer-events:none; }
+.wb-scrim.wb-sheet-in{ animation:wb-fade-in var(--dur-med) var(--ease-out) backwards; }
+.wb-scrim.wb-sheet-out{ animation:wb-fade-out var(--dur-med) var(--ease-out) forwards; }
 
 /* ---- reduced motion: no movement, no looping, state changes are instant ---- */
 @media (prefers-reduced-motion:reduce){
   .m-enter > *, .m-pop{ animation:none; }
-  .wb-in, .wb-out, .wb-shake, .wb-picked{ animation:none; }
-  .wb-ex, .wb-day, .wb-sticky-day{ transition:none; }
-  .wb-ex:active, .wb-ex:hover, .wb-ex.wb-dragging, .wb-remove-btn:hover,
-  .wb-day.wb-drop-over, .wb-sticky-day.wb-drop-over{ transform:none; }
+  .wb-in, .wb-out, .wb-shake, .wb-picked, .wb-added-row .wb-add,
+  .wb-sheet.wb-sheet-in, .wb-sheet.wb-sheet-out, .wb-scrim.wb-sheet-in, .wb-scrim.wb-sheet-out{ animation:none; }
+  .wb-ex, .wb-tab, .wb-tray, .wb-panel, .wb-review-chev, .wb-group-chev{ transition:none; }
+  .wb-ex-main:active, .wb-ex.wb-dragging, .wb-remove-btn:hover, .wb-preview:hover,
+  .wb-tray.wb-drop-over, .wb-panel.wb-drop-over{ transform:none; }
   .session-btn::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{ display:none; }
   :where(button:not(:disabled)):active{ transform:none; }
   .bar-fill, .timer-fill{ transition:none; }
