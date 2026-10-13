@@ -1216,7 +1216,7 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: renderForm, planSummary: planSummary, ramadan: ramadanMode, showResult: renderResult };
+  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: renderForm, planSummary: planSummary, ramadan: ramadanMode, showResult: renderResult, myPlans: renderMyPlans };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
