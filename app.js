@@ -29,8 +29,8 @@ const DAYS_MALE = [
     {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
     {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium"},
     {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"C45c3fR4o28", shape:"shoulder_rear", tier:"easy"},
-    {id:"mua_curl", en:"Barbell Curl", sets:3, reps:"10-12", rest:60, vid:"9_ijHhcwlkM", shape:"biceps_short", tier:"medium"},
+    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
+    {id:"mua_curl", en:"Barbell Curl", sets:3, reps:"10-12", rest:60, vid:"ZQWL7omZh94", shape:"biceps_short", tier:"medium"},
     {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy"},
   ]},
   { id:"m_lowerA", label:"Lower A", muscles:"Quads, Glutes, Hamstrings, Abs", exercises:[
@@ -92,7 +92,7 @@ const DAYS_FEMALE = [
     {id:"fub_incline", en:"Incline Dumbbell Press", sets:3, reps:"12-15", rest:60, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium"},
     {id:"fub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy"},
     {id:"fub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium"},
-    {id:"fub_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"C45c3fR4o28", shape:"shoulder_rear", tier:"easy"},
+    {id:"fub_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
     {id:"fub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_short", tier:"medium"},
     {id:"fub_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
   ]},
@@ -102,7 +102,7 @@ const DAYS_FEMALE = [
 const DAYS_MALE_CAL = [
   { id:"mc_push", label:"Push", muscles:"Push & Core", exercises:[
     {id:"mcp_pushup", en:"Push-ups", sets:4, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
-    {id:"mcp_pike", en:"Pike Push-ups", sets:3, reps:"8-12", rest:60, vid:"shEnAXgc9y4", shape:"shoulder_front", tier:"medium"},
+    {id:"mcp_pike", en:"Pike Push-ups", sets:3, reps:"8-12", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
     {id:"mcp_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
     {id:"mcp_plank", en:"Plank (core)", sets:3, reps:"45-60s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
     {id:"mcp_hollow", en:"Hollow Body Hold", sets:3, reps:"25-40s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_upper", tier:"medium"},
@@ -120,7 +120,7 @@ const DAYS_MALE_CAL = [
     {id:"mcx_row", en:"Inverted Row (under a table)", sets:4, reps:"10-15", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
     {id:"mcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"20-25", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"mcx_superman", en:"Superman", sets:3, reps:"15-20", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
-    {id:"mcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"C45c3fR4o28", shape:"shoulder_rear", tier:"easy"},
+    {id:"mcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
     {id:"mcx_flutter", en:"Flutter Kicks", sets:4, reps:"40s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", tier:"easy"},
     {id:"mcx_bear", en:"Bear Crawl", sets:3, reps:"30s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", tier:"medium"},
   ]},
@@ -129,7 +129,7 @@ const DAYS_MALE_CAL = [
 const DAYS_FEMALE_CAL = [
   { id:"fc_push", label:"Push", muscles:"Push & Core", exercises:[
     {id:"fcp_pushup", en:"Push-ups", sets:3, reps:"8-15", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
-    {id:"fcp_pike", en:"Pike Push-ups", sets:3, reps:"6-10", rest:60, vid:"shEnAXgc9y4", shape:"shoulder_front", tier:"medium"},
+    {id:"fcp_pike", en:"Pike Push-ups", sets:3, reps:"6-10", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
     {id:"fcp_dips", en:"Bench Dips", sets:3, reps:"8-12", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
     {id:"fcp_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
     {id:"fcp_hollow", en:"Hollow Body Hold", sets:3, reps:"15-30s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_upper", tier:"medium"},
@@ -147,7 +147,7 @@ const DAYS_FEMALE_CAL = [
     {id:"fcx_row", en:"Inverted Row (under a table)", sets:3, reps:"6-12", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
     {id:"fcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"fcx_superman", en:"Superman", sets:3, reps:"12-15", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
-    {id:"fcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"C45c3fR4o28", shape:"shoulder_rear", tier:"easy"},
+    {id:"fcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
     {id:"fcx_flutter", en:"Flutter Kicks", sets:3, reps:"30s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", tier:"easy"},
     {id:"fcx_bear", en:"Bear Crawl", sets:3, reps:"20s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", tier:"medium"},
   ]},
