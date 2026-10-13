@@ -64,6 +64,7 @@
     wbClose: ["Close", "إغلاق"],
     wbRemoved: ["Removed {name}", "تمت إزالة {name}"],
     wbUndo: ["Undo", "تراجع"],
+    wbUndoDayFull: ["Can't bring that day back — the plan already has 7 days. Remove one first.", "تعذّرت استعادة هذا اليوم — الخطة فيها 7 أيام بالفعل. احذف يومًا أولاً."],
     wbAnnounceAdded: ["Added {name} to {day}. {n}.", "أُضيف {name} إلى {day}. {n}."],
     wbAnnounceRemoved: ["Removed {name}. Undo available.", "تمت إزالة {name}. التراجع متاح."],
     wbSave: ["Save plan", "حفظ الخطة"],
@@ -363,10 +364,14 @@
     if (!info) return;
     clearUndo();
     if (info.type === "day") {
-      if (plan.days.length < DAY_CAP) {
-        plan.days.splice(Math.min(info.index, plan.days.length), 0, info.dayObj);
-        selectedDayIndex = Math.min(info.index, plan.days.length - 1);
+      if (plan.days.length >= DAY_CAP) {
+        showReject(s("wbUndoDayFull"));
+        setFx({ notice: true });
+        rerender();
+        return;
       }
+      plan.days.splice(Math.min(info.index, plan.days.length), 0, info.dayObj);
+      selectedDayIndex = Math.min(info.index, plan.days.length - 1);
       setFx({ newDay: selectedDayIndex });
       rerender();
       return;
@@ -396,12 +401,18 @@
 
   // Remove one exercise, with Undo. `rowEl` (optional) plays the exit first.
   function removeWithUndo(dayIndex, exIndex, rowEl) {
-    var ex = plan.days[dayIndex].exercises[exIndex];
+    var dayObj = plan.days[dayIndex];
+    var ex = dayObj && dayObj.exercises[exIndex];
     if (!ex) return;
     animateOut(rowEl, function () {
+      // Indexes can go stale while the exit plays (another row or day removed
+      // meanwhile), so look both up again by identity.
+      var d = plan.days.indexOf(dayObj);
+      var i = d < 0 ? -1 : dayObj.exercises.indexOf(ex);
+      if (i < 0) return;
       clearReject();
-      removeExercise(dayIndex, exIndex);
-      offerUndo({ type: "ex", day: dayIndex, index: exIndex, ex: ex });
+      removeExercise(d, i);
+      offerUndo({ type: "ex", day: d, index: i, ex: ex });
       liveMsg = fmt("wbAnnounceRemoved", { name: window.exName(ex) });
       setFx({ count: true, notice: true });
       rerender();
@@ -424,7 +435,9 @@
 
   function addDay() {
     if (plan.days.length >= DAY_CAP) return;
-    plan.days.push({ name: defaultDayName(plan.days.length + 1), exercises: [] });
+    var n = plan.days.length + 1;
+    while (plan.days.some(function (d) { return d.name === defaultDayName(n); })) n++;
+    plan.days.push({ name: defaultDayName(n), exercises: [] });
     selectedDayIndex = plan.days.length - 1;
     setFx({ newDay: selectedDayIndex, select: true });
     rerender();
@@ -1002,6 +1015,10 @@
         return;
       }
     }
+    // The focused control is gone (e.g. its row was removed). Inside the
+    // sheet, keep focus in the dialog so Escape and the Tab trap still work.
+    var title = root.querySelector('.wb-sheet [data-fk="sheet"]');
+    if (title) { try { title.focus({ preventScroll: true }); } catch (e) {} }
   }
 
   function rerender() {
@@ -1064,9 +1081,13 @@
   function exportAsWorkoutPlan() {
     return {
       split: "Custom",
-      days: plan.days.filter(function (d) { return d.exercises.length > 0; }).map(function (d) {
+      days: plan.days.map(function (d, i) {
+        // A cleared name falls back to the day's default ("Day 2" / "اليوم 2").
+        return { d: d, name: (d.name || "").trim() || defaultDayName(i + 1) };
+      }).filter(function (x) { return x.d.exercises.length > 0; }).map(function (x) {
+        var d = x.d;
         return {
-          day: d.name,
+          day: x.name,
           exercises: d.exercises.map(function (ex) {
             return { name: ex.en, sets: ex.sets, reps: ex.reps, restSec: ex.rest };
           })

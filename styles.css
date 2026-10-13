@@ -1670,7 +1670,9 @@ body.onboarding-open #appNav{ display:none !important; }
 .wb-save-err p{ margin:0; }
 .wb-save-err .wb-icon{ margin-top:2px; }
 
-/* Review sheet (phone) */
+/* Review sheet (phone). The builder lives inside .wrap's stacking context,
+   so the bottom nav would sit over the sheet; hide it while the sheet is open. */
+body:has(.wb-sheet-wrap) #appNav{ visibility:hidden; }
 .wb-scrim{ position:fixed; inset:0; z-index:130; background:color-mix(in srgb, var(--surface) 70%, transparent); }
 .wb-sheet{
   position:fixed; inset-inline:0; bottom:0; z-index:131; max-height:85vh; overflow-y:auto; overscroll-behavior:contain;

@@ -218,6 +218,9 @@
       }
       rm.forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}
+    // The custom-plan builder keeps an unsaved draft in sessionStorage; it
+    // must not carry over to the next account signed in on this tab.
+    try { sessionStorage.removeItem("gym_wb_draft"); } catch (e) {}
   }
 
   function isSignedIn() {
