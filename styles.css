@@ -1564,7 +1564,6 @@ body.onboarding-open #appNav{ display:none !important; }
 }
 .wb-preview{ color:var(--primary-text); }
 .wb-preview .wb-icon{ fill:currentColor; stroke-width:1.5; }
-[dir="rtl"] .wb-preview .wb-icon{ transform:scaleX(-1); }
 .wb-empty{
   border:1.5px dashed var(--line-strong); border-radius:var(--radius);
   padding:var(--space-5) var(--space-4); text-align:center;
