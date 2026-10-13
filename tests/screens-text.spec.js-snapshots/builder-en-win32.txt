@@ -1,96 +1,61 @@
-Back
-Build Your Own Plan
+Build your plan
+Day 1
+0
+Add day
 Day 1
 0 exercises
-Green border = easier alternative for that muscle area
-All exercises
+Review
+Save plan
+Add at least one exercise to save
+Tap + on any exercise below. It goes into the day you have selected.
+Exercises
+Adding to: Day 1
+All
 Easy only
 Chest
+Back
+Shoulders
+Biceps
+Triceps
+Quads
+Hamstrings
+Glutes
+Calves
+Core
+Chest
+0 / 3
 Upper chest
 Incline Dumbbell Press
+3×8-10
+· Upper chest
 Mid chest
 Dumbbell Bench Press
+3×8-12
+· Mid chest
 Barbell Bench Press
-Push-ups (easy)
+4×6-8
+· Mid chest
+Push-ups
+Easy
+4×12-20
+· Mid chest
 Lower chest
-No easy alternative here — switch to “All exercises”
+No exercises yet for this area
 Back
-Lats (width)
-Lat Pulldown / Pull-up
-Inverted Row (under a table)
-Mid-back / rhomboids (thickness)
-Seated Cable Row (easy)
-Chest-Supported Row
-Chest-Supported Dumbbell Row (easy)
-One-Arm Dumbbell Row
-Lower back / traps
-Barbell Romanian Deadlift
-Superman (easy)
+0 / 3
 Shoulders
-Front delt
-Seated Dumbbell Shoulder Press
-Arnold Press
-Pike Push-ups
-Side delt
-Dumbbell Lateral Raise (easy)
-Rear delt
-Band Face Pull (easy)
-Band Pull-Apart (easy)
+0 / 3
 Biceps
-Long head (outer)
-No easy alternative here — switch to “All exercises”
-Short head (inner)
-Barbell Curl
-Hammer Curl
-Biceps Curl + Triceps Extension (superset)
+0 / 2
 Triceps
-Long head
-No easy alternative here — switch to “All exercises”
-Lateral/medial head
-Cable Rope Pushdown (easy)
-Bench Dips (easy)
+0 / 2
 Quads
-Quads
-Leg Press (easy)
-Barbell Back Squat
-Hack Squat
-Leg Extension (easy)
-Goblet Squat (easy)
-Reverse Lunge (Dumbbell)
-Dumbbell Sumo Squat
-Bulgarian Split Squat
-Bodyweight Squats (easy)
-Reverse Lunges (easy)
-Squat Jumps
+0 / 1
 Hamstrings
-Hamstrings
-Lying Leg Curl (easy)
-Barbell Romanian Deadlift
-Single-Leg Dumbbell RDL
-Seated Leg Curl (easy)
-Dumbbell Romanian Deadlift
+0 / 1
 Glutes
-Glutes
-Dumbbell Glute Bridge (easy)
-Band Glute Kickback (easy)
-Glute Bridge (easy)
+0 / 1
 Calves
-Calves
-Standing Calf Raise (easy)
-Seated Calf Raise (Dumbbell) (easy)
+0 / 1
 Core
-Upper abs
-Plank (core)
-Hollow Body Hold
-Lower abs
-Hanging Leg Raise (core)
-Lying Leg Raise (core)
-Mountain Climbers
-Burpees
-Flutter Kicks (easy)
-Obliques
-Pallof Press (core)
-Dead Bug (core) (easy)
-Bear Crawl
-+ Add day
-Save this plan
+0 / 3
