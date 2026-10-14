@@ -1,16 +1,120 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etqadem</title>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Etqadem</title>
 <style>
-  body{margin:0;height:100vh;display:grid;place-items:center;background:#10171f;color:#F3F0E8;
-    font:500 16px/1.5 system-ui,sans-serif;text-align:center}
-  button{margin-top:16px;padding:12px 28px;border:0;border-radius:999px;background:#3CC2B8;color:#10171f;font:inherit;font-weight:700}
-</style></head>
-<body>
-<div>
-  <p>Etqadem needs an internet connection to start.<br>يحتاج اتقدم إلى اتصال بالإنترنت للبدء.</p>
-  <button onclick="location.href='https://etqadem.cloider.app/app/'">Try again · إعادة المحاولة</button>
-</div>
+  /* Brand tokens copied from the web app's styles.css (dark = default,
+     light = prefers-color-scheme: light). No external requests. */
+  :root{ --surface:#10171f; --ink:#f2f6fa; --muted:#b4c3d4; --btn:#3CC2B8; --on-btn:#10171f; --focus:#3CC2B8; }
+  @media (prefers-color-scheme: light){
+    :root{ --surface:#F3F0E8; --ink:#14161B; --muted:#545A64; --btn:#0B7A75; --on-btn:#fff; --focus:#0B7A75; }
+  }
+  *{ box-sizing:border-box }
+  html,body{ margin:0; height:100%; background:var(--surface); color:var(--ink) }
+  body{ display:grid; place-items:center; padding:24px;
+    font:500 16px/1.5 system-ui,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif; text-align:center }
+  body[hidden]{ display:none }
+  main{ width:100%; max-width:340px }
+  .logo{ width:96px; height:96px; margin:0 auto 24px; display:block }
+  .logo .fg{ fill:none; stroke:var(--ink) }
+  .logo .bar{ fill:var(--ink); stroke:none }
+  .logo .head{ fill:var(--btn); stroke:none }
+  h1{ margin:0 0 8px; font-size:24px; line-height:1.25; font-weight:700 }
+  p{ margin:0; color:var(--muted) }
+  button{ margin-top:28px; min-width:180px; padding:14px 32px; border:0; border-radius:999px;
+    background:var(--btn); color:var(--on-btn); font:inherit; font-weight:700; cursor:pointer }
+  button:focus-visible{ outline:3px solid var(--focus); outline-offset:3px }
+  button[disabled]{ opacity:.7 }
+</style>
+</head>
+<body hidden>
+<main>
+  <svg class="logo" viewBox="0 0 96 96" role="img" aria-label="Etqadem">
+    <rect class="bar" x="4" y="78" width="27" height="12" rx="5"/><rect class="bar" x="34" y="68" width="27" height="22" rx="5"/><rect class="bar" x="64" y="58" width="27" height="32" rx="5"/>
+    <g class="fg" stroke-linecap="round" stroke-linejoin="round"><path d="M43 30L36 51" stroke-width="10"/><path d="M36 51L52 54L50 65" stroke-width="9"/><path d="M36 51L28 65L21 75.5" stroke-width="9"/><path d="M43 30L55 36L63 28" stroke-width="8"/><path d="M43 30L33 39L27 47" stroke-width="8"/></g>
+    <circle class="head" cx="48" cy="14.5" r="8.5"/>
+  </svg>
+  <h1 id="title"></h1>
+  <p id="help" role="status"></p>
+  <button id="retry" type="button"></button>
+</main>
 <script>
-  try { window.Capacitor.Plugins.SplashScreen.hide(); } catch (e) {}
+/* Offline / unreachable launch screen (Capacitor errorPath). Shown when the
+ * main-frame load of the server URL fails, or MainActivity's watchdog gives up
+ * on a hung load (?r=timeout). Native cold start can fail before the service
+ * worker is consulted although the PWA shell is cached, so on a fresh error
+ * we first try the server URL once (the SW then serves the cached shell).
+ * If that fails too we land back here with a recent attempt stamp and show
+ * the screen. Keep SERVER in sync with capacitor.config.ts server.url. */
+(function () {
+  "use strict";
+  var SERVER = "https://etqadem.cloider.app/app/";
+  var PROBE = SERVER + "manifest.json";
+  var STAMP = "etq_offline_try";
+  var COPY = {
+    en: { title: "You're offline", help: "Check your connection and try again. Your data is safe on this device.", btn: "Try again", busy: "Trying…" },
+    ar: { title: "أنت غير متصل بالإنترنت", help: "تحقق من اتصالك ثم حاول مرة أخرى. بياناتك محفوظة على جهازك.", btn: "حاول مرة أخرى", busy: "جارٍ المحاولة…" }
+  };
+  var lang = /^ar/i.test(navigator.language || (navigator.languages && navigator.languages[0]) || "") ? "ar" : "en";
+  var q = new URLSearchParams(location.search);
+  if (q.get("lang") === "ar" || q.get("lang") === "en") lang = q.get("lang");
+  var t = COPY[lang];
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.getElementById("title").textContent = t.title;
+  document.getElementById("help").textContent = t.help;
+  var btn = document.getElementById("retry");
+  btn.textContent = t.btn;
+
+  function hideSplash() {
+    try { window.Capacitor.Plugins.SplashScreen.hide(); } catch (e) {}
+  }
+  function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, String(v)); } catch (e) {} }
+  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  var leaving = false;
+  function go() {
+    if (leaving) return;
+    leaving = true;
+    store(STAMP, Date.now());
+    location.replace(SERVER);
+  }
+
+  function showScreen() {
+    document.body.hidden = false;
+    hideSplash();
+    btn.addEventListener("click", function () {
+      btn.disabled = true; btn.textContent = t.busy;
+      go();
+    });
+    window.addEventListener("online", go);
+    // Periodic reachability probe: a no-cors fetch resolves once the server
+    // answers and rejects on a dead / black-holed network.
+    setInterval(function () {
+      if (leaving || document.hidden) return;
+      var ctl = typeof AbortController === "function" ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+      fetch(PROBE, { mode: "no-cors", cache: "no-store", signal: ctl ? ctl.signal : undefined })
+        .then(function () { clearTimeout(timer); go(); })
+        .catch(function () { clearTimeout(timer); });
+    }, 5000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden && navigator.onLine) go(); });
+  }
+
+  var last = parseInt(read(STAMP) || "0", 10);
+  var fresh = !last || Date.now() - last > 15000;
+  if (fresh && q.get("r") !== "timeout") {
+    // First look at this failure: one silent attempt (the splash stays up).
+    go();
+    // Safety net if that navigation never gets going.
+    setTimeout(function () { leaving = false; showScreen(); }, 4000);
+  } else {
+    showScreen();
+  }
+})();
 </script>
-</body></html>
+</body>
+</html>
