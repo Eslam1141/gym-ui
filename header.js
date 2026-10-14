@@ -171,6 +171,8 @@
       '    <div class="tb-menu-name" id="tbMenuName"></div>' +
       '    <button type="button" role="menuitem" id="tbMenuProfile"></button>' +
       '    <button type="button" role="menuitem" id="tbMenuAdmin" hidden></button>' +
+      '    <button type="button" role="menuitem" id="tbMenuTheme"></button>' +
+      '    <button type="button" role="menuitem" id="tbMenuLang"></button>' +
       '    <button type="button" role="menuitem" id="tbMenuSignOut"></button>' +
       '  </div>' +
       '</div>';
@@ -203,6 +205,17 @@
     document.getElementById("tbMenuAdmin").addEventListener("click", function () {
       setMenuOpen(false);
       window.location.href = "admin.html"; // relative (app lives at /app/); same tab: sessionStorage session carries over
+    });
+    // Theme + language: the floating pill (#topPrefs) is hidden while signed
+    // in, so the menu calls the same toggles app.js gives the pill. The menu
+    // stays open so both can be changed in one visit.
+    document.getElementById("tbMenuTheme").addEventListener("click", function () {
+      if (window.GymPrefs) GymPrefs.toggleTheme();
+      render();
+    });
+    document.getElementById("tbMenuLang").addEventListener("click", function () {
+      if (window.GymPrefs) GymPrefs.toggleLang(); // rewrites <html lang>, which re-renders us
+      render();
     });
     GymAct.bind(document.getElementById("tbMenuSignOut"), function () {
       setMenuOpen(false);
@@ -261,6 +274,11 @@
     adminItem.hidden = !(me && me.isAdmin === true);
     adminItem.textContent = str("hdrAdmin");
     document.getElementById("tbMenuSignOut").textContent = str("hdrSignOut");
+    var dark = document.documentElement.dataset.theme !== "light";
+    document.getElementById("tbMenuTheme").textContent = str(dark ? "menuThemeLight" : "menuThemeDark");
+    var langItem = document.getElementById("tbMenuLang");
+    langItem.textContent = str("langBtn");
+    langItem.lang = document.documentElement.lang === "ar" ? "en" : "ar";
   }
 
   // ---------------- wiring ----------------

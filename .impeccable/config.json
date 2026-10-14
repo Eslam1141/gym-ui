@@ -12,9 +12,9 @@
     "ignoreValues": [
       {
         "rule": "design-system-font",
-        "value": "alexandria",
+        "value": "readex pro",
         "createdAt": "2026-10-01T17:40:28.595Z",
-        "reason": "Alexandria is the landing's own face per the canon surface contract and the caller's task brief; DESIGN.md gains a landing section after finish review"
+        "reason": "Readex Pro is the landing's own face per the canon surface contract and the caller's task brief; DESIGN.md gains a landing section after finish review"
       }
     ]
   }

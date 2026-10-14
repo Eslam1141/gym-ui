@@ -33,7 +33,7 @@ RUN cd /usr/share/nginx/html/app && \
         icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \
         icons/icon-maskable-192-etq.png icons/icon-maskable-512-etq.png \
         icons/apple-touch-icon-etq.png icons/favicon-32-etq.png icons/favicon-16-etq.png \
-        fonts/alexandria-var.woff2 | sha256sum | cut -c1-12) && \
+        fonts/readex-pro-var.woff2 | sha256sum | cut -c1-12) && \
     sed "/^const CACHE_NAME/s/__CACHE_HASH__/${HASH}/" service-worker.js > /tmp/service-worker.js.tmp && \
     cat /tmp/service-worker.js.tmp > service-worker.js && \
     rm /tmp/service-worker.js.tmp

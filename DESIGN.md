@@ -36,38 +36,38 @@ colors:
   brand-paper: "#F3F0E8"
 typography:
   display:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "34px"
-    fontWeight: 900
+    fontWeight: 700
     lineHeight: 1.15
   headline:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "28px"
-    fontWeight: 900
+    fontWeight: 700
     lineHeight: 1.2
     fontFeature: "tnum"
   title:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "19px"
-    fontWeight: 900
+    fontWeight: 700
     lineHeight: 1.3
   subtitle:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "16px"
     fontWeight: 700
     lineHeight: 1.4
   body:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.55
   label:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "12.5px"
     fontWeight: 700
     lineHeight: 1.4
   overline:
-    fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    fontFamily: "'Readex Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "11px"
     fontWeight: 700
     lineHeight: 1.3
@@ -174,7 +174,7 @@ The system ships two official persona palettes with identical structure: **Vane 
 - Cards are the unit of work: one exercise, one card, one checkmark.
 - Lively depth: lifted cards, sheen, gradient primary fills, metallic Start button, beams backdrop, springy press feedback.
 - 44px minimum tap targets everywhere, including small controls (invisible hit areas where the visual is smaller).
-- System font stack; weight does the hierarchy (700 for controls, 900 for headings and big numbers).
+- Readex Pro, one family for Latin and Arabic; weight does the hierarchy (700 for controls, headings and big numbers; 400 for body). The face tops out at 700, so there is no heavier tier.
 
 ## Colors
 
@@ -219,11 +219,11 @@ Applied through `:root[data-plan="female"]`, which redefines the same CSS variab
 
 ## Typography
 
-**Display Font:** the system UI stack (-apple-system, Segoe UI, Roboto, Arial, sans-serif)
-**Body Font:** the same stack
-**Label Font:** the same stack
+**Display Font:** Readex Pro (self-hosted variable woff2, wght 160-700, Latin + Arabic subset in `fonts/`, OFL)
+**Body Font:** Readex Pro
+**Label Font:** Readex Pro
 
-**Character:** native and fast-loading, so Arabic and Latin both render in each phone's own well-hinted system face with no web-font flash. Personality comes from weight, not typeface: the clipboard writes in bold marker.
+**Character:** one geometric, reading-optimised family that carries Arabic and Latin with matching colour and proportions, so a bilingual line does not change voice mid-sentence. Personality comes from weight and size, not a second typeface. The system stack stays as the fallback while the font loads (font-display: swap).
 
 ### Hierarchy
 - **Display** (900, 34px, 1.15): rare: big hero numbers and onboarding headlines.
@@ -335,7 +335,7 @@ A slide-up shelf (Raised Slate, accent top border, upward shadow) with a 28px 90
 - **Don't** use green for anything except completion.
 - **Don't** lighten a teal button on hover; darken it.
 - **Don't** put raw Vane Teal text on slate (2.9:1); use the tint.
-- **Don't** add font sizes outside the `--text-*` ramp, or weights other than 400/700/900.
+- **Don't** add font sizes outside the `--text-*` ramp, or weights other than 400/600/700 (Readex Pro stops at 700).
 - **Don't** let a fixed element (nav, timer, coach button) cover a card's controls; keep the screen's bottom padding.
 - **Don't** reintroduce orange as a brand color, or the old "Athlex" name or blue accent.
 - **Don't** add a light theme ad hoc; the system is dark-only until a light theme is designed as a full persona-aware set.

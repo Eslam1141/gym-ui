@@ -54,7 +54,7 @@ const ASSETS = [
   "./icons/apple-touch-icon-etq.png",
   "./icons/favicon-32-etq.png",
   "./icons/favicon-16-etq.png",
-  "./fonts/alexandria-var.woff2"
+  "./fonts/readex-pro-var.woff2"
 ];
 
 self.addEventListener("install", (event) => {
