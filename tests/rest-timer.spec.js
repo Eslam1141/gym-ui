@@ -32,8 +32,11 @@ async function startRest(page) {
 async function screenOffFor(page, ms) {
   // Timers don't run while the screen is off: move the wall clock without
   // firing them, then report the page visible again.
-  await page.clock.pauseAt(Date.parse(await page.evaluate(() => new Date().toISOString())));
+  // The installed clock keeps running between evaluate() and pauseAt(), so a
+  // target equal to "now" can already be in the past; pause a safe second ahead.
   const now = await page.evaluate(() => Date.now());
+  const pausedAt = now + 1000;
+  await page.clock.pauseAt(pausedAt);
   await page.clock.setSystemTime(now + ms);
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
 }
