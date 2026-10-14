@@ -446,6 +446,8 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   pointer-events:none;
 }
 #toTop.show{ opacity:1; transform:none; pointer-events:auto; }
+/* the rest timer bar owns the bottom edge; #toTop would cover its Skip button */
+body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #toTop:active{ transform:scale(.9); }
 #toTop svg{ width:22px; height:22px; fill:#fff; }
 
