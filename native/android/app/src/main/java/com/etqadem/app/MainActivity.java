@@ -22,6 +22,10 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getBridge() == null) return;
+        // WebViewClient.onPageStarted only fires once the server starts
+        // answering, so a black-holed first request never reaches it: arm
+        // for the initial remote load right here.
+        arm(getBridge().getWebView());
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
             public void onPageStarted(WebView webView) {
