@@ -23,10 +23,10 @@ const config: CapacitorConfig = {
     SplashScreen: {
       // Held until the web app's logo loader has painted (gym-ui
       // boot-loader.js calls SplashScreen.hide()), so launch is one
-      // continuous logo with no white flash. Auto-hide after 5 s is only a
+      // continuous logo with no white flash. Auto-hide after 9 s (just past MainActivity's 7 s load watchdog) is only a
       // backstop (web code without that call, or a page that never loads).
       launchAutoHide: true,
-      launchShowDuration: 5000,
+      launchShowDuration: 9000,
       launchFadeOutDuration: 200,
       backgroundColor: '#10171f',
       androidScaleType: 'CENTER_CROP',

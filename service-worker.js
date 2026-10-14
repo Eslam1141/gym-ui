@@ -13,6 +13,7 @@
 // build), CACHE_NAME is just this fixed string — still syntactically valid
 // and fully functional, just not content-addressed.
 const CACHE_NAME = "etqadem-__CACHE_HASH__";
+const NETWORK_TIMEOUT_MS = 4000;
 const ASSETS = [
   "./index.html",
   "./styles.css",
@@ -97,30 +98,41 @@ self.addEventListener("fetch", (event) => {
   // last visit's stale app.js/coach.js immediately every time, which is why a
   // shipped fix could look like it "didn't happen" until a second reload.
   // Cache is now purely the offline fallback.
+  const cachedFallback = () =>
+    caches.match(event.request).then((hit) => {
+      if (hit) return hit;
+      // Offline launch/refresh of the app shell: start_url "./" and the
+      // password-reset route are not cache keys themselves (the ASSETS
+      // list holds ./index.html), so serve the cached shell for any
+      // page navigation instead of the browser's offline error page.
+      if (event.request.mode === "navigate") return caches.match("./index.html");
+      return hit;
+    });
+
+  const network = fetch(event.request).then((networkResponse) => {
+    // Never persist a password-reset URL (/?reset_token=... or
+    // /reset-password?token=...) into Cache Storage: the cache key is the
+    // full URL, so the live reset token would sit on disk until evicted.
+    const holdsSecret = url.searchParams.has("reset_token") ||
+      /\/reset-password$/.test(url.pathname);
+    if (!holdsSecret && networkResponse && networkResponse.status === 200) {
+      const clone = networkResponse.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    }
+    return networkResponse;
+  });
+
+  // A dead-but-connected network (captive portal, black hole) makes fetch()
+  // hang rather than fail, which would strand the app on a blank screen. If
+  // the network has not answered within NETWORK_TIMEOUT_MS and we hold a
+  // cached copy, serve that; the fetch keeps going and refreshes the cache.
+  const timeout = new Promise((resolve) => {
+    setTimeout(() => {
+      cachedFallback().then((hit) => { if (hit) resolve(hit); });
+    }, NETWORK_TIMEOUT_MS);
+  });
+
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // Never persist a password-reset URL (/?reset_token=... or
-        // /reset-password?token=...) into Cache Storage: the cache key is the
-        // full URL, so the live reset token would sit on disk until evicted.
-        const holdsSecret = url.searchParams.has("reset_token") ||
-          /\/reset-password$/.test(url.pathname);
-        if (!holdsSecret && networkResponse && networkResponse.status === 200) {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return networkResponse;
-      })
-      .catch(() =>
-        caches.match(event.request).then((hit) => {
-          if (hit) return hit;
-          // Offline launch/refresh of the app shell: start_url "./" and the
-          // password-reset route are not cache keys themselves (the ASSETS
-          // list holds ./index.html), so serve the cached shell for any
-          // page navigation instead of the browser's offline error page.
-          if (event.request.mode === "navigate") return caches.match("./index.html");
-          return hit;
-        })
-      )
+    Promise.race([network, timeout]).catch(() => cachedFallback())
   );
 });
