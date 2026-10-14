@@ -168,7 +168,7 @@
   .wb-tray.wb-drop-over, .wb-panel.wb-drop-over{ transform:none; }
   .session-btn::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{ display:none; }
   :where(button:not(:disabled)):active{ transform:none; }
-  .bar-fill, .timer-fill{ transition:none; }
+  .bar-fill{ transition:none; }
   .skeleton::after{ animation:none; }
   .gym-toast, .gym-toast.show{ transition:opacity var(--dur-fast) linear; transform:translateX(-50%); }
 }

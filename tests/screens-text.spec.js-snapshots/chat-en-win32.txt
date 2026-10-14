@@ -169,9 +169,9 @@ Protein:
 Data is saved on this device only. Tap
 Back up progress
 every week or two.
-Rest
 00:00
-Skip
+Rest
++15
 Exercise video
 00:00:00
 Nutrition & fitness chat
