@@ -363,15 +363,17 @@
 </script>
 
 <div id="timerBar" role="timer" aria-label="Rest">
-  <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
-    <circle class="timer-ring-track" cx="60" cy="60" r="54"/>
-    <circle class="timer-ring-fill" id="timerFill" cx="60" cy="60" r="54" pathLength="100"/>
-  </svg>
-  <div class="timer-core">
-    <div class="time" id="timerTime">00:00</div>
-    <div class="label" id="timerLabel" data-i18n="restBtn">Rest</div>
-  </div>
   <button type="button" class="timer-btn timer-add" id="timerAdd" data-i18n-aria="restAdd"><span dir="ltr" aria-hidden="true">+15</span></button>
+  <div class="timer-dial">
+    <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+      <circle class="timer-ring-track" cx="60" cy="60" r="54"/>
+      <circle class="timer-ring-fill" id="timerFill" cx="60" cy="60" r="54" pathLength="100"/>
+    </svg>
+    <div class="timer-core">
+      <div class="time" id="timerTime">00:00</div>
+      <div class="label" id="timerLabel" data-i18n="restBtn">Rest</div>
+    </div>
+  </div>
   <button type="button" class="timer-btn timer-skip" id="timerSkip" data-i18n-aria="skip">
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
   </button>

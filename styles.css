@@ -382,12 +382,14 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
    (mirrored in RTL, like the other progress bars). --p (1..0) is set on the
    fill from app.js; pathLength=100 keeps the dash maths unit-free. */
 #timerBar{
-  --timer-d:120px;
+  --timer-d:112px; --timer-pad:8px;
   position:fixed; inset-inline:0; margin-inline:auto; z-index:50;
   bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
-  width:var(--timer-d); height:var(--timer-d); border-radius:50%;
-  background:var(--panel2); box-shadow:var(--elev-2);
-  display:grid; place-items:center;
+  width:max-content;
+  display:flex; align-items:center; gap:8px; padding:var(--timer-pad);
+  border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--line-strong); box-shadow:var(--elev-2);
+  backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2);
   opacity:0; transform:scale(.8); visibility:hidden; pointer-events:none;
   transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease), visibility 0s linear var(--dur-med);
 }
@@ -399,6 +401,7 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 #timerBar.done:not(.show){ transition-delay:.45s; }
 /* the celebration card takes the same spot above the tab bar; it wins while it shows */
 body:has(.celebrate-card.show) #timerBar{ opacity:0; pointer-events:none; }
+.timer-dial{ position:relative; flex:none; width:var(--timer-d); height:var(--timer-d); display:grid; place-items:center; }
 .timer-ring{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
 [dir="rtl"] .timer-ring{ transform:rotate(-90deg) scaleY(-1); }
 .timer-ring circle{ fill:none; stroke-width:7; }
@@ -409,18 +412,17 @@ body:has(.celebrate-card.show) #timerBar{ opacity:0; pointer-events:none; }
 }
 #timerBar.ending .timer-ring-fill{ stroke:var(--warn); }
 #timerBar.done .timer-ring-fill{ stroke:var(--accent); stroke-dashoffset:0; }
-.timer-core{ position:relative; display:grid; justify-items:center; gap:2px; max-width:76px; text-align:center; }
+.timer-core{ position:relative; display:grid; justify-items:center; gap:2px; max-width:72px; text-align:center; }
 .timer-core .time{ font-size:var(--text-2xl); font-weight:var(--fw-black); color:var(--paper); font-variant-numeric:tabular-nums; line-height:1; }
 #timerBar.ending .timer-core .time{ color:var(--warn); }
 .timer-core .label{ max-width:100%; font-size:var(--text-xs); color:var(--paper-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .timer-btn{
-  position:absolute; top:-24px; width:44px; height:44px; padding:0; border-radius:50%;
+  flex:none; width:44px; height:44px; padding:0; border-radius:50%;
   display:grid; place-items:center; cursor:pointer; font-family:inherit; font-size:var(--text-sm); font-weight:700;
-  background:var(--panel2); color:var(--paper-dim); border:1px solid var(--line); box-shadow:var(--elev-1);
+  background:var(--panel2); color:var(--paper-dim); border:1px solid var(--line);
 }
 .timer-btn:hover{ color:var(--paper); border-color:var(--line-strong); }
-.timer-skip{ inset-inline-end:-24px; }
-.timer-add{ inset-inline-start:-24px; font-variant-numeric:tabular-nums; }
+.timer-add{ font-variant-numeric:tabular-nums; }
 @media (prefers-reduced-motion:no-preference){
   @keyframes timer-pulse{ 50%{ transform:scale(1.1); } }
   @keyframes timer-pop{ 40%{ transform:scale(1.12); } }
@@ -1002,6 +1004,8 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
    nav) plus a 16px gap, so at max scroll the last exercise card's Save/Rest
    row and wt/rep inputs never sit under a fixed FAB. */
 .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 88px); }
+/* the rest dock floats over the page: let the current card scroll clear of it (dock 128px + 12px offset + 16px gap) */
+body:has(#timerBar.show) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 156px); }
 
 #appNav{
   position:fixed; z-index:120; left:0; right:0; bottom:0;
@@ -1050,6 +1054,7 @@ body.onboarding-open #appNav{ display:none !important; }
   #appNav button{ --pill-top:var(--space-2); flex:none; min-height:64px; }
   body{ padding-left:var(--side-w); }
   .screen{ padding-bottom:96px; } /* P0-1: clears the rail-anchored FABs (52px + 24px gap + margin) */
+  body:has(#timerBar.show) .screen{ padding-bottom:168px; }
   #timerBar{ inset-inline-start:var(--side-w); bottom:24px; } /* centred in the content area beside the rail */
   #toTop{ bottom:24px; }
   .screen .wrap{ max-width:720px; }
