@@ -14,9 +14,6 @@ public class MainActivity extends BridgeActivity {
     // network) never reaches Capacitor's errorPath. This watchdog gives up on
     // it and loads the bundled offline page instead.
     private static final long LOAD_TIMEOUT_MS = 7000;
-    // WebView progress at which the page has committed and is rendering; past
-    // this a slow load is left to finish (the web boot loader has its own cap).
-    private static final int COMMITTED_PROGRESS = 40;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
@@ -29,6 +26,13 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageStarted(WebView webView) {
                 arm(webView);
+            }
+
+            // First paint of the main frame = it is alive; a slow but healthy
+            // load is left to finish (the web boot loader has its own cap).
+            @Override
+            public void onPageCommitVisible(WebView webView, String url) {
+                disarm();
             }
 
             @Override
@@ -57,9 +61,9 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void run() {
                 watchdog = null;
-                if (isLocal(webView) || webView.getProgress() >= COMMITTED_PROGRESS) return;
+                if (isLocal(webView)) return;
                 String errorUrl = getBridge().getErrorUrl();
-                if (errorUrl != null) webView.loadUrl(errorUrl + "?r=timeout");
+                if (errorUrl != null) webView.loadUrl(errorUrl + "#timeout");
             }
         };
         handler.postDelayed(watchdog, LOAD_TIMEOUT_MS);

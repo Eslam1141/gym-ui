@@ -44,7 +44,7 @@
 <script>
 /* Offline / unreachable launch screen (Capacitor errorPath). Shown when the
  * main-frame load of the server URL fails, or MainActivity's watchdog gives up
- * on a hung load (?r=timeout). Native cold start can fail before the service
+ * on a hung load (#timeout). Native cold start can fail before the service
  * worker is consulted although the PWA shell is cached, so on a fresh error
  * we first try the server URL once (the SW then serves the cached shell).
  * If that fails too we land back here with a recent attempt stamp and show
@@ -59,7 +59,10 @@
     ar: { title: "أنت غير متصل بالإنترنت", help: "تحقق من اتصالك ثم حاول مرة أخرى. بياناتك محفوظة على جهازك.", btn: "حاول مرة أخرى", busy: "جارٍ المحاولة…" }
   };
   var lang = /^ar/i.test(navigator.language || (navigator.languages && navigator.languages[0]) || "") ? "ar" : "en";
-  var q = new URLSearchParams(location.search);
+  // Flags arrive in the fragment (#timeout, #lang=ar): the local server rejects query strings.
+  var hash = location.hash.replace(/^#/, "");
+  var q = new URLSearchParams(hash.indexOf("=") > -1 ? hash : "");
+  var timedOut = /(^|&)timeout(&|$)/.test(hash);
   if (q.get("lang") === "ar" || q.get("lang") === "en") lang = q.get("lang");
   var t = COPY[lang];
   document.documentElement.lang = lang;
@@ -106,7 +109,7 @@
 
   var last = parseInt(read(STAMP) || "0", 10);
   var fresh = !last || Date.now() - last > 15000;
-  if (fresh && q.get("r") !== "timeout") {
+  if (fresh && !timedOut) {
     // First look at this failure: one silent attempt (the splash stays up).
     go();
     // Safety net if that navigation never gets going.
