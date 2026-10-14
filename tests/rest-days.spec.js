@@ -65,7 +65,7 @@ test.describe("rest days (signed in)", () => {
     const { context, page, server } = await openApp(browser, { signedIn: true, checks: partial(3) });
     await settle(page);
     await expect(sheet(page)).toBeVisible(T);
-    await expect(sheet(page).locator(".syd-body")).toContainText("3 of 8");
+    await expect(sheet(page).locator(".syd-body")).toContainText("3 of 6");
     await sheet(page).locator(".syd-yes").click();
     await expect(sheet(page)).toHaveCount(0, T);
     const p = posts(server, "/workouts/complete");
@@ -144,7 +144,7 @@ test.describe("rest days (signed in)", () => {
 
   test("400 invalid_request retries once without today", async ({ browser }) => {
     const { context, page, server } = await openApp(browser, { signedIn: true, server: { rejectToday: true } });
-    expect(await page.evaluate((d) => window.GymRest.submit(d, "m_upperA"), YESTERDAY)).toBe("ok");
+    expect(await page.evaluate((d) => window.GymRest.submit(d, "m_upper"), YESTERDAY)).toBe("ok");
     const p = posts(server, "/workouts/complete");
     expect(p.map((r) => r.body)).toEqual([
       { date: YESTERDAY, dayId: DAY_ID, today: TODAY },

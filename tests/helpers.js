@@ -3,8 +3,8 @@
 const NOW = "2026-10-02T07:00:00Z"; // Friday 10:00 in Cairo; yesterday = 2026-10-01
 const TODAY = "2026-10-02";
 const YESTERDAY = "2026-10-01";
-const DAY_ID = "m_upperA";
-const EX_IDS = ["mua_bench", "mua_pulldown", "mua_ohp", "mua_row", "mua_lateral", "mua_facepull", "mua_curl", "mua_pushdown"];
+const DAY_ID = "m_upper";
+const EX_IDS = ["mua_bench", "mua_pulldown", "mua_ohp", "mua_row", "mua_lateral", "mua_facepull"];
 
 function makeServer(over) {
   return Object.assign({

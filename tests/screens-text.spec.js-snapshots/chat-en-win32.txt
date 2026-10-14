@@ -24,16 +24,19 @@ Fri
 Today: not trained yet
 2 of 2 rest days left this week. A rest day keeps your streak but doesn't add to it.
 Take a rest day
-Upper A
-Lower A
-Upper B
-Lower B
+Upper
+Lower
+Rest
+Back + Biceps + Calves
+Chest + Triceps
+Rest
+Rest
 Workout Timer
 00:00:00
 Not started yet
 Start Workout
-Upper A — Chest, Back, Delts, Arms
-0/8
+Upper — Chest, Back, Shoulders
+0/6
 Warm-up — do this first
 Video
 Raise your temperature
@@ -122,44 +125,18 @@ Save
 Rest
 Video
 No log yet
-Barbell Curl
-3
-sets
-10-12
-reps
-60s
-rest
-kg
-reps
-Save
-Rest
-Video
-No log yet
-Cable Rope Pushdown
-3
-sets
-12-15
-reps
-45s
-rest
-kg
-reps
-Save
-Rest
-Video
-No log yet
 Reset today's checklist
 Important Notes
 Weekly schedule:
-Sat Legs · Sun Push · Mon Pull · Tue rest (football) · Wed Lower · Thu Upper · Fri rest. Every muscle 2×/week with 3-4 days between.
+Day 1 Upper · Day 2 Lower · Day 3 rest · Day 4 Back + Biceps + Calves · Day 5 Chest + Triceps · Days 6-7 rest. Chest and back get two sessions a week; legs get one heavy session.
 Progressive overload:
 add a little weight or a rep once you hit the top of the rep range with clean form — beat last session's numbers (shown on each card).
 Train close to failure:
 stop compound sets 1-3 reps short; isolation moves 0-1.
 Warm-up:
 follow the warm-up card before your first set.
-Core 3×/week:
-hanging leg raise (Pull), Pallof press (Upper), cable crunch (Lower). Brace as if bracing for a punch.
+Core:
+hanging leg raise on Lower day. Brace as if bracing for a punch.
 Recover:
 7-9 h sleep. Football counts as leg load — keep it to Tuesday.
 Deload

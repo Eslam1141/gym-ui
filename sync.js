@@ -367,6 +367,9 @@
         // rather than waiting on this device's next unrelated write.
         var migrated = false;
         try { migrated = !!(window.GymMigrations && window.GymMigrations.maleV2 && window.GymMigrations.maleV2()); } catch (e) {}
+        // The 4-day split's id moves (maleV3) must follow maleV2's, which can still
+        // land old day ids on this device.
+        try { migrated = !!(window.GymMigrations && window.GymMigrations.maleV3 && window.GymMigrations.maleV3()) || migrated; } catch (e) {}
         if (migrated) { changed = true; scheduleDebouncedSync(); }
         if (changed && typeof window.GymApplyExternalUpdate === "function") {
           window.GymApplyExternalUpdate();
