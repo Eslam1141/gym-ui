@@ -15,7 +15,7 @@
 
   var LS_DONE = "gymcel_done";
   var SHOW_MS = 3200;
-  var BURST = 8;
+  var BURST = 12;
 
   var host = null, card = null, live = null, textEl = null, stage = null;
   var timer = null;
@@ -100,6 +100,7 @@
         var dot = document.createElement("span");
         dot.className = "celebrate-dot";
         dot.style.setProperty("--a", (i * 360 / BURST) + "deg");
+        dot.style.setProperty("--d", (i % 2 ? 66 : 50) + "px");
         stage.appendChild(dot);
       }
     }
