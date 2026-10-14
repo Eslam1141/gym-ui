@@ -173,6 +173,7 @@
       '    <button type="button" role="menuitem" id="tbMenuAdmin" hidden></button>' +
       '    <button type="button" role="menuitem" id="tbMenuTheme"></button>' +
       '    <button type="button" role="menuitem" id="tbMenuLang"></button>' +
+      '    <button type="button" role="menuitem" id="tbMenuFeedback"></button>' +
       '    <button type="button" role="menuitem" id="tbMenuSignOut"></button>' +
       '  </div>' +
       '</div>';
@@ -216,6 +217,10 @@
     document.getElementById("tbMenuLang").addEventListener("click", function () {
       if (window.GymPrefs) GymPrefs.toggleLang(); // rewrites <html lang>, which re-renders us
       render();
+    });
+    document.getElementById("tbMenuFeedback").addEventListener("click", function () {
+      setMenuOpen(false);
+      if (window.GymFeedback) GymFeedback.open();
     });
     GymAct.bind(document.getElementById("tbMenuSignOut"), function () {
       setMenuOpen(false);
@@ -274,6 +279,7 @@
     adminItem.hidden = !(me && me.isAdmin === true);
     adminItem.textContent = str("hdrAdmin");
     document.getElementById("tbMenuSignOut").textContent = str("hdrSignOut");
+    document.getElementById("tbMenuFeedback").textContent = window.GymFeedback ? GymFeedback.title() : "";
     var dark = document.documentElement.dataset.theme !== "light";
     document.getElementById("tbMenuTheme").textContent = str(dark ? "menuThemeLight" : "menuThemeDark");
     var langItem = document.getElementById("tbMenuLang");

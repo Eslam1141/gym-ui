@@ -191,7 +191,7 @@
   }
   function setTab(tab) {
     state.tab = tab;
-    ["overview", "users", "removed", "activity"].forEach(function (t) {
+    ["overview", "users", "removed", "activity", "feedback"].forEach(function (t) {
       var b = document.querySelector('[data-tab="' + t + '"]');
       b.setAttribute("aria-selected", t === tab ? "true" : "false");
     });
@@ -269,6 +269,7 @@
     if (panel && !panel.hidden) return;
     if (state.tab === "overview") loadOverview(true);
     else if (state.tab === "users") loadList(true);
+    loadFbBadge();
   }
   function chart(series) {
     var W = 900, H = 180, pad = 22, n = series.length || 1;
@@ -612,6 +613,190 @@
     load();
   };
 
+  // ---- feedback ----
+  // Every field here is user-controlled: textContent only, dir="auto" on free
+  // text (bidi spoofing), white-space:pre-wrap in CSS, no href/src from data.
+  addStrings({
+    tabFeedback: ["Feedback", "الآراء"],
+    fbAll: ["All", "الكل"],
+    fbStatus: ["Status", "الحالة"],
+    fbType: ["Type", "النوع"],
+    fbNone: ["No feedback yet.", "لا توجد آراء بعد."],
+    fbGuest: ["Guest", "زائر"],
+    fbContext: ["Context", "السياق"],
+    fbNote: ["Internal note (only admins see it)", "ملاحظة داخلية (للمسؤولين فقط)"],
+    fbNoteSave: ["Save note", "حفظ الملاحظة"],
+    fbNoteSaved: ["Note saved.", "تم حفظ الملاحظة."],
+    fbStatusSaved: ["Status updated.", "تم تحديث الحالة."],
+    fbPageOf: ["Page {p} of {n} · {t} items", "صفحة {p} من {n} · {t} عنصر"],
+    st_new: ["New", "جديد"], st_in_progress: ["In progress", "قيد المعالجة"], st_done: ["Done", "تم"], st_wont_do: ["Won't do", "لن يُنفَّذ"],
+    ty_bug: ["Problem", "مشكلة"], ty_idea: ["Idea", "فكرة"], ty_other: ["Other", "أخرى"],
+    ctxPlatform: ["Platform", "المنصة"], ctxLang: ["Language", "اللغة"], ctxScreen: ["Screen", "الشاشة"],
+    ctxVersion: ["App version", "إصدار التطبيق"], ctxUA: ["User agent", "المتصفح"]
+  });
+  var FB_STATUS = ["new", "in_progress", "done", "wont_do"];
+  var FB_TYPES = ["bug", "idea", "other"];
+  var FB_ICON = { bug: "🐞", idea: "💡", other: "💬" };
+  state.feedback = { status: "", type: "", page: 1 };
+
+  function fmtDateTime(iso) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d)) return "—";
+    try { return d.toLocaleString(AR ? "ar" : "en", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso; }
+  }
+  function setFbBadge(n) {
+    var b = document.getElementById("fbBadge");
+    if (!b) return;
+    n = Math.max(0, Number(n) || 0);
+    b.textContent = n > 99 ? "99+" : String(n);
+    b.hidden = n === 0;
+  }
+  var fbNew = 0;
+  function loadFbBadge() {
+    return api("/feedback/count?status=new").then(function (r) {
+      if (r.ok && r.data && typeof r.data.count === "number") { fbNew = r.data.count; setFbBadge(fbNew); }
+    });
+  }
+  function bumpFbBadge(delta) { fbNew = Math.max(0, fbNew + delta); setFbBadge(fbNew); }
+
+  views.feedback = function () {
+    var f = state.feedback;
+    main.textContent = "";
+    function opt(list, prefix) {
+      return [el("option", { value: "", text: s("fbAll") })].concat(list.map(function (v) { return el("option", { value: v, text: s(prefix + v) }); }));
+    }
+    var selStatus = el("select", { "aria-label": s("fbStatus") }, opt(FB_STATUS, "st_"));
+    var selType = el("select", { "aria-label": s("fbType") }, opt(FB_TYPES, "ty_"));
+    selStatus.value = f.status; selType.value = f.type;
+    selStatus.addEventListener("change", function () { f.status = selStatus.value; f.page = 1; loadFeedback(); });
+    selType.addEventListener("change", function () { f.type = selType.value; f.page = 1; loadFeedback(); });
+    main.appendChild(el("div", { class: "adm-tools" }, [selStatus, selType]));
+    main.appendChild(el("div", { id: "admFbHost" }));
+    loadFeedback();
+  };
+
+  var fbSeq = 0;
+  function loadFeedback() {
+    var f = state.feedback, seq = ++fbSeq, host = document.getElementById("admFbHost");
+    if (!host) return;
+    var qs = "?page=" + f.page + "&pageSize=25" + (f.status ? "&status=" + encodeURIComponent(f.status) : "") + (f.type ? "&type=" + encodeURIComponent(f.type) : "");
+    api("/feedback" + qs).then(function (r) {
+      if (seq !== fbSeq || state.tab !== "feedback") return;
+      if (authFailed(r)) return;
+      host.textContent = "";
+      if (!r.ok) {
+        host.appendChild(el("p", { class: "adm-err", role: "alert", text: s("loadErr") }));
+        host.appendChild(el("button", { class: "adm-btn", text: s("retry"), onclick: loadFeedback }));
+        return;
+      }
+      var d = r.data;
+      if (typeof d.newCount === "number") { fbNew = d.newCount; setFbBadge(fbNew); }
+      var items = d.items || [];
+      if (!items.length && f.page > 1) { f.page--; return loadFeedback(); }
+      if (!items.length) { host.appendChild(el("p", { class: "adm-msg", text: s("fbNone") })); return; }
+      host.appendChild(el("div", { class: "adm-list" }, items.map(function (it, i) {
+        var card = feedbackCard(it);
+        card.style.setProperty("--i", Math.min(i, 12));
+        return card;
+      })));
+      var size = d.pageSize || 25, pages = Math.max(1, Math.ceil(d.total / size));
+      host.appendChild(el("div", { class: "adm-pager" }, [
+        el("button", { class: "adm-btn", text: s("prev"), disabled: f.page <= 1, onclick: function () { f.page--; loadFeedback(); } }),
+        el("span", { class: "adm-sub", text: s("fbPageOf", { p: f.page, n: pages, t: fmtNum(d.total) }) }),
+        el("button", { class: "adm-btn", text: s("next"), disabled: f.page >= pages, onclick: function () { f.page++; loadFeedback(); } })
+      ]));
+    });
+  }
+
+  function feedbackCard(it) {
+    var type = FB_TYPES.indexOf(it.type) >= 0 ? it.type : "other";
+    var status = FB_STATUS.indexOf(it.status) >= 0 ? it.status : "new";
+    var saved = { status: status, note: it.adminNote || "" };
+    var msgEl = el("p", { class: "adm-fb-msg", dir: "auto", text: it.message });
+    var author;
+    if (it.userId) author = (it.userName || "") + (it.userName && it.userEmail ? " " : "") + (it.userEmail ? "<" + it.userEmail + ">" : "");
+    else author = s("fbGuest") + (it.email ? " " + it.email : "");
+    var authorEl = el("bdi", { text: author || it.userId });
+    var ico = el("span", { class: "adm-fb-ico", "aria-hidden": "true", text: FB_ICON[type] });
+    var typeEl = el("span", { class: "adm-sub", text: s("ty_" + type) });
+    var pill = el("span", { class: "adm-badge adm-st adm-st-" + status, text: s("st_" + status) });
+    var head = el("div", { class: "adm-fb-head" }, [
+      ico, typeEl, pill,
+      el("span", { class: "adm-sub adm-fb-when", text: fmtDateTime(it.createdAt) }),
+      el("span", { class: "adm-sub adm-fb-who" }, [authorEl])
+    ]);
+
+    var ctx = it.context && typeof it.context === "object" ? it.context : {};
+    var kv = el("dl", { class: "adm-kv" });
+    [["ctxPlatform", ctx.platform], ["ctxLang", ctx.lang], ["ctxScreen", ctx.screen], ["ctxVersion", ctx.appVersion], ["ctxUA", ctx.userAgent]].forEach(function (p) {
+      if (p[1] == null || p[1] === "") return;
+      kv.appendChild(el("dt", { text: s(p[0]) }));
+      kv.appendChild(el("dd", { dir: "auto", text: String(p[1]) }));
+    });
+    var details = kv.childNodes.length ? el("details", { class: "adm-fb-ctx" }, [el("summary", { text: s("fbContext") }), kv]) : null;
+
+    var msgState = el("p", { class: "adm-err", role: "status", "aria-live": "polite" });
+    var sel = el("select", { "aria-label": s("fbStatus") }, FB_STATUS.map(function (v) { return el("option", { value: v, text: s("st_" + v) }); }));
+    sel.value = status;
+    var noteId = "fbNote" + it.id;
+    var note = el("textarea", { id: noteId, rows: "2", maxlength: "2000", dir: "auto" });
+    note.value = saved.note;
+    var noteBtn = el("button", { type: "button", class: "adm-btn", text: s("fbNoteSave") });
+    var noteLabel = el("label", { class: "adm-sub", for: noteId, text: s("fbNote") });
+
+    function paintStatus(v) {
+      pill.className = "adm-badge adm-st adm-st-" + v;
+      pill.textContent = s("st_" + v);
+    }
+    sel.addEventListener("change", function () {
+      var next = sel.value, prev = saved.status;
+      if (next === prev) return;
+      paintStatus(next);
+      sel.disabled = true;
+      bumpFbBadge((next === "new" ? 1 : 0) - (prev === "new" ? 1 : 0));
+      msgState.textContent = "";
+      api("/feedback/" + encodeURIComponent(it.id), { method: "PATCH", body: { status: next } }).then(function (r) {
+        sel.disabled = false;
+        if (authFailed(r)) return;
+        if (!r.ok) {
+          sel.value = prev; paintStatus(prev);
+          bumpFbBadge((prev === "new" ? 1 : 0) - (next === "new" ? 1 : 0));
+          msgState.className = "adm-err"; msgState.textContent = errText(r);
+          return;
+        }
+        saved.status = next;
+        msgState.className = "adm-ok"; msgState.textContent = s("fbStatusSaved");
+        loadFbBadge();
+      });
+    });
+    noteBtn.addEventListener("click", function () {
+      var next = note.value.trim(), prev = saved.note;
+      if (next === prev) { msgState.className = "adm-ok"; msgState.textContent = s("fbNoteSaved"); return; }
+      noteBtn.disabled = true;
+      msgState.textContent = "";
+      api("/feedback/" + encodeURIComponent(it.id), { method: "PATCH", body: { adminNote: next } }).then(function (r) {
+        noteBtn.disabled = false;
+        if (authFailed(r)) return;
+        if (!r.ok) {
+          // Roll back to the last saved note; the failed text is not kept.
+          note.value = prev;
+          msgState.className = "adm-err"; msgState.textContent = errText(r);
+          return;
+        }
+        saved.note = next; note.value = next;
+        msgState.className = "adm-ok"; msgState.textContent = s("fbNoteSaved");
+      });
+    });
+
+    return el("article", { class: "adm-section adm-fb" }, [
+      head, msgEl, details,
+      el("div", { class: "adm-fb-act" }, [sel]),
+      noteLabel, note,
+      el("div", { class: "adm-actions" }, [noteBtn]),
+      msgState
+    ]);
+  }
+
   window.__admin = { api: api, s: s, addStrings: addStrings, el: el, fmtDate: fmtDate, fmtNum: fmtNum, authFailed: authFailed, showError: showError, views: views, render: render, state: state, AR: AR, API_BASE: API_BASE, session: session };
 
   function init() {
@@ -624,6 +809,7 @@
     document.getElementById("tabUsers").textContent = s("tabUsers");
     document.getElementById("tabRemoved").textContent = s("tabRemoved");
     document.getElementById("tabActivity").textContent = s("tabActivity");
+    document.getElementById("tabFeedback").insertBefore(document.createTextNode(s("tabFeedback")), document.getElementById("fbBadge"));
     document.title = "Etqadem — " + s("title");
     var sess = session();
     if (!sess) return showMsg("noSession", true);
@@ -635,6 +821,7 @@
     });
     var h = (location.hash || "").slice(1);
     setTab(views[h] ? h : "overview");
+    loadFbBadge();
     setInterval(liveTick, LIVE_MS);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") liveTick(); });
   }

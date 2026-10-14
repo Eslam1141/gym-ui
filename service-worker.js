@@ -40,6 +40,7 @@ const ASSETS = [
   "./calendar.js",
   "./workout-builder.js",
   "./header.js",
+  "./feedback.js",
   "./notifications.js",
   "./profile.js",
   "./toast.js",

@@ -93,3 +93,20 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 .adm-hint{margin:-4px 0 6px;color:var(--paper-dim);font-size:var(--text-sm)}
 .adm-sum{margin:0 0 10px;font-size:var(--text-sm);font-weight:700}
 .adm-axis{display:flex;justify-content:space-between;color:var(--paper-dim);font-size:var(--text-xs);margin-top:4px}
+
+/* feedback tab */
+.adm-tabbadge{display:inline-block;min-width:20px;padding:1px 6px;margin-inline-start:8px;border-radius:999px;background:var(--accent);color:#fff;font-size:var(--text-xs);font-weight:700;text-align:center;line-height:18px}
+.adm-tabbadge[hidden]{display:none}
+.adm-fb{margin-block-end:0}
+.adm-fb-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.adm-fb-ico{font-size:var(--text-lg);line-height:1}
+.adm-fb-who{margin-inline-start:auto;overflow-wrap:anywhere}
+.adm-fb-msg{margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:var(--lh-body)}
+.adm-fb-ctx summary{cursor:pointer;color:var(--paper-dim);font-size:var(--text-sm);min-height:32px}
+.adm-fb-ctx .adm-kv dd{overflow-wrap:anywhere}
+.adm-fb-act{margin-block:10px}
+.adm-fb-act select{background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:10px;padding:10px 12px;font:inherit;min-height:44px}
+.adm-st-new{background:var(--accent);color:#fff}
+.adm-st-in_progress{background:var(--warn);color:#14161B}
+.adm-st-done{background:var(--success);color:#fff}
+.adm-st-wont_do{background:var(--panel2);color:var(--paper-dim)}
