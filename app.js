@@ -309,6 +309,15 @@ const T = {
   restHint:["A rest day keeps your streak but doesn't add to it.","يوم الراحة يحافظ على سلسلتك لكنه لا يضيف إليها."],
   restMarked:["Rest day saved","تم حفظ يوم الراحة"],
   restRemoved:["Rest day removed","تم إلغاء يوم الراحة"],
+  celebDay1:["Great job. See you next session.","عمل رائع. نراك في الجلسة القادمة."],
+  celebDay2:["Two days in a row. Keep it going.","يومان متتاليان. لنواصل هكذا."],
+  celebHabit:["{n} days in a row. You're building a habit.","{n} أيام متتالية. العادة تتشكّل."],
+  celebHabitMany:["{n} days in a row. You're building a habit.","{n} يومًا متتاليًا. العادة تتشكّل."],
+  celebWeek1:["A full week in a row. Well earned.","أسبوع كامل متتالٍ. تستحق ذلك."],
+  celebWeek2:["Two weeks in a row. That is consistency.","أسبوعان متتاليان. هذا هو الالتزام."],
+  celebWeeks:["{w} weeks in a row. That is consistency.","{w} أسابيع متتالية. هذا هو الالتزام."],
+  celebWeeksMany:["{w} weeks in a row. That is consistency.","{w} أسبوعًا متتاليًا. هذا هو الالتزام."],
+  celebRest:["Rest is part of training. Recharge and come back stronger.","الراحة جزء من التدريب. أعد شحن طاقتك وعد أقوى."],
   restErrLimit:["You've used both rest days this week.","استخدمت يومَي الراحة لهذا الأسبوع."],
   restErrTrained:["You already trained that day.","لقد تمرنت في هذا اليوم بالفعل."],
   restErrWindow:["Only today and yesterday can be changed.","يمكن تغيير اليوم والأمس فقط."],
@@ -1024,6 +1033,7 @@ function renderExercises(){
       // can auto-select the next day in rotation on a later day's visit.
       if(!wasComplete && isDayComplete(activeDay)){
         saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
+        if(window.GymCelebrate) GymCelebrate.day(activeDay);
       }
       if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
         window.GymCalendar.onCheckChanged(activeDay, todayStr());
