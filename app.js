@@ -1365,11 +1365,19 @@ async function scheduleRestNotification(endAt, name){
     await ln.createChannel({ id:"rest-timer", name:t("restBtn"), importance:5, vibration:true, visibility:1 });
     await ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] });
     if(endAt !== restEndAt) return; // skipped or restarted while we were asking
+    // The plugin defaults to an exact alarm and, on Android 12+ without the
+    // "Alarms & reminders" permission, opens that system Settings screen from
+    // schedule() itself. Never do that mid-workout: ask for exact only when
+    // it is already allowed, else schedule the inexact (still Doze-safe) alarm.
+    let exact = false;
+    try{ exact = (await ln.checkExactNotificationSetting()).exact_alarm === "granted"; }catch(e){}
+    if(endAt !== restEndAt) return;
     await ln.schedule({ notifications:[{
       id: REST_NOTIF_ID,
       title: t("restOverTitle"),
       body: t("restOverBody").replace("{name}", name),
       channelId: "rest-timer",
+      isExactNotification: exact,
       schedule: { at: new Date(endAt), allowWhileIdle: true }
     }] });
   }catch(e){}
