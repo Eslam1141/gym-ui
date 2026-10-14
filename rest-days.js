@@ -165,7 +165,8 @@
     if (btn) btn.disabled = true;
     return setRest(date, on).then(function (r) {
       if (btn) btn.disabled = false;
-      toast(r.ok ? str(on ? "restMarked" : "restRemoved") : r.message);
+      if (r.ok && on && window.GymCelebrate) GymCelebrate.rest();
+      else toast(r.ok ? str(on ? "restMarked" : "restRemoved") : r.message);
       return r;
     });
   }
