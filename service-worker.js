@@ -41,6 +41,7 @@ const ASSETS = [
   "./workout-builder.js",
   "./header.js",
   "./feedback.js",
+  "./native-shell.js",
   "./notifications.js",
   "./profile.js",
   "./toast.js",

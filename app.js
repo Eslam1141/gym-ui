@@ -1726,6 +1726,18 @@ function restNotifier(){
   }catch(e){ return null; }
   return (c.Plugins && c.Plugins.LocalNotifications) || null;
 }
+// Android shell only (native/android TimerAlarmPlugin): an exact, insistent
+// alarm (sound loops up to 30 s, "Stop" action) used instead of a plain
+// LocalNotification when present (exact when the exact-alarm permission is
+// granted, else inexact: see offerPreciseAlerts).
+function timerAlarmPlugin(){
+  const c = window.Capacitor;
+  try{
+    if(!c || typeof c.isNativePlatform !== "function" || !c.isNativePlatform()) return null;
+  }catch(e){ return null; }
+  const p = c.Plugins && c.Plugins.TimerAlarm;
+  return p && typeof p.schedule === "function" ? p : null;
+}
 async function scheduleRestNotification(endAt, name){
   const ln = restNotifier();
   if(!ln) return;
@@ -1738,6 +1750,18 @@ async function scheduleRestNotification(endAt, name){
     await ln.createChannel({ id:"timer-alarm", name:t("alarmChannel"), importance:5, vibration:true, visibility:1, sound:"timer_alarm.wav" });
     await ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] });
     if(endAt !== finalEndAt()) return; // skipped or restarted while we were asking
+    const ta = timerAlarmPlugin();
+    if(ta){
+      const exT = timerKind === "ex";
+      await ta.schedule({
+        id: REST_NOTIF_ID, at: endAt,
+        title: t(exT ? "exOverTitle" : "restOverTitle"),
+        body: exT ? name : t("restOverBody").replace("{name}", name),
+        stopLabel: t("alarmStop")
+      });
+      if(endAt === finalEndAt()) notifScheduled = true;
+      return;
+    }
     // The plugin defaults to an exact alarm and, on Android 12+ without the
     // "Alarms & reminders" permission, opens that system Settings screen from
     // schedule() itself. Never do that mid-workout: ask for exact only when
@@ -1759,6 +1783,8 @@ async function scheduleRestNotification(endAt, name){
   }catch(e){}
 }
 function cancelRestNotification(){
+  const ta = timerAlarmPlugin();
+  if(ta && typeof ta.cancel === "function") try{ Promise.resolve(ta.cancel({ id:REST_NOTIF_ID })).catch(()=>{}); }catch(e){}
   const ln = restNotifier();
   if(ln) ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] }).catch(()=>{});
 }

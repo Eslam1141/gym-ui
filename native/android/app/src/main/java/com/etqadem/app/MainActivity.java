@@ -1,5 +1,7 @@
 package com.etqadem.app;
 
+import android.app.NotificationManager;
+import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,11 +17,20 @@ public class MainActivity extends BridgeActivity {
     // it and loads the bundled offline page instead.
     private static final long LOAD_TIMEOUT_MS = 7000;
 
+    private static volatile boolean foreground = false;
+
+    /** True while the app is on screen (the in-app alarm rings then, not the native one). */
+    static boolean isForeground() {
+        return foreground;
+    }
+
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(TimerAlarmPlugin.class);
+        TimerAlarmReceiver.ensureChannel(this);
         super.onCreate(savedInstanceState);
         if (getBridge() == null) return;
         // WebViewClient.onPageStarted only fires once the server starts
@@ -78,6 +89,21 @@ public class MainActivity extends BridgeActivity {
             handler.removeCallbacks(watchdog);
             watchdog = null;
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        foreground = true;
+        // Back in the app: stop a still-ringing timer notification (a pending
+        // alarm, if the timer is still running, stays scheduled).
+        ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).cancel(4242);
+    }
+
+    @Override
+    public void onPause() {
+        foreground = false;
+        super.onPause();
     }
 
     @Override
