@@ -1,6 +1,6 @@
 // Rest timer survives the screen turning off: phones freeze setInterval while
 // the screen is off, so the timer must count from a wall-clock end time and
-// alert (beep + vibrate) as soon as the page is visible again.
+// alert (alarm + vibrate) as soon as the page is visible again.
 const { test, expect } = require("@playwright/test");
 const { openApp } = require("./helpers");
 
@@ -13,7 +13,7 @@ async function stubAlerts(page) {
       constructor() { this.currentTime = 0; this.state = "running"; this.destination = {}; }
       resume() { return Promise.resolve(); }
       createOscillator() { return { connect() {}, frequency: {}, start() { window.__beeps++; }, stop() {} }; }
-      createGain() { return { connect() {}, gain: { setValueAtTime() {} } }; }
+      createGain() { return { connect() {}, gain: { setValueAtTime() {}, linearRampToValueAtTime() {} } }; }
     }
     window.AudioContext = FakeCtx;
     window.webkitAudioContext = FakeCtx;
@@ -56,8 +56,9 @@ test("rest that ended while the screen was off alerts on return", async ({ brows
   const secs = await startRest(page);
   await screenOffFor(page, (secs + 5) * 1000);
   await expect(page.locator("#timerBar")).not.toHaveClass(/show/);
-  expect(await page.evaluate(() => window.__beeps)).toBe(1);
+  expect(await page.evaluate(() => window.__beeps)).toBe(4); // one alarm burst: four pulses
   expect(await page.evaluate(() => window.__vibrations.length)).toBe(1);
+  await expect(page.locator("#alarmBanner")).toBeVisible();
   await context.close();
 });
 
@@ -178,7 +179,7 @@ test("final seconds state applies at 5s or less and the time is announced at 10s
   await page.clock.runFor(5500);
   await expect(page.locator("#timerBar")).not.toHaveClass(/show/);
   await expect(page.locator("#timerLive")).toHaveText("Rest is over");
-  expect(await page.evaluate(() => window.__beeps)).toBe(1);
+  expect(await page.evaluate(() => window.__beeps)).toBe(4);
   await context.close();
 });
 
