@@ -60,7 +60,7 @@
   var panelOpen = false;
   var fetchSeq = 0;
 
-  var bellBtn, badgeEl, backdrop, panel, listEl, closeBtn, titleEl;
+  var bellBtn, badgeEl, backdrop, panel, listEl, closeBtn, titleEl, readAllBtn, liveEl;
 
   var ICON_BELL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></svg>';
   var ICON_CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.3 19.7 2.89 18.29 9.17 12 2.89 5.71 4.3 4.3l6.29 6.29L16.89 4.3z"/></svg>';
@@ -95,6 +95,12 @@
       badgeEl.textContent = "";
       bellBtn.setAttribute("aria-label", str("notifBell"));
     }
+    renderReadAll();
+  }
+
+  // The header action only makes sense while something is unread.
+  function renderReadAll() {
+    if (readAllBtn) readAllBtn.hidden = !(unreadCount > 0 && !loadErr);
   }
 
   // ---------------- panel ----------------
@@ -113,16 +119,22 @@
     panel.innerHTML =
       '<div class="notif-panel-head">' +
       '  <span class="notif-panel-title" id="notifPanelTitle"></span>' +
+      '  <button type="button" class="notif-readall" id="notifReadAllBtn" hidden></button>' +
       '  <button type="button" class="notif-close" id="notifCloseBtn">' + ICON_CLOSE + '</button>' +
       '</div>' +
-      '<div class="notif-list" id="notifList"></div>';
+      '<div class="notif-list" id="notifList"></div>' +
+      '<span class="sr-only" id="notifLive" role="status" aria-live="polite"></span>';
 
     document.body.appendChild(backdrop);
     document.body.appendChild(panel);
     titleEl = document.getElementById("notifPanelTitle");
     listEl = document.getElementById("notifList");
     closeBtn = document.getElementById("notifCloseBtn");
+    readAllBtn = document.getElementById("notifReadAllBtn");
+    liveEl = document.getElementById("notifLive");
     closeBtn.addEventListener("click", close);
+    if (window.GymAct && typeof GymAct.bind === "function") GymAct.bind(readAllBtn, markAllRead, { cooldown: 400 });
+    else readAllBtn.addEventListener("click", markAllRead);
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && panelOpen) close();
     });
@@ -133,6 +145,8 @@
     panel.setAttribute("aria-label", str("notifTitle"));
     if (titleEl) titleEl.textContent = str("notifTitle");
     if (closeBtn) closeBtn.setAttribute("aria-label", str("notifClose"));
+    if (readAllBtn) readAllBtn.textContent = str("notifReadAll");
+    renderReadAll();
   }
 
   function clearList() {
@@ -232,6 +246,48 @@
     var url = item.url;
     close();
     if (url && isSameOriginOtherPage(url)) window.location.assign(url);
+  }
+
+  // Optimistic: flip everything loaded to read first, then tell the server.
+  // /notifications/read-all may not be deployed yet (404) — then fall back to
+  // the per-item endpoint for each loaded unread item. Any failure restores
+  // the previous state and says so.
+  function markAllRead() {
+    if (!isAuthed() || unreadCount <= 0) return Promise.resolve();
+    var prevCount = unreadCount;
+    var seq = fetchSeq;
+    var touched = items.filter(function (i) { return !i.readAt; });
+    var stamp = new Date().toISOString();
+    touched.forEach(function (i) { i.readAt = stamp; });
+    unreadCount = 0;
+    renderBadge();
+    renderList();
+    if (readAllBtn && document.activeElement === readAllBtn && closeBtn) closeBtn.focus();
+    if (liveEl) liveEl.textContent = str("notifAllReadDone");
+
+    function perItem() {
+      return Promise.all(touched.map(function (i) {
+        return GymHeader.api("/notifications/" + encodeURIComponent(i.id) + "/read", { method: "POST" })
+          .then(function (res) { if (!res.ok) throw new Error("notifications " + res.status); });
+      }));
+    }
+    return GymHeader.api("/notifications/read-all", { method: "POST" })
+      .then(function (res) {
+        if (res.status === 404) return perItem();
+        if (!res.ok) throw new Error("notifications " + res.status);
+      })
+      .catch(function () {
+        touched.forEach(function (i) { i.readAt = null; });
+        if (seq === fetchSeq) {
+          unreadCount = prevCount;
+          renderBadge();
+          if (panelOpen) renderList();
+        } else {
+          fetchNotifications();
+        }
+        if (liveEl) liveEl.textContent = "";
+        if (window.GymToast && typeof GymToast.show === "function") GymToast.show({ message: str("notifAllReadErr") });
+      });
   }
 
   // Which account the cached inbox belongs to — an account switch must not
