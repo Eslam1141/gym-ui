@@ -1269,6 +1269,7 @@ function restTick(){
   renderRestTime(remaining, restTotal);
   if(remaining <= 0){
     stopRestTimer();
+    if(!document.hidden) cancelRestNotification(); // alerting in-app; no second ring
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     beep();
   }
@@ -1321,7 +1322,10 @@ async function holdScreenAwake(on){
   try{
     if(!on){ if(screenLock){ const l = screenLock; screenLock = null; await l.release(); } return; }
     if(screenLock && !screenLock.released) return;
-    if(navigator.wakeLock && !document.hidden) screenLock = await navigator.wakeLock.request("screen");
+    if(!navigator.wakeLock || document.hidden) return;
+    const lock = await navigator.wakeLock.request("screen");
+    if(restEndAt) screenLock = lock;
+    else lock.release(); // skipped or ended while the request was pending
   }catch(e){ screenLock = null; } // denied (battery saver, unsupported WebView): the end-time math still covers it
 }
 
