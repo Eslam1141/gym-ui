@@ -2177,3 +2177,42 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   .syd-backdrop, .syd-panel{ animation:none; }
   .rest-btn{ transition:none; }
 }
+
+/* feedback sheet (feedback.js): the .syd sheet with a type picker, a counter and a status line */
+.fb-panel{ max-height:calc(100dvh - var(--space-6)); overflow-y:auto; }
+.fb-form{ display:flex; flex-direction:column; gap:var(--space-2); }
+.fb-types{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-2); margin-block-end:var(--space-2); }
+.fb-chip{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  min-height:56px; padding:var(--space-2); border-radius:var(--radius); cursor:pointer;
+  font-family:inherit; font-size:var(--text-sm); font-weight:var(--fw-bold);
+  background:transparent; color:var(--paper); border:1px solid var(--line-strong);
+  transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.fb-chip-ico{ font-size:var(--text-lg); line-height:1; }
+.fb-chip.is-on{ background:var(--primary-soft); border-color:var(--primary-text); }
+.fb-chip:focus-visible, .fb-text:focus-visible, .fb-input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.fb-label{ font-size:var(--text-sm); font-weight:var(--fw-bold); color:var(--paper-dim); }
+.fb-text, .fb-input{
+  width:100%; box-sizing:border-box; padding:var(--space-3); border-radius:var(--radius);
+  font-family:inherit; font-size:var(--text-base); line-height:var(--lh-body);
+  background:var(--panel2); color:var(--paper); border:1px solid var(--line);
+}
+.fb-text{ resize:vertical; min-height:120px; white-space:pre-wrap; }
+.fb-input{ min-height:48px; }
+.fb-field{ display:flex; flex-direction:column; gap:var(--space-2); }
+.fb-count{ align-self:flex-end; font-size:var(--text-xs); color:var(--paper-dim); font-variant-numeric:tabular-nums; }
+.fb-count.is-full{ color:var(--danger); }
+.fb-status{ margin:0; min-height:1.4em; font-size:var(--text-sm); color:var(--paper-dim); }
+.fb-status.is-err{ color:var(--danger); }
+.fb-form .syd-actions{ margin-block-start:var(--space-2); }
+.fb-done{ display:flex; flex-direction:column; align-items:center; gap:var(--space-3); text-align:center; padding-block:var(--space-4) 0; }
+.fb-done .syd-title{ margin:0; }
+.fb-done .syd-yes{ align-self:stretch; }
+.fb-done-mark{
+  width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
+  font-size:var(--text-xl); font-weight:var(--fw-bold);
+  background:var(--primary-soft); color:var(--primary-text); border:1px solid var(--primary-text);
+  animation:sydRise var(--dur-med) var(--ease-spring);
+}
+@media (prefers-reduced-motion:reduce){ .fb-done-mark{ animation:none; } }
