@@ -469,6 +469,20 @@ const T = {
   restOverLive:["Rest is over","انتهت الراحة"],
   restOverTitle:["Rest is over","انتهت الراحة"],
   restOverBody:["Next set: {name}","المجموعة التالية: {name}"],
+  timeLbl:["time","الوقت"],
+  secPH:["time","وقت"], secUnit:["sec","ثانية"],
+  exStart:["Start {n} s","ابدأ {n} ثانية"],
+  exTimer:["Exercise timer — {name}","مؤقت التمرين — {name}"],
+  exReady:["Get ready","استعد"],
+  exGo:["Go","يلا"],
+  exStop:["Stop","إيقاف"],
+  exOverLive:["Time's up","انتهى الوقت"],
+  exOverTitle:["Time's up","انتهى الوقت"],
+  exOverBody:["{n} s filled in. Tap Save to log the set.","اتكتبت {n} ثانية في الخانة. دوس حفظ علشان تسجّل المجموعة."],
+  exOverBodyF:["{n} s filled in. Tap Save to log the set.","اتكتبت {n} ثانية في الخانة. دوسي حفظ علشان تسجّلي المجموعة."],
+  timeUp:["Time's up","انتهى الوقت"],
+  alarmStop:["Stop","إيقاف"],
+  alarmChannel:["Timer alarm","منبّه المؤقت"],
   preciseTitle:["Allow precise rest alerts?","تسمح بتنبيهات الراحة بالثانية؟"],
   preciseTitleF:["Allow precise rest alerts?","تسمحي بتنبيهات الراحة بالثانية؟"],
   preciseBody:["Your rest alert rings exactly on time, even when the screen is off. You'll confirm it in Android settings.","تنبيه الراحة هيرن في معاده بالظبط حتى لو الشاشة مقفولة. هتأكد ده من إعدادات أندرويد."],
@@ -1143,6 +1157,7 @@ function renderExercises(){
     const nm = esc(exName(ex));
     const eid = esc(ex.id);
     const hasVid = !!ex.vid; // coach-generated plans have no demo clip
+    const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
 
     card.innerHTML = `
       <div class="ex-top">
@@ -1155,18 +1170,22 @@ function renderExercises(){
       </div>
       <div class="ex-meta">
         <span><b>${esc(ex.sets)}</b> ${t("sets")}</span>
-        <span><b>${esc(ex.reps)}</b> ${t("reps")}</span>
+        <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
         <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
       <div class="ex-actions">
+        ${tsec ? `<button class="btn-sm ex-start" data-extimer="${eid}" data-sec="${tsec}" data-name="${nm}">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          ${t("exStart").replace("{n}", "<bdi>" + tsec + "</bdi>")}
+        </button>` : ``}
         <div class="log-box">
           <span class="log-field">
             <input type="number" inputmode="decimal" placeholder="${esc(last?last.w:t('wtPH'))}" data-w="${eid}">
             <span class="unit">kg</span>
           </span>
           <span class="log-field">
-            <input type="number" inputmode="numeric" placeholder="${esc(last?last.r:t('repPH'))}" data-r="${eid}">
-            <span class="unit">${t('reps')}</span>
+            <input type="number" inputmode="numeric" placeholder="${esc(last?last.r:t(tsec ? 'secPH' : 'repPH'))}" data-r="${eid}">
+            <span class="unit">${t(tsec ? 'secUnit' : 'reps')}</span>
           </span>
         </div>
         <button class="btn-sm" data-save="${eid}">
@@ -1227,8 +1246,10 @@ function renderExercises(){
       const id = btn.dataset.save;
       const wInput = exList.querySelector(`[data-w="${id}"]`);
       const rInput = exList.querySelector(`[data-r="${id}"]`);
-      const w = wInput.value || wInput.placeholder;
       const r = rInput.value || rInput.placeholder;
+      const timed = timedSeconds((day.exercises.find(x=>x.id===id)||{}).reps) > 0;
+      // holds are mostly bodyweight: no weight typed or remembered saves as 0 kg
+      const w = wInput.value || (wInput.placeholder === t("wtPH") && timed ? "0" : wInput.placeholder);
       if(!w || w===t("wtPH")) return;
       weights[id] = weights[id] || [];
       const todayEntryIdx = weights[id].findIndex(e=>e.date===todayStr());
@@ -1250,6 +1271,9 @@ function renderExercises(){
 
   exList.querySelectorAll("[data-rest]").forEach(btn=>{
     btn.onclick = ()=> startRestTimer(parseInt(btn.dataset.rest), btn.dataset.name);
+  });
+  exList.querySelectorAll("[data-extimer]").forEach(btn=>{
+    btn.onclick = ()=> startExerciseTimer(btn.dataset.extimer, parseInt(btn.dataset.sec), btn.dataset.name);
   });
 
   // --- video toggle: mount / unmount just this player ---
@@ -1433,24 +1457,54 @@ videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeVid
 // recomputed and a rest that ended meanwhile alerts straight away. While it
 // runs the screen is kept awake (Wake Lock), and in the native app a local
 // notification is scheduled for the end time so it sounds with the screen off.
+// The exercise timer (holds measured in seconds) shares this engine and the
+// same dock: only one of the two runs at a time, starting one replaces the
+// other. Its 3-2-1 "ready" phase counts down first, then the hold itself.
 let restInterval = null, restRaf = 0;
 let restEndAt = 0, restTotal = 0, restName = "";
+let timerKind = "rest"; // "rest" | "ex"
+let exId = "", exPhase = "", exTarget = 0; // exPhase: "ready" | "hold" | "" (idle)
+let notifScheduled = false;
 const timerBar = document.getElementById("timerBar");
 const timerTime = document.getElementById("timerTime");
 const timerLabel = document.getElementById("timerLabel");
 const timerFill = document.getElementById("timerFill");
 const timerLive = document.getElementById("timerLive");
 const reduceMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
-const REST_ADD_SECONDS = 15, REST_ENDING_SECONDS = 5;
+const timerAddBtn = document.getElementById("timerAdd");
+const timerSkipBtn = document.getElementById("timerSkip");
+const REST_ADD_SECONDS = 15, REST_ENDING_SECONDS = 5, EX_READY_SECONDS = 3;
+// A seconds-based target ("30s", "45 sec", "30-45s", "1 min") -> its upper
+// bound in seconds, else 0. The upper bound is the goal; Stop logs a shorter
+// hold, and +15 s extends a longer one.
+function timedSeconds(reps){
+  const m = /^\s*(\d+)(?:\s*[-\u2013]\s*(\d+))?\s*(s|secs?|seconds?|mins?|minutes?)\b/i.exec(String(reps == null ? "" : reps));
+  if(!m) return 0;
+  return parseInt(m[2] || m[1], 10) * (/^m/i.test(m[3]) ? 60 : 1);
+}
+// where the alert should sound: the end of the hold, even during the ready count
+function finalEndAt(){ return exPhase === "ready" ? restEndAt + exTarget*1000 : restEndAt; }
+function resetDock(kind){
+  timerKind = kind;
+  stopAlarm();
+  clearInterval(restInterval);
+  notifScheduled = false;
+  cancelRestNotification();
+  unlockBeep(); // inside the tap, so the alert isn't blocked by autoplay rules
+  holdScreenAwake(true);
+  timerBar.classList.remove("done", "ending", "ready");
+  timerBar.classList.toggle("ex", kind === "ex");
+  timerSkipBtn.setAttribute("aria-label", t(kind === "ex" ? "exStop" : "skip"));
+}
 
 function startRestTimer(seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
-  clearInterval(restInterval);
+  resetDock("rest");
+  exPhase = "";
+  timerAddBtn.disabled = false;
   restTotal = seconds;
   restName = name;
   restEndAt = Date.now() + seconds*1000;
-  unlockBeep(); // inside the tap, so the end beep isn't blocked by autoplay rules
-  holdScreenAwake(true);
   scheduleRestNotification(restEndAt, name);
   const label = t("restTimer").replace("{name}", name);
   timerBar.setAttribute("aria-label", label);
@@ -1462,32 +1516,84 @@ function startRestTimer(seconds, name){
   restInterval = setInterval(restTick, 250);
   startRestRing();
 }
+function startExerciseTimer(id, seconds, name){
+  if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
+  resetDock("ex");
+  exId = id; exTarget = seconds; exPhase = "ready";
+  restName = name;
+  restTotal = EX_READY_SECONDS;
+  restEndAt = Date.now() + EX_READY_SECONDS*1000;
+  timerAddBtn.disabled = true; // +15 s means more hold time: only once the hold runs
+  scheduleRestNotification(finalEndAt(), name);
+  const label = t("exTimer").replace("{name}", name);
+  timerBar.setAttribute("aria-label", label);
+  timerLabel.textContent = t("exReady");
+  timerBar.classList.add("show", "ready");
+  renderRestTime(EX_READY_SECONDS, restTotal);
+  timerLive.textContent = `${label}, ${t("exReady")}`;
+  restInterval = setInterval(restTick, 250);
+  startRestRing();
+}
+let readyShown = 0;
 function restTick(){
   if(!restEndAt) return;
+  if(exPhase === "ready" && restEndAt <= Date.now()){
+    // ready count done: the hold starts exactly where the count ended
+    exPhase = "hold";
+    restTotal = exTarget;
+    restEndAt += exTarget*1000;
+    timerAddBtn.disabled = false;
+    timerBar.classList.remove("ready");
+    timerLabel.textContent = restName;
+    timerLive.textContent = t("exGo");
+    blip(1175, 0.5);
+  }
   const remaining = Math.max(0, Math.ceil((restEndAt - Date.now())/1000));
   renderRestTime(remaining, restTotal);
-  if(remaining === 10) timerLive.textContent = t("restTenLeft");
+  if(exPhase === "ready" && remaining !== readyShown){ readyShown = remaining; blip(660, 0.22); }
+  if(remaining === 10 && exPhase !== "ready") timerLive.textContent = t("restTenLeft");
   if(remaining <= 0){
-    timerLive.textContent = t("restOverLive");
+    const kind = timerKind, endedAt = restEndAt, held = exTarget;
+    timerLive.textContent = t(kind === "ex" ? "exOverLive" : "restOverLive");
     timerBar.classList.add("done"); // the ring fills and pops while the widget leaves
     stopRestTimer();
+    const sub = kind === "ex" ? preciseStr("exOverBody").replace("{n}", held) : t("restOverBody").replace("{name}", restName);
+    if(kind === "ex") fillExerciseSeconds(exId, held);
+    // Back from a long screen-off: the native alert already rang, so don't ring a second time.
+    if(notifScheduled && Date.now() - endedAt > ALARM_LATE_MS){
+      notifScheduled = false;
+      offerPreciseAlerts();
+      return;
+    }
     if(!document.hidden) cancelRestNotification(); // alerting in-app; no second ring
-    if(navigator.vibrate) navigator.vibrate([200,100,200]);
-    beep();
-    offerPreciseAlerts();
+    notifScheduled = false;
+    startAlarm(sub);
   }
 }
 function stopRestTimer(){
   clearInterval(restInterval);
   cancelAnimationFrame(restRaf);
   restEndAt = 0;
-  timerBar.classList.remove("show", "ending");
+  exPhase = "";
+  readyShown = 0;
+  timerBar.classList.remove("show", "ending", "ready");
   holdScreenAwake(false);
+}
+// Puts the seconds held into the card's reps field so the set can be saved.
+function fillExerciseSeconds(id, secs){
+  const input = exList.querySelector(`[data-r="${CSS.escape(id)}"]`);
+  if(!input) return;
+  input.value = secs;
+  const field = input.closest(".log-field");
+  if(!field) return;
+  field.classList.add("filled");
+  setTimeout(()=> field.classList.remove("filled"), 2400);
 }
 // The ring sweeps smoothly: while the page is visible it is repainted every
 // frame from the wall-clock end time. Reduced motion keeps the once-a-second
 // steps from renderRestTime instead.
 function paintRestRing(){
+  if(!restEndAt) return;
   timerFill.style.setProperty("--p", Math.max(0, Math.min(1, (restEndAt - Date.now())/(restTotal*1000))));
 }
 function startRestRing(){
@@ -1511,19 +1617,25 @@ document.addEventListener("visibilitychange", ()=>{
 function renderRestTime(remaining, total){
   const m = Math.max(0,Math.floor(remaining/60)).toString().padStart(2,"0");
   const s = Math.max(0,remaining%60).toString().padStart(2,"0");
-  timerTime.textContent = `${m}:${s}`;
-  timerBar.classList.toggle("ending", remaining > 0 && remaining <= REST_ENDING_SECONDS);
+  timerTime.textContent = exPhase === "ready" ? String(remaining) : `${m}:${s}`;
+  timerBar.classList.toggle("ending", exPhase !== "ready" && remaining > 0 && remaining <= REST_ENDING_SECONDS);
   timerFill.style.setProperty("--p", Math.max(0, remaining/total));
 }
-document.getElementById("timerAdd").onclick = ()=>{
-  if(!restEndAt) return;
+timerAddBtn.onclick = ()=>{
+  if(!restEndAt || exPhase === "ready") return;
   restEndAt += REST_ADD_SECONDS*1000;
   restTotal += REST_ADD_SECONDS;
+  if(exPhase === "hold") exTarget += REST_ADD_SECONDS;
   scheduleRestNotification(restEndAt, restName);
   restTick();
   paintRestRing();
 };
-document.getElementById("timerSkip").onclick = ()=>{
+timerSkipBtn.onclick = ()=>{
+  // stopping a hold early still logs what was held
+  if(timerKind === "ex" && exPhase === "hold" && restEndAt){
+    const held = Math.round(exTarget - (restEndAt - Date.now())/1000);
+    if(held >= 1) fillExerciseSeconds(exId, held);
+  }
   stopRestTimer();
   cancelRestNotification();
 };
@@ -1535,19 +1647,62 @@ function unlockBeep(){
     if(beepCtx.state === "suspended") beepCtx.resume();
   }catch(e){}
 }
-function beep(){
+// One short tone: used for the 3-2-1 ticks and, in bursts, the alarm.
+function tone(freq, at, dur, vol, type){
+  const ctx = beepCtx;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type || "sine";
+  o.frequency.value = freq;
+  o.connect(g); g.connect(ctx.destination);
+  const t0 = ctx.currentTime + at;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol, t0 + 0.015); // no click on the edges
+  g.gain.setValueAtTime(vol, t0 + dur - 0.04);
+  g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+  o.start(t0);
+  o.stop(t0 + dur);
+}
+function blip(freq, dur){
+  try{ unlockBeep(); tone(freq, 0, dur > 0.3 ? dur : 0.12, 0.2); }catch(e){}
+}
+
+// ---- alarm: rings after either timer ends, until Stop or 30 s ----
+// A two-tone pattern, four pulses then a pause, with a matching vibration,
+// repeated every ALARM_CYCLE_MS. Synthesised, so no audio file is shipped.
+const ALARM_CYCLE_MS = 2200, ALARM_MAX_MS = 30000, ALARM_LATE_MS = 3000;
+const alarmBanner = document.getElementById("alarmBanner");
+const alarmSubEl = document.getElementById("alarmSub");
+let alarmActive = false, alarmCycleTimer = 0, alarmStopTimer = 0;
+function alarmCycle(){
+  if(navigator.vibrate) navigator.vibrate([450,150,450,150,450,150,450]);
   try{
     unlockBeep();
-    const ctx = beepCtx;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.15, ctx.currentTime);
-    o.start();
-    o.stop(ctx.currentTime + 0.35);
+    [0, 1, 0, 1].forEach((hi, k)=> tone(hi ? 1175 : 880, k*0.3, 0.2, 0.5, "triangle"));
   }catch(e){}
 }
+function startAlarm(sub){
+  if(alarmActive) return; // already ringing: never a second alarm on top
+  alarmActive = true;
+  document.getElementById("alarmTitle").textContent = t("timeUp");
+  alarmSubEl.textContent = sub;
+  document.getElementById("alarmStop").textContent = t("alarmStop");
+  alarmBanner.hidden = false;
+  alarmCycle();
+  alarmCycleTimer = setInterval(alarmCycle, ALARM_CYCLE_MS);
+  alarmStopTimer = setTimeout(stopAlarm, ALARM_MAX_MS);
+}
+function stopAlarm(){
+  if(!alarmActive) return;
+  alarmActive = false;
+  clearInterval(alarmCycleTimer);
+  clearTimeout(alarmStopTimer);
+  if(navigator.vibrate) navigator.vibrate(0);
+  alarmBanner.hidden = true;
+  offerPreciseAlerts();
+}
+alarmBanner.onclick = stopAlarm;
+document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && alarmActive) stopAlarm(); });
 
 let screenLock = null;
 async function holdScreenAwake(on){
@@ -1578,24 +1733,29 @@ async function scheduleRestNotification(endAt, name){
     let perm = await ln.checkPermissions();
     if(perm.display !== "granted") perm = await ln.requestPermissions();
     if(perm.display !== "granted") return;
-    await ln.createChannel({ id:"rest-timer", name:t("restBtn"), importance:5, vibration:true, visibility:1 });
+    // One loud channel for both timers. Channel settings are frozen once
+    // created, so the alarm sound lives under its own id (res/raw/timer_alarm.wav).
+    await ln.createChannel({ id:"timer-alarm", name:t("alarmChannel"), importance:5, vibration:true, visibility:1, sound:"timer_alarm.wav" });
     await ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] });
-    if(endAt !== restEndAt) return; // skipped or restarted while we were asking
+    if(endAt !== finalEndAt()) return; // skipped or restarted while we were asking
     // The plugin defaults to an exact alarm and, on Android 12+ without the
     // "Alarms & reminders" permission, opens that system Settings screen from
     // schedule() itself. Never do that mid-workout: ask for exact only when
     // it is already allowed, else schedule the inexact (still Doze-safe) alarm.
     let exact = false;
     try{ exact = (await ln.checkExactNotificationSetting()).exact_alarm === "granted"; }catch(e){}
-    if(endAt !== restEndAt) return;
+    if(endAt !== finalEndAt()) return;
+    const ex = timerKind === "ex";
     await ln.schedule({ notifications:[{
       id: REST_NOTIF_ID,
-      title: t("restOverTitle"),
-      body: t("restOverBody").replace("{name}", name),
-      channelId: "rest-timer",
+      title: t(ex ? "exOverTitle" : "restOverTitle"),
+      body: ex ? name : t("restOverBody").replace("{name}", name),
+      channelId: "timer-alarm",
+      sound: "timer_alarm.wav", // Android 7 and older ignore the channel
       isExactNotification: exact,
       schedule: { at: new Date(endAt), allowWhileIdle: true }
     }] });
+    if(endAt === finalEndAt()) notifScheduled = true;
   }catch(e){}
 }
 function cancelRestNotification(){
@@ -1645,7 +1805,7 @@ async function offerPreciseAlerts(){
   }catch(e){ return; }
   // Let the finished-rest pop settle, and don't pile onto another dialog.
   setTimeout(() => {
-    if(preciseSheet || preciseAnswered() || document.hidden || restEndAt || document.querySelector(".syd")) return;
+    if(preciseSheet || preciseAnswered() || document.hidden || restEndAt || alarmActive || document.querySelector(".syd")) return;
     openPreciseSheet(ln);
   }, 900);
 }
@@ -1694,7 +1854,7 @@ function openPreciseSheet(ln){
 document.addEventListener("visibilitychange", () => {
   if(document.hidden || !preciseAwaitingSettings) return;
   preciseAwaitingSettings = false;
-  if(restEndAt) scheduleRestNotification(restEndAt, restName); // re-reads the setting
+  if(restEndAt) scheduleRestNotification(finalEndAt(), restName); // re-reads the setting
 });
 
 // ---------------- SESSION TIMER (whole workout) ----------------

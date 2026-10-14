@@ -45,6 +45,7 @@ async function finishRest(page) {
   const secs = await startRest(page);
   await page.clock.fastForward((secs + 2) * 1000);
   await page.waitForTimeout(300); // real time: the async gating checks settle
+  await page.click("#alarmStop"); // the prompt waits for the alarm to be stopped
   await page.clock.runFor(1200);
 }
 
