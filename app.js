@@ -400,6 +400,7 @@ const T = {
   programLabel:["Program","البرنامج"],
   prefsLabel:["Display preferences","تفضيلات العرض"],
   themeToDark:["Switch to dark mode","التبديل إلى الوضع الداكن"], themeToLight:["Switch to light mode","التبديل إلى الوضع الفاتح"],
+  menuThemeDark:["Dark mode","الوضع الداكن"], menuThemeLight:["Light mode","الوضع الفاتح"],
   premiumLabel:["Premium","بريميوم"],
   premiumTitle:["Etqadem Premium","اتقدم بريميوم"],
   premiumSub:["Coming soon","قريباً"],
@@ -1617,12 +1618,16 @@ document.querySelectorAll("[data-style-btn]").forEach(b=>{
   b.onclick = ()=> setStyle(b.dataset.styleBtn);
 });
 // Theme switch (top bar): follows the phone until tapped, then stores an explicit light/dark.
-document.getElementById("themeBtn").onclick = ()=>{
+function toggleTheme(){
   const dark = document.documentElement.dataset.theme !== "light";
   if(window.GymTheme) window.GymTheme.setMode(dark ? "light" : "dark");
   renderThemePrefs();
-};
-document.getElementById("langBtn").onclick = ()=> applyLang(activeLang === "ar" ? "en" : "ar", true);
+}
+function toggleLang(){ applyLang(activeLang === "ar" ? "en" : "ar", true); }
+// Shared by the floating pill (signed out) and the avatar menu (header.js, signed in).
+window.GymPrefs = { toggleTheme, toggleLang };
+document.getElementById("themeBtn").onclick = toggleTheme;
+document.getElementById("langBtn").onclick = toggleLang;
 
 // ---------------- INIT ----------------
 document.documentElement.lang = activeLang === "ar" ? "ar" : "en";

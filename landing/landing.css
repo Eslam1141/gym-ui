@@ -1,18 +1,18 @@
 /* Etqadem landing. Dark ink ground, one Deep Teal light source, rose/violet
-   only for the women's plan. Alexandria for Latin and Arabic. Logical
+   only for the women's plan. Readex Pro for Latin and Arabic. Logical
    properties throughout so the same sheet serves LTR and RTL. */
 
 @font-face {
-  font-family: "Alexandria";
-  src: url("assets/alexandria-latin.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "Readex Pro";
+  src: url("assets/readex-pro-latin.woff2") format("woff2");
+  font-weight: 160 700;
   font-display: swap;
   unicode-range: U+0000-00FF, U+2018-201D, U+2026, U+2190, U+2192;
 }
 @font-face {
-  font-family: "Alexandria";
-  src: url("assets/alexandria-arabic.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "Readex Pro";
+  src: url("assets/readex-pro-arabic.woff2") format("woff2");
+  font-weight: 160 700;
   font-display: swap;
   unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
 }
@@ -46,7 +46,7 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--paper);
-  font: 400 1rem/1.6 "Alexandria", system-ui, sans-serif;
+  font: 400 1rem/1.6 "Readex Pro", system-ui, sans-serif;
 }
 :lang(ar) { letter-spacing: 0; }
 img { display: block; max-width: 100%; height: auto; }
@@ -71,7 +71,7 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 48px; padding: 0 26px; border-radius: var(--r-pill);
-  font: 700 1rem/1 "Alexandria", system-ui, sans-serif; text-decoration: none; white-space: nowrap;
+  font: 700 1rem/1 "Readex Pro", system-ui, sans-serif; text-decoration: none; white-space: nowrap;
   border: 1px solid transparent; cursor: pointer;
   transition: transform var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
@@ -89,7 +89,7 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
 .nav-in { display: flex; align-items: center; gap: 24px; height: 64px; }
 .brand { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand img { border-radius: 9px; }
-.brand-name { font-weight: 800; font-size: 1.125rem; }
+.brand-name { font-weight: 700; font-size: 1.125rem; }
 .brand-ar { font-weight: 600; font-size: 1.0625rem; color: var(--muted); }
 .links { display: flex; gap: 28px; margin-inline-start: 24px; }
 .links a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: .9375rem; padding-block: 10px; transition: color var(--dur) var(--ease); }
@@ -98,14 +98,14 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
 .lang {
   min-height: 44px; min-width: 44px; padding: 0 14px; border-radius: var(--r-pill);
   background: transparent; color: var(--teal-lit); border: 1px solid var(--line);
-  font: 600 .9375rem/1 "Alexandria", system-ui, sans-serif; cursor: pointer;
+  font: 600 .9375rem/1 "Readex Pro", system-ui, sans-serif; cursor: pointer;
 }
 .lang:hover { border-color: var(--teal-lit); }
 
 /* Hero */
 .hero { display: grid; grid-template-columns: 1fr; gap: 32px; padding-block: 32px 16px; align-items: center; }
 .hero-copy h1 {
-  margin: 0; font-weight: 800; line-height: 1.1; text-wrap: balance;
+  margin: 0; font-weight: 700; line-height: 1.1; text-wrap: balance;
   font-size: clamp(2.125rem, 1.2rem + 2.2vw, 3rem);
 }
 :lang(ar) h1, :lang(ar) h2 { line-height: 1.3; }
@@ -160,7 +160,7 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
 }
 
 /* Sections */
-section h2 { margin: 0; font-weight: 800; line-height: 1.15; font-size: clamp(1.75rem, 1.1rem + 2.4vw, 2.75rem); text-wrap: balance; }
+section h2 { margin: 0; font-weight: 700; line-height: 1.15; font-size: clamp(1.75rem, 1.1rem + 2.4vw, 2.75rem); text-wrap: balance; }
 section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; }
 
 .features { padding-block: 72px; }
@@ -181,7 +181,7 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .calc-food { display: flex; justify-content: space-between; gap: 16px; font-weight: 600; }
 .calc-g { color: rgb(243 240 232 / .7); font-weight: 500; }
 .cell-food .calc-kcal { color: #fff; font-size: 1rem; }
-.calc-kcal strong { font-variant-numeric: tabular-nums; font-size: 2.25rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.calc-kcal strong { font-variant-numeric: tabular-nums; font-size: 2.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
 .calc-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .875rem; }
 .cell-video, .cell-streak { justify-content: flex-end; }
 .weeks { margin-bottom: auto; display: flex; align-items: center; gap: 6px; }
@@ -210,7 +210,7 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 
 /* Ramadan band */
 .ramadan { position: relative; overflow: hidden; background: linear-gradient(100deg, var(--teal-deep), var(--teal) 70%, var(--emerald)); padding-block: 72px; }
-.ramadan-mark { position: absolute; inset-inline-end: -2%; top: 50%; translate: 0 -50%; margin: 0; font-weight: 800; line-height: 1; font-size: clamp(7rem, 24vw, 17rem); color: rgb(243 240 232 / .09); pointer-events: none; user-select: none; }
+.ramadan-mark { position: absolute; inset-inline-end: -2%; top: 50%; translate: 0 -50%; margin: 0; font-weight: 700; line-height: 1; font-size: clamp(7rem, 24vw, 17rem); color: rgb(243 240 232 / .09); pointer-events: none; user-select: none; }
 .ramadan-in { position: relative; display: grid; gap: 12px; }
 .ramadan-in p { margin: 0; font-size: 1.1875rem; max-width: 26em; color: rgb(243 240 232 / .92); }
 
