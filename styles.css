@@ -483,6 +483,8 @@ body:has(.celebrate-card.show) #timerBar{ opacity:0; pointer-events:none; }
   pointer-events:none;
 }
 #toTop.show{ opacity:1; transform:none; pointer-events:auto; }
+/* the rest timer dock owns the bottom edge */
+body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #toTop:active{ transform:scale(.9); }
 #toTop svg{ width:22px; height:22px; fill:#fff; }
 
