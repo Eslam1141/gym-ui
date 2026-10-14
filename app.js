@@ -11,6 +11,58 @@ const DAYS_PREVIEW = [
     {id:"pv_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:45, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
   ]},
 ];
+// 4-day split on a 7-day week (2026-10-14): Upper, Lower, rest, Back + Biceps +
+// Calves, Chest + Triceps, rest, rest. Every exercise id below already existed
+// in an earlier men's plan (this file's Upper/Lower A+B, kept as
+// LEGACY_MALE_DAYS, or the pre-#44 Chest/Back split), so each user's weight
+// log and "last time" hint stays linked to the same id. The pre-#44 ids
+// (cta_*, ctb_*, bba_*, bbb_*) are the exact same move + video, reused
+// instead of minting duplicates. The two back-to-back training days (Back +
+// Biceps + Calves, then Chest + Triceps) share no movement.
+const DAYS_MALE = [
+  { id:"m_upper", label:"Upper", muscles:"Chest, Back, Shoulders", exercises:[
+    {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard"},
+    {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
+    {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
+    {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium"},
+    {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
+    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
+  ]},
+  { id:"m_lower", label:"Lower", muscles:"Quads, Hamstrings, Glutes, Abs", exercises:[
+    {id:"mla_squat", en:"Barbell Back Squat", sets:4, reps:"6-8", rest:150, vid:"tNUq6b5t11Q", shape:"quads", tier:"hard"},
+    {id:"mla_rdl", en:"Barbell Romanian Deadlift", sets:3, reps:"8-10", rest:90, vid:"zdip4iexlxg", shape:"hamstrings", shape2:"back_lower", tier:"hard"},
+    {id:"bbb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:75, vid:"uODWo4YqbT8", shape:"quads", tier:"hard"},
+    {id:"mla_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy"},
+    {id:"mlb_legext", en:"Leg Extension", sets:3, reps:"15-20", rest:60, vid:"iQ92TuvBqRo", shape:"quads", tier:"easy"},
+    {id:"mla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
+    {id:"mla_core", en:"Hanging Leg Raise (core)", sets:3, reps:"10-15", rest:45, vid:"0wSUjj5j1xo", shape:"core_lower", tier:"hard"},
+  ]},
+  { id:"m_backbi", label:"Back + Biceps + Calves", muscles:"Back, Biceps, Calves", exercises:[
+    {id:"mub_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
+    {id:"bbb_tbar", en:"T-Bar Row", sets:4, reps:"8-10", rest:90, vid:"1iQSSqin3ro", shape:"back_mid", tier:"hard"},
+    {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
+    {id:"bba_inclcurl", en:"Incline Dumbbell Curl", sets:3, reps:"10-12", rest:45, vid:"XhIsIcjIbCw", shape:"biceps_long", tier:"medium"},
+    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_short", tier:"medium"},
+    {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
+    {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy"},
+  ]},
+  { id:"m_chesttri", label:"Chest + Triceps", muscles:"Chest, Triceps", exercises:[
+    {id:"ctb_dbbench", en:"Dumbbell Bench Press", sets:4, reps:"8-10", rest:90, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium"},
+    {id:"mub_incline", en:"Incline Dumbbell Press", sets:3, reps:"8-10", rest:120, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium"},
+    {id:"cta_fly", en:"Cable Chest Fly", sets:3, reps:"12-15", rest:60, vid:"I-Ue34qLxc4", shape:"chest_mid", tier:"easy"},
+    {id:"ctb_pushup", en:"Push-ups", sets:3, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
+    {id:"cta_ohext", en:"Overhead Cable Triceps Extension", sets:3, reps:"10-15", rest:60, vid:"tPIWaCKWFF8", shape:"triceps_long", tier:"medium"},
+    {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy"},
+  ]},
+];
+// The week the men's gym plan runs on, in order. A rest slot is a day to
+// recover, not a workout; the app's own rest-day flow (rest-days.js) records it.
+const WEEK_MALE = ["m_upper", "m_lower", null, "m_backbi", "m_chesttri", null, null];
+
+// The Upper/Lower A+B days this plan replaced (2026-10-14). Kept only so a
+// day id already in someone's history (gym_checks, completed-day records on
+// the server, the calendar) still resolves its exercise list; never rendered
+// as a tab. Old -> new day ids are in GymMigrations.maleV3.
 // Upper/Lower A+B split (rewritten 2026-09-28 from a "user findings" pass —
 // the previous 4-day version paired Chest+Triceps / Back+Biceps and tacked
 // 2 leg moves onto EVERY day, so legs got hit 4x/week with no dedicated leg
@@ -22,7 +74,7 @@ const DAYS_PREVIEW = [
 // days, and no muscle is trained on every single day. Every exercise here
 // already exists elsewhere in the catalog (has a real vid + an AR_EX/AR_DAY
 // translation already) — nothing new to translate or source video for.
-const DAYS_MALE = [
+const LEGACY_MALE_DAYS = [
   { id:"m_upperA", label:"Upper A", muscles:"Chest, Back, Delts, Arms", exercises:[
     {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard"},
     {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
@@ -203,10 +255,10 @@ const AR_EX = {
   "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب"
 };
 const AR_DAY = {"Push":"دفع","Pull":"سحب","Legs":"أرجل","Upper":"علوي","Lower":"سفلي","Lower A":"سفلي أ","Upper A":"علوي أ","Lower B":"سفلي ب","Upper B":"علوي ب","Full-Body Starter":"تمرين شامل للمبتدئين",
-  "Chest & Triceps A":"صدر وترايسبس أ","Back & Biceps A":"ظهر وبايسبس أ","Chest & Triceps B":"صدر وترايسبس ب","Back & Biceps B":"ظهر وبايسبس ب"};
+  "Back + Biceps + Calves":"ظهر + بايسبس + سمانة","Chest + Triceps":"صدر + ترايسبس","Chest & Triceps A":"صدر وترايسبس أ","Back & Biceps A":"ظهر وبايسبس أ","Chest & Triceps B":"صدر وترايسبس ب","Back & Biceps B":"ظهر وبايسبس ب"};
 const AR_MUS = {
   "Chest, Shoulders, Triceps":"صدر، أكتاف، ترايسبس","Back, Rear Delts, Biceps":"ظهر، أكتاف خلفية، بايسبس","Quads, Hamstrings, Calves":"أمامية الفخذ، خلفية الفخذ، سمانة",
-  "Chest, Back, Delts, Arms":"صدر، ظهر، أكتاف، ذراعين","Quads, Glutes, Hamstrings, Abs":"أمامية الفخذ، ألوية، خلفية الفخذ، بطن","Glutes & Quads":"ألوية وأمامية الفخذ",
+  "Chest, Back, Delts, Arms":"صدر، ظهر، أكتاف، ذراعين","Chest, Back, Shoulders":"صدر، ظهر، أكتاف","Quads, Hamstrings, Glutes, Abs":"أمامية الفخذ، خلفية الفخذ، ألوية، بطن","Back, Biceps, Calves":"ظهر، بايسبس، سمانة","Chest, Triceps":"صدر، ترايسبس","Quads, Glutes, Hamstrings, Abs":"أمامية الفخذ، ألوية، خلفية الفخذ، بطن","Glutes & Quads":"ألوية وأمامية الفخذ",
   "Push focus":"تركيز الدفع","Hamstrings & Glutes":"خلفية الفخذ والألوية","Pull focus & core":"تركيز السحب والبطن",
   "Push & Core":"دفع وبطن","Legs & Cardio":"أرجل وكارديو","Pull & Total Body":"سحب وكامل الجسم",
   "Full body":"الجسم كامل",
@@ -252,7 +304,7 @@ const EX_ALIASES = {
 };
 const EX_VID = (function(){
   const m = {};
-  [DAYS_PREVIEW, DAYS_MALE, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.vid) return;
       m[_normEx(ex.en)] = ex.vid;
@@ -307,6 +359,10 @@ const T = {
   restTodayRest:["Today: rest day, streak kept","اليوم: يوم راحة، السلسلة محفوظة"],
   restLeft:["{n} of 2 rest days left this week","متبقي {n} من يومَي راحة هذا الأسبوع"],
   restHint:["A rest day keeps your streak but doesn't add to it.","يوم الراحة يحافظ على سلسلتك لكنه لا يضيف إليها."],
+  weekRest:["Rest","راحة"],
+  weekDayN:["Day {n}","اليوم {n}"],
+  restPanelBody:["Day {n} of 7. Recovery is when training turns into strength. Nothing to log today.","اليوم {n} من 7. في الراحة يتحول التمرين إلى قوة. لا شيء لتسجيله اليوم."],
+  restPanelNext:["Next up: {day}","التالي: {day}"],
   restMarked:["Rest day saved","تم حفظ يوم الراحة"],
   restRemoved:["Rest day removed","تم إلغاء يوم الراحة"],
   celebDay1:["Great job. See you tomorrow","عمل رائع. نشوفك بكرة إن شاء الله"],
@@ -461,21 +517,21 @@ const T = {
 };
 const NOTES = {
   male_gym:{ en:[
-    "<b>Weekly schedule:</b> Sat Legs · Sun Push · Mon Pull · Tue rest (football) · Wed Lower · Thu Upper · Fri rest. Every muscle 2×/week with 3-4 days between.",
+    "<b>Weekly schedule:</b> Day 1 Upper · Day 2 Lower · Day 3 rest · Day 4 Back + Biceps + Calves · Day 5 Chest + Triceps · Days 6-7 rest. Chest and back get two sessions a week; legs get one heavy session.",
     "<b>Progressive overload:</b> add a little weight or a rep once you hit the top of the rep range with clean form — beat last session's numbers (shown on each card).",
     "<b>Train close to failure:</b> stop compound sets 1-3 reps short; isolation moves 0-1.",
     "<b>Warm-up:</b> follow the warm-up card before your first set.",
-    "<b>Core 3×/week:</b> hanging leg raise (Pull), Pallof press (Upper), cable crunch (Lower). Brace as if bracing for a punch.",
+    "<b>Core:</b> hanging leg raise on Lower day. Brace as if bracing for a punch.",
     "<b>Recover:</b> 7-9 h sleep. Football counts as leg load — keep it to Tuesday.",
     "<b>Deload</b> every 5-8 weeks: an easy week at ~⅔ the weight or half the sets.",
     "<b>Protein:</b> 1.6-2.2 g per kg body weight daily.",
     "Data is saved on this device only. Tap <b>Back up progress</b> every week or two."
   ], ar:[
-    "<b>الجدول الأسبوعي:</b> السبت أرجل · الأحد دفع · الاثنين سحب · الثلاثاء راحة (كرة قدم) · الأربعاء سفلي · الخميس علوي · الجمعة راحة. كل عضلة مرتين أسبوعياً بفارق 3-4 أيام.",
+    "<b>الجدول الأسبوعي:</b> اليوم 1 علوي · اليوم 2 سفلي · اليوم 3 راحة · اليوم 4 ظهر + بايسبس + سمانة · اليوم 5 صدر + ترايسبس · اليومان 6-7 راحة. الصدر والظهر مرتين أسبوعياً، والأرجل مرة واحدة بحمل ثقيل.",
     "<b>الزيادة التدريجية:</b> أضِف وزناً بسيطاً أو تكراراً عند بلوغ أعلى نطاق التكرار بأداء نظيف — تجاوز أرقام الجلسة السابقة (تظهر على كل بطاقة).",
     "<b>اقترب من الفشل:</b> أوقف تمارين المركّب قبل الفشل بـ1-3 تكرارات، وتمارين العزل بـ0-1.",
     "<b>الإحماء:</b> اتبع بطاقة الإحماء قبل مجموعتك الأولى.",
-    "<b>البطن 3 مرات أسبوعياً:</b> رفع الرجلين معلقاً (سحب)، ضغط بالوف (علوي)، كرنش بالكابل (سفلي). شُدّ البطن كأنك تتلقى لكمة.",
+    "<b>البطن:</b> رفع الرجلين معلقاً في يوم السفلي. شُدّ البطن كأنك تتلقى لكمة.",
     "<b>الاستشفاء:</b> نوم 7-9 ساعات. كرة القدم تُحسب حِملاً على الأرجل — اجعلها يوم الثلاثاء.",
     "<b>أسبوع تخفيف</b> كل 5-8 أسابيع: أسبوع سهل بثلثي الوزن أو نصف المجموعات تقريباً.",
     "<b>البروتين:</b> 1.6-2.2 جم لكل كجم من وزن الجسم يومياً.",
@@ -774,6 +830,86 @@ window.GymMigrations.maleV2 = function migrateMaleIdsV2(){
 };
 window.GymMigrations.maleV2();
 
+// ---------------- DATA-DRIVEN MIGRATION: 4-day split (2026-10-14) ----------------
+// Upper/Lower A+B became Upper, Lower, Back + Biceps + Calves, Chest + Triceps.
+// Exercise ids were kept wherever the move still exists, so gym_weights needs
+// no rewrite; old day ids still resolve through LEGACY_MALE_DAYS, so past
+// gym_checks / gym_sessions / server records stay readable. What does need
+// moving is state that points at the *current* day by id:
+//   - the remembered tab, the pending-rotation marker, the in-progress session
+//     (positional: Upper A->Upper, Lower A->Lower, Upper B->3rd day, Lower B->4th,
+//     so a user mid-cycle lands on the same step of the rotation);
+//   - today's checked exercises, re-filed under whichever new day now holds each
+//     exercise id, so a half-finished workout keeps its ticks;
+//   - Upper A / Lower A session timings, merged onto Upper / Lower (the
+//     "last time" hint).
+// Idempotent and re-run after every sync pull (see sync.js), like maleV2.
+window.GymMigrations.maleV3 = function migrateMaleSplitV3(){
+  try {
+    var DAY_MAP = { m_upperA: "m_upper", m_lowerA: "m_lower", m_upperB: "m_backbi", m_lowerB: "m_chesttri" };
+    var EX_TO_DAY = {};
+    DAYS_MALE.forEach(function(d){ d.exercises.forEach(function(ex){ if(!EX_TO_DAY[ex.id]) EX_TO_DAY[ex.id] = d.id; }); });
+    var touched = {};
+    function readObj(key){
+      try { var v = JSON.parse(localStorage.getItem(key)); return (v && typeof v === "object" && !Array.isArray(v)) ? v : {}; }
+      catch(e){ return {}; }
+    }
+    function write(key, val){ localStorage.setItem(key, typeof val === "string" ? val : JSON.stringify(val)); touched[key] = true; }
+
+    var activeKey = "gym_active_day_male_gym";
+    var tab = localStorage.getItem(activeKey);
+    if (tab && DAY_MAP[tab]) write(activeKey, DAY_MAP[tab]);
+
+    var last = readObj("gymday_last_completed");
+    if (last.dayId && DAY_MAP[last.dayId]) { last.dayId = DAY_MAP[last.dayId]; localStorage.setItem("gymday_last_completed", JSON.stringify(last)); }
+
+    var live = readObj("gym_session_active");
+    if (live.dayId && DAY_MAP[live.dayId]) { live.dayId = DAY_MAP[live.dayId]; localStorage.setItem("gym_session_active", JSON.stringify(live)); }
+
+    var today = window.GymDate.key();
+    var checks = readObj("gym_checks"), checksChanged = false;
+    Object.keys(DAY_MAP).forEach(function(oldDay){
+      var ticks = checks[today + "_" + oldDay];
+      if (!ticks || typeof ticks !== "object" || Array.isArray(ticks)) return;
+      Object.keys(ticks).forEach(function(exId){
+        var newDay = EX_TO_DAY[exId];
+        if (!newDay) return;
+        var k = today + "_" + newDay;
+        checks[k] = checks[k] || {};
+        if (checks[k][exId] === undefined) { checks[k][exId] = ticks[exId]; checksChanged = true; }
+      });
+    });
+    if (checksChanged) write("gym_checks", checks);
+
+    var sessions = readObj("gym_sessions"), sessionsChanged = false;
+    [["m_upperA", "m_upper"], ["m_lowerA", "m_lower"]].forEach(function(pair){
+      var from = sessions[pair[0]];
+      if (!Array.isArray(from) || !from.length) return;
+      var to = sessions[pair[1]] = Array.isArray(sessions[pair[1]]) ? sessions[pair[1]] : [];
+      var seen = {}; to.forEach(function(e){ if (e && e.date) seen[e.date] = true; });
+      var added = false;
+      from.forEach(function(e){ if (e && e.date && !seen[e.date]) { to.push(e); seen[e.date] = true; added = true; } });
+      if (added) { to.sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); sessionsChanged = true; }
+    });
+    if (sessionsChanged) write("gym_sessions", sessions);
+
+    // Sync-safe meta bump: +1 on a known timestamp only (same reasoning as maleV2).
+    var syncKeys = Object.keys(touched);
+    if (syncKeys.length) {
+      var meta = readObj("gym_meta_updatedAt"), metaChanged = false;
+      syncKeys.forEach(function(k){
+        if (typeof meta[k] === "number" && isFinite(meta[k]) && meta[k] > 0) { meta[k] += 1; metaChanged = true; }
+      });
+      if (metaChanged) localStorage.setItem("gym_meta_updatedAt", JSON.stringify(meta));
+    }
+    return syncKeys.length > 0;
+  } catch(e) {
+    try { if (window.console) console.error("[migrateMaleSplitV3] skipped:", e); } catch(e2){}
+    return false;
+  }
+};
+window.GymMigrations.maleV3();
+
 // ---------------- PLAN + STYLE + LANG STATE ----------------
 let activePlan  = localStorage.getItem("gym_plan");                 // "male" | "female" | null (first run)
 let activeStyle = localStorage.getItem("gym_style") || "gym";       // "gym" | "cal"
@@ -819,14 +955,14 @@ let DAYS = pickDays();
 // the calendar needs a day's exercise list to compute done===total locally.
 window.GymApp = window.GymApp || {};
 window.GymApp.dayExercises = function(dayId){
-  const day = DAYS.find(d=>d.id===dayId);
+  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
   return day ? day.exercises : [];
 };
 // Marks every exercise of a past day's checklist as done (rest-days.js "save
 // yesterday"). Goes through the in-memory `checks` so the next toggle's
 // saveJSON doesn't overwrite it with a stale copy.
 window.GymApp.markDayComplete = function(date, dayId){
-  const day = DAYS.find(d=>d.id===dayId);
+  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
   if(!day) return;
   const k = date + "_" + dayId;
   checks[k] = checks[k] || {};
@@ -835,7 +971,7 @@ window.GymApp.markDayComplete = function(date, dayId){
 };
 // Localised day label for dayId (used by the save-yesterday sheet).
 window.GymApp.dayName = function(dayId){
-  const day = DAYS.find(d=>d.id===dayId);
+  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
   return day ? dayLabel(day) : "";
 };
 
@@ -871,6 +1007,12 @@ if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
   setPref(activeDayStoreKey(), activeDay);
   localStorage.removeItem("gymday_last_completed");
 })();
+
+// Index into WEEK_MALE while a rest slot is open on the Plan screen, else null.
+// View-only: never persisted, activeDay keeps pointing at the last training day.
+let restSlot = null;
+// The 7-slot week for the men's gym plan; null for every other plan.
+function weekSlots(){ return DAYS === DAYS_MALE ? WEEK_MALE : null; }
 
 let openVideoId = null; // which exercise currently has an inline player mounted
 let animateCards = true; // replay the card entrance only on a real context change (day/plan/language)
@@ -972,7 +1114,30 @@ function closeInlineVideo(id){
   if(btn){ btn.classList.remove("on"); btn.innerHTML = videoBtnInner(false); }
 }
 
+function renderRestPanel(){
+  const week = weekSlots();
+  const n = restSlot + 1;
+  let nextDay = null;
+  for(let i = 1; i <= week.length && !nextDay; i++) nextDay = DAYS.find(d=>d.id === week[(restSlot + i) % week.length]);
+  document.body.classList.add("rest-view");
+  dayMuscles.textContent = t("restBadge");
+  exList.innerHTML = "";
+  const panel = document.createElement("section");
+  panel.className = "rest-panel" + (animateCards ? " anim-in" : "");
+  panel.setAttribute("aria-labelledby", "restPanelTitle");
+  panel.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.7 14.4A8.5 8.5 0 0 1 9.6 3.3a.75.75 0 0 0-1-.9A10 10 0 1 0 21.6 15.4a.75.75 0 0 0-.9-1z"/></svg>' +
+    '<h3 id="restPanelTitle"></h3><p class="rest-panel-body"></p><p class="rest-panel-next"></p>';
+  panel.querySelector("h3").textContent = t("restBadge");
+  panel.querySelector(".rest-panel-body").textContent = t("restPanelBody").replace("{n}", n);
+  panel.querySelector(".rest-panel-next").textContent = nextDay ? t("restPanelNext").replace("{day}", dayLabel(nextDay)) : "";
+  const act = window.GymRest && GymRest.actionButton ? GymRest.actionButton(todayStr(), null) : null;
+  if(act) panel.appendChild(act);
+  exList.appendChild(panel);
+}
+
 function renderExercises(){
+  if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
+  document.body.classList.remove("rest-view");
   const day = DAYS.find(d=>d.id===activeDay);
   dayMuscles.textContent = dayLabel(day) + " — " + musLabel(day);
   const key = sessionKey(day.id);
@@ -1227,11 +1392,14 @@ function applyAnonUI(){
 // Re-pick the day set and re-render after an auth/anon state change (ui.js).
 window.GymAppRebuild = function(){
   DAYS = pickDays();
+  restSlot = null;
   activeDay = localStorage.getItem(activeDayStoreKey()) || DAYS[0].id;
   if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
   animateCards = true;
   renderAll();
 };
+// Taking or undoing a rest day swaps the button inside an open rest panel.
+document.addEventListener("gym:restchange", ()=>{ if(restSlot !== null && weekSlots()) renderExercises(); });
 
 // P1-8: no more blocking native confirm() — reset happens immediately, with
 // an "Undo" toast (shared .gym-toast component, toast.js) instead of asking
@@ -1917,6 +2085,7 @@ function applyState(persist){
   if(activeStyle === "coach" && !loadJSON("gym_plans_custom", null)) activeStyle = "gym";
   ensureCoachStyleBtn();
   DAYS = pickDays();
+  restSlot = null;
   animateCards = true;
   document.documentElement.dataset.plan = activePlan || "male";
   applyTheme();
@@ -1935,16 +2104,32 @@ function renderDayTabs(){
   const list = document.getElementById("dayTabs");
   if(!list) return;
   list.innerHTML = "";
-  DAYS.forEach(d=>{
+  const week = weekSlots();
+  const slots = week ? week.map((id, i)=>({ i, day: id && DAYS.find(d=>d.id === id) })) : DAYS.map(d=>({ i: -1, day: d }));
+  slots.forEach(slot=>{
+    const d = slot.day;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "day-chip";
-    b.textContent = dayLabel(d);
-    if(d.id === activeDay){ b.classList.add("active"); b.setAttribute("aria-current","true"); }
+    if(d){
+      b.textContent = dayLabel(d);
+      if(week) b.setAttribute("aria-label", t("weekDayN").replace("{n}", slot.i + 1) + ": " + dayLabel(d));
+    } else {
+      b.classList.add("is-rest");
+      b.textContent = t("weekRest");
+      b.setAttribute("aria-label", t("weekDayN").replace("{n}", slot.i + 1) + ": " + t("weekRest"));
+    }
+    const on = d ? (restSlot === null && d.id === activeDay) : restSlot === slot.i;
+    if(on){ b.classList.add("active"); b.setAttribute("aria-current","true"); }
     b.onclick = ()=>{
-      if(d.id === activeDay) return;
-      activeDay = d.id;
-      setPref(activeDayStoreKey(), activeDay);
+      if(on) return;
+      if(d){
+        restSlot = null;
+        activeDay = d.id;
+        setPref(activeDayStoreKey(), activeDay);
+      } else {
+        restSlot = slot.i;
+      }
       openVideoId = null;
       animateCards = true;
       renderAll();

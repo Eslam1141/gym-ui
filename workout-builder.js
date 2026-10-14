@@ -101,7 +101,7 @@
   function buildExerciseIndex() {
     var byName = {};
     var order = [];
-    [DAYS_PREVIEW, DAYS_MALE, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(function (set) {
+    [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(function (set) {
       set.forEach(function (day) {
         day.exercises.forEach(function (ex) {
           if (byName[ex.en]) return;

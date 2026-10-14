@@ -1117,6 +1117,24 @@ body.onboarding-open #appNav{ display:none !important; }
   background-image:linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 
+/* Rest slots in the men's gym week: dashed outline, same cue as the rest card.
+   Opening one shows the rest panel instead of a workout, so the workout-only
+   blocks are hidden. */
+.day-chip.is-rest{ background:transparent; border-style:dashed; border-color:var(--line-strong); }
+.day-chip.is-rest.active{ color:var(--paper); background-image:none; background:var(--primary-soft); border:1px dashed var(--primary-text); }
+.day-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+body.rest-view .session-card, body.rest-view .progress-row, body.rest-view .bar-track,
+body.rest-view .warmup-card, body.rest-view #resetLink{ display:none; }
+.rest-panel{
+  display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2);
+  padding:var(--space-5) var(--space-4); border:1px dashed var(--line-strong); border-radius:var(--radius);
+}
+.rest-panel > svg{ width:28px; height:28px; fill:currentColor; color:var(--primary-text); }
+.rest-panel h3{ margin:0; font-size:var(--text-lg); font-weight:var(--fw-bold); color:var(--paper); }
+.rest-panel p{ margin:0; max-width:46ch; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); text-align:start; }
+.rest-panel .rest-panel-next{ color:var(--paper); font-weight:var(--fw-bold); }
+.rest-panel .rest-btn{ margin-top:var(--space-3); }
+
 /* ---- Coach: shared controls ---- */
 .coach-primary{
   width:100%; border:none; cursor:pointer; font-family:inherit;

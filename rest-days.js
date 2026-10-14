@@ -475,6 +475,7 @@
     left: restLeft,
     renderCard: renderCard,
     renderDetailControls: renderDetailControls,
+    actionButton: actionButton,
     submit: submit,
     notifyDropped: notifyDropped,
     flushQueue: flushQueue,
