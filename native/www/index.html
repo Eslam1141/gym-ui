@@ -54,6 +54,12 @@
   var SERVER = "https://etqadem.cloider.app/app/";
   var PROBE = SERVER + "manifest.json";
   var STAMP = "etq_offline_try";
+  // When the screen was last shown. A hung DNS lookup only fails ~30 s after
+  // the watchdog showed the screen, and Capacitor then reloads this page
+  // without #timeout; within SHOWN_WINDOW we keep it visible instead of hiding
+  // the body and starting another silent retry (blank beige screen, loop).
+  var SHOWN = "etq_offline_shown";
+  var SHOWN_WINDOW = 120000;
   var COPY = {
     en: { title: "You're offline", help: "Check your connection and try again. Your data is safe on this device.", btn: "Try again", busy: "Trying…" },
     ar: { title: "أنت غير متصل بالإنترنت", help: "تحقق من اتصالك ثم حاول مرة أخرى. بياناتك محفوظة على جهازك.", btn: "حاول مرة أخرى", busy: "جارٍ المحاولة…" }
@@ -87,6 +93,7 @@
   }
 
   function showScreen() {
+    store(SHOWN, Date.now());
     document.body.hidden = false;
     hideSplash();
     btn.addEventListener("click", function () {
@@ -109,7 +116,9 @@
 
   var last = parseInt(read(STAMP) || "0", 10);
   var fresh = !last || Date.now() - last > 15000;
-  if (fresh && !timedOut) {
+  var lastShown = parseInt(read(SHOWN) || "0", 10);
+  var recentlyShown = lastShown && Date.now() - lastShown < SHOWN_WINDOW;
+  if (fresh && !timedOut && !recentlyShown) {
     // First look at this failure: one silent attempt (the splash stays up).
     go();
     // Safety net if that navigation never gets going.

@@ -10,7 +10,7 @@ const vm = require("vm");
 const PAGE = "/native/www/index.html";
 const SERVER = "https://etqadem.cloider.app/app/";
 
-async function open(browser, { hash = "", locale = "en-US", stamp = null, probeOk = false } = {}) {
+async function open(browser, { hash = "", locale = "en-US", stamp = null, shown = null, probeOk = false } = {}) {
   const context = await browser.newContext({ locale, serviceWorkers: "block" });
   const nav = [];
   const probes = [];
@@ -25,6 +25,9 @@ async function open(browser, { hash = "", locale = "en-US", stamp = null, probeO
   });
   if (stamp !== null) {
     await context.addInitScript((s) => { try { localStorage.setItem("etq_offline_try", s); } catch (e) {} }, String(stamp));
+  }
+  if (shown !== null) {
+    await context.addInitScript((s) => { try { localStorage.setItem("etq_offline_shown", s); } catch (e) {} }, String(shown));
   }
   const page = await context.newPage();
   await page.goto(PAGE + hash);
@@ -70,6 +73,23 @@ test("a recent attempt stamp (the retry also failed) shows the screen instead of
   const { context, page, nav } = await open(browser, { stamp: Date.now() });
   await expect(page.locator("body")).toBeVisible();
   expect(nav).toEqual([]);
+  await context.close();
+});
+
+// A hung DNS lookup only errors out ~30 s later; Capacitor then reloads the
+// error page without the #timeout flag. That reload must not hide the body and
+// restart the silent retry (blank screen, loop).
+test("a late error reload right after the screen was shown stays visible, no new retry", async ({ browser }) => {
+  const { context, page, nav } = await open(browser, { shown: Date.now() - 40000, stamp: Date.now() - 40000 });
+  await expect(page.locator("body")).toBeVisible();
+  expect(nav).toEqual([]);
+  await context.close();
+});
+
+test("showing the screen records the shown stamp", async ({ browser }) => {
+  const { context, page } = await open(browser, { hash: "#timeout" });
+  const v = await page.evaluate(() => localStorage.getItem("etq_offline_shown"));
+  expect(Date.now() - parseInt(v, 10)).toBeLessThan(5000);
   await context.close();
 });
 

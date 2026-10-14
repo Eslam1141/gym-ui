@@ -68,3 +68,17 @@ npx capacitor-assets generate --android --iconBackgroundColor '#F3F0E8' --splash
 ```
 
 Never commit a keystore. Release signing uses `C:\Users\L\keys\etqadem-upload.keystore`.
+
+## Timer alarm, Back button, app version
+
+- `TimerAlarmPlugin` / `TimerAlarmReceiver` (in `android/app/src/main/java/com/etqadem/app/`) are a tiny
+  in-app Capacitor plugin: the rest / exercise timer end is scheduled with `AlarmManager`
+  (`setAlarmClock` when "Alarms & reminders" is granted, else `setAndAllowWhileIdle`) and fires an
+  insistent notification (`FLAG_INSISTENT`, 30 s cap, "Stop" action) on the `timer-alarm` channel
+  (`USAGE_ALARM`). It stays silent while the app is on screen (the in-app alarm rings instead) and is
+  cancelled when the app returns to the foreground. No new permission: `SCHEDULE_EXACT_ALARM` is already
+  declared by `@capacitor/local-notifications` (Play "Alarms & reminders" declaration, same as before);
+  no foreground service and no `USE_FULL_SCREEN_INTENT`.
+- `native-shell.js` (web) wires `@capacitor/app`: hardware Back closes the top sheet / ringing banner,
+  then goes back, then exits; `window.GYM_APP_VERSION` = versionName (sent as `context.appVersion` in
+  feedback); deletes the old `rest-timer` channel at startup.
