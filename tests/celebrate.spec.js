@@ -19,8 +19,8 @@ test.describe("day celebration", () => {
     await expect(page.locator(".celebrate-card.show")).toHaveCount(0);
     await lastCheck(page).click();
     await expect(card(page)).toHaveClass(/show/, T);
-    await expect(card(page)).toContainText("Two days in a row. Keep it going.");
-    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going.");
+    await expect(card(page)).toContainText("Two days in a row. Keep it going");
+    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
     await card(page).click();
     await expect(card(page)).not.toHaveClass(/show/);
 
@@ -41,7 +41,7 @@ test.describe("day celebration", () => {
     const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 3, todayDone: false } });
     await ready(page, true);
     await lastCheck(page).click();
-    await expect(card(page)).toContainText("4 days in a row. You're building a habit.", T);
+    await expect(card(page)).toContainText("4 days in a row. You're building a habit", T);
     await page.keyboard.press("Escape");
     await expect(card(page)).not.toHaveClass(/show/);
     await page.evaluate(() => { GymCelebrate.rest(); });
@@ -55,7 +55,7 @@ test.describe("day celebration", () => {
     const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 6, todayDone: false } });
     await ready(page, true);
     await lastCheck(page).click();
-    await expect(card(page)).toContainText("A full week in a row.", T);
+    await expect(card(page)).toContainText("A full week in a row. You deserve the best", T);
     await context.close();
   });
 
@@ -63,7 +63,7 @@ test.describe("day celebration", () => {
     const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 2, todayDone: true } });
     await ready(page, true);
     await lastCheck(page).click();
-    await expect(card(page)).toContainText("Two days in a row.", T);
+    await expect(card(page)).toContainText("Two days in a row", T);
     await context.close();
   });
 
@@ -72,7 +72,7 @@ test.describe("day celebration", () => {
     const checks = page.locator(".check");
     await expect(checks.first()).toBeVisible(T);
     for (let i = await checks.count(); i > 0; i--) await checks.nth(i - 1).click();
-    await expect(card(page)).toContainText("Great job. See you next session.", T);
+    await expect(card(page)).toContainText("Great job. See you tomorrow", T);
     await context.close();
   });
 
@@ -80,7 +80,36 @@ test.describe("day celebration", () => {
     const { context, page } = await openApp(browser, { signedIn: true, lang: "ar", checks: allButLast(), server: { streak: 2, todayDone: false } });
     await ready(page, true);
     await lastCheck(page).click();
-    await expect(card(page)).toContainText("٣ أيام متتالية", T);
+    await expect(card(page)).toContainText("٣ أيام، ربنا ما يقطعها عادة", T);
+    await context.close();
+  });
+
+  test("female plan gets the feminine Arabic line, male plan does not", async ({ browser }) => {
+    for (const [plan, week, rest] of [["female", "إنتي تستاهلي الأفضل", "اشحني طاقتك وارجعي أقوى"], ["male", "إنت تستاهل الأفضل", "اشحن طاقتك وارجع أقوى"]]) {
+      const { context, page } = await openApp(browser, { signedIn: true, lang: "ar", plan, server: { streak: 6, todayDone: false } });
+      await page.waitForFunction(() => window.GymHeader && GymHeader.me() && GymHeader.me().currentStreak != null, null, T);
+      await page.evaluate(() => { GymCelebrate.day("t"); });
+      await expect(card(page)).toContainText(week, T);
+      await page.evaluate(() => { GymCelebrate.rest(); });
+      await expect(card(page)).toContainText(rest, T);
+      await context.close();
+    }
+  });
+
+  test("animated emoji is decorative, loads on demand, falls back to the character", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    await ready(page, true);
+    expect(await page.locator(".celebrate-emoji img").count()).toBe(0);
+    await lastCheck(page).click();
+    const img = page.locator(".celebrate-emoji img");
+    await expect(img).toHaveAttribute("src", "icons/emoji/fire.webp", T);
+    await expect(img).toHaveAttribute("alt", "");
+    await expect(page.locator(".celebrate-emoji")).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
+    await expect.poll(() => img.evaluate((i) => i.complete && i.naturalWidth > 0), T).toBe(true);
+    await page.evaluate(() => { document.querySelector(".celebrate-emoji img").dispatchEvent(new Event("error")); });
+    await expect(page.locator(".celebrate-emoji")).toHaveText("\u{1F525}");
+    await expect(page.locator(".celebrate-emoji img")).toHaveCount(0);
     await context.close();
   });
 
@@ -102,7 +131,7 @@ test.describe("rest celebration", () => {
     const rc = page.locator(".rest-card");
     await rc.getByRole("button", { name: "Take a rest day" }).click();
     await expect(card(page)).toHaveClass(/is-rest/, T);
-    await expect(card(page)).toContainText("Rest is part of training. Recharge and come back stronger.");
+    await expect(card(page)).toContainText("Rest is part of training. Recharge and come back stronger");
     await card(page).click();
     await expect(card(page)).not.toHaveClass(/show/);
     await rc.getByRole("button", { name: "Undo rest day" }).click();

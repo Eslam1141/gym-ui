@@ -17,11 +17,17 @@
   var SHOW_MS = 3200;
   var BURST = 12;
 
-  var host = null, card = null, live = null, textEl = null, stage = null;
+  var host = null, card = null, live = null, textEl = null, stage = null, emojiEl = null;
   var timer = null;
 
   function str(key, params) {
     var out = typeof window.t === "function" ? window.t(key) : key;
+    // Arabic addresses women in the feminine form on the female plan: an
+    // optional "<key>F" string overrides the default one.
+    if (isAr() && document.documentElement.dataset.plan === "female" && typeof window.t === "function") {
+      var f = window.t(key + "F");
+      if (f !== key + "F") out = f;
+    }
     if (params) out = out.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? params[k] : ""; });
     return out;
   }
@@ -52,17 +58,23 @@
     return me.currentStreak + (me.todayDone === false ? 1 : 0);
   }
 
+  // Returns the message and the name of its animated emoji (icons/emoji/<name>.webp).
   function trainingText(n) {
-    if (n < 2) return str("celebDay1");
-    if (n === 2) return str("celebDay2");
+    if (n < 2) return { text: str("celebDay1"), emoji: "muscle" };
+    if (n === 2) return { text: str("celebDay2"), emoji: "fire" };
     if (n >= 7 && n % 7 === 0) {
       var w = n / 7;
-      if (w === 1) return str("celebWeek1");
-      if (w === 2) return str("celebWeek2");
-      return str(w <= 10 ? "celebWeeks" : "celebWeeksMany", { w: num(w) });
+      if (w === 1) return { text: str("celebWeek1"), emoji: "trophy" };
+      if (w === 2) return { text: str("celebWeek2"), emoji: "medal" };
+      return { text: str(w <= 10 ? "celebWeeks" : "celebWeeksMany", { w: num(w) }), emoji: "crown" };
     }
-    return str(n <= 10 ? "celebHabit" : "celebHabitMany", { n: num(n) });
+    return n <= 10 ? { text: str("celebHabit", { n: num(n) }), emoji: "sprout" }
+                   : { text: str("celebHabitMany", { n: num(n) }), emoji: "rocket" };
   }
+
+  // Plain-character fallback when the image cannot load.
+  var CHARS = { muscle: "\uD83D\uDCAA", fire: "\uD83D\uDD25", sprout: "\uD83C\uDF31", rocket: "\uD83D\uDE80",
+                trophy: "\uD83C\uDFC6", medal: "\uD83E\uDD47", crown: "\uD83D\uDC51", battery: "\uD83D\uDD0B" };
 
   // ---------------- DOM ----------------
   function build() {
@@ -82,6 +94,11 @@
     stage.className = "celebrate-stage";
     textEl = document.createElement("p");
     textEl.className = "celebrate-text";
+    emojiEl = document.createElement("span");
+    emojiEl.className = "celebrate-emoji";
+    emojiEl.setAttribute("aria-hidden", "true");
+    textEl.appendChild(emojiEl);
+    textEl.appendChild(document.createTextNode(""));
     card.appendChild(stage);
     card.appendChild(textEl);
     card.addEventListener("click", dismiss);
@@ -118,11 +135,31 @@
     card.classList.remove("show");
   }
 
-  function show(kind, message) {
+  // Created per celebration so nothing is fetched until one shows. Decorative:
+  // alt="" + aria-hidden; the reduced-motion still comes from <picture>.
+  function setEmoji(name) {
+    emojiEl.textContent = "";
+    var pic = document.createElement("picture");
+    var src = document.createElement("source");
+    src.media = "(prefers-reduced-motion: reduce)";
+    src.srcset = "icons/emoji/" + name + "-static.webp";
+    var img = document.createElement("img");
+    img.alt = "";
+    img.width = 30; img.height = 30;
+    img.decoding = "async";
+    img.src = "icons/emoji/" + name + ".webp";
+    img.addEventListener("error", function () { emojiEl.textContent = CHARS[name]; });
+    pic.appendChild(src);
+    pic.appendChild(img);
+    emojiEl.appendChild(pic);
+  }
+
+  function show(kind, message, emoji) {
     build();
     clearTimeout(timer);
     card.classList.remove("show", "is-day", "is-rest");
-    textEl.textContent = message;
+    textEl.lastChild.nodeValue = message;
+    setEmoji(emoji);
     live.textContent = "";
     fillStage(kind);
     card.classList.add("is-" + kind);
@@ -136,11 +173,12 @@
 
   function day(dayId) {
     if (!claim(dayId || "day")) return;
-    show("day", trainingText(streakAfterToday()));
+    var m = trainingText(streakAfterToday());
+    show("day", m.text, m.emoji);
     try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   }
 
-  function rest() { show("rest", str("celebRest")); }
+  function rest() { show("rest", str("celebRest"), "battery"); }
 
   window.GymCelebrate = { day: day, rest: rest };
 })();
