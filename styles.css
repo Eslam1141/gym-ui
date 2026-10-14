@@ -378,24 +378,61 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   font-size:var(--text-sm); margin:6px 0 14px; text-decoration:underline; cursor:pointer;
 }
 
+/* rest timer: a floating circle with a progress ring that drains clockwise
+   (mirrored in RTL, like the other progress bars). --p (1..0) is set on the
+   fill from app.js; pathLength=100 keeps the dash maths unit-free. */
 #timerBar{
-  position:fixed; inset-inline:0; bottom:0; z-index:50;
-  background:var(--panel2); border-top:1px solid var(--rust);
-  padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-  transform:translateY(120%); transition:transform .25s ease;
-  box-shadow:0 -8px 24px rgba(0,0,0,0.4);
+  --timer-d:112px; --timer-pad:8px;
+  position:fixed; inset-inline:0; margin-inline:auto; z-index:50;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  width:max-content;
+  display:flex; align-items:center; gap:8px; padding:var(--timer-pad);
+  border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--line-strong); box-shadow:var(--elev-2);
+  backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2);
+  opacity:0; transform:scale(.8); visibility:hidden; pointer-events:none;
+  transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease), visibility 0s linear var(--dur-med);
 }
-#timerBar.show{ transform:translateY(0); }
-.timer-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; max-width:640px; margin:0 auto; }
-.timer-info{ flex:1; }
-.timer-info .label{ font-size:var(--text-sm); color:var(--paper-dim); }
-.timer-info .time{ font-size:var(--text-2xl); font-weight:var(--fw-black); color:var(--paper); font-variant-numeric:tabular-nums; }
-.timer-track{ height:5px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:8px; max-width:640px; }
-.timer-fill{ height:100%; background:var(--rust); width:100%; transform:scaleX(var(--p,1)); transform-origin:0 50%; transition:transform 1s linear; }
-[dir="rtl"] .timer-fill{ transform-origin:100% 50%; }
-.timer-skip{
-  background:transparent; border:1px solid var(--line); color:var(--paper-dim);
-  font-size:var(--text-sm); font-weight:700; padding:8px 14px; border-radius:8px; cursor:pointer; font-family:inherit;
+#timerBar.show{
+  opacity:1; transform:none; visibility:visible; pointer-events:auto;
+  transition-delay:0s; transition-timing-function:var(--ease-out);
+}
+/* finished: hold the widget for the pop, then let it leave */
+#timerBar.done:not(.show){ transition-delay:.45s; }
+/* the celebration card takes the same spot above the tab bar; it wins while it shows */
+body:has(.celebrate-card.show) #timerBar{ opacity:0; pointer-events:none; }
+.timer-dial{ position:relative; flex:none; width:var(--timer-d); height:var(--timer-d); display:grid; place-items:center; }
+.timer-ring{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
+[dir="rtl"] .timer-ring{ transform:rotate(-90deg) scaleY(-1); }
+.timer-ring circle{ fill:none; stroke-width:7; }
+.timer-ring-track{ stroke:var(--line); }
+.timer-ring-fill{
+  stroke:var(--accent); stroke-linecap:round;
+  stroke-dasharray:100; stroke-dashoffset:calc((var(--p, 1) - 1) * 100);
+}
+#timerBar.ending .timer-ring-fill{ stroke:var(--warn); }
+#timerBar.done .timer-ring-fill{ stroke:var(--accent); stroke-dashoffset:0; }
+.timer-core{ position:relative; display:grid; justify-items:center; gap:2px; max-width:72px; text-align:center; }
+.timer-core .time{ font-size:var(--text-2xl); font-weight:var(--fw-black); color:var(--paper); font-variant-numeric:tabular-nums; line-height:1; }
+#timerBar.ending .timer-core .time{ color:var(--warn); }
+.timer-core .label{ max-width:100%; font-size:var(--text-xs); color:var(--paper-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.timer-btn{
+  flex:none; width:44px; height:44px; padding:0; border-radius:50%;
+  display:grid; place-items:center; cursor:pointer; font-family:inherit; font-size:var(--text-sm); font-weight:700;
+  background:var(--panel2); color:var(--paper-dim); border:1px solid var(--line);
+}
+.timer-btn:hover{ color:var(--paper); border-color:var(--line-strong); }
+.timer-add{ font-variant-numeric:tabular-nums; }
+@media (prefers-reduced-motion:no-preference){
+  @keyframes timer-pulse{ 50%{ transform:scale(1.1); } }
+  @keyframes timer-pop{ 40%{ transform:scale(1.12); } }
+  #timerBar.ending .timer-core .time{ animation:timer-pulse 1s ease-in-out infinite; }
+  #timerBar.done .timer-ring{ animation:timer-pop .45s var(--ease-spring); }
+  #timerBar.done .timer-ring-fill{ transition:stroke-dashoffset .25s var(--ease-out); }
+}
+@media (prefers-reduced-motion:reduce){
+  #timerBar, #timerBar.show{ transition:none; transform:none; }
+  #timerBar.done:not(.show){ transition-delay:0s; }
 }
 
 .install-tip{
@@ -446,7 +483,7 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   pointer-events:none;
 }
 #toTop.show{ opacity:1; transform:none; pointer-events:auto; }
-/* the rest timer bar owns the bottom edge; #toTop would cover its Skip button */
+/* the rest timer dock owns the bottom edge */
 body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #toTop:active{ transform:scale(.9); }
 #toTop svg{ width:22px; height:22px; fill:#fff; }
@@ -533,7 +570,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
   /* the bottom nav becomes a fixed left rail at this width (#appNav, below) —
      these were still anchored to the viewport edge and ended up rendered
      underneath the rail (z-index 120 vs 65), invisible and unclickable.
-     Physical left/right + [dir=rtl] flip, matching #timerBar's approach. */
+     Physical left/right + [dir=rtl] flip, matching the other rail-anchored fixed elements. */
   #coachFab{ bottom:24px; left:calc(var(--side-w) + 16px); right:auto; }
   #coachFabTip{ bottom:90px; left:calc(var(--side-w) + 16px); right:auto; }
   [dir="rtl"] #coachFab{ left:auto; right:calc(var(--side-w) + 16px); }
@@ -969,6 +1006,8 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
    nav) plus a 16px gap, so at max scroll the last exercise card's Save/Rest
    row and wt/rep inputs never sit under a fixed FAB. */
 .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 88px); }
+/* the rest dock floats over the page: let the current card scroll clear of it (dock 128px + 12px offset + 16px gap) */
+body:has(#timerBar.show) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 156px); }
 
 #appNav{
   position:fixed; z-index:120; left:0; right:0; bottom:0;
@@ -1003,7 +1042,6 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
 
 body.onboarding-open #appNav{ display:none !important; }
 
-#timerBar{ bottom:calc(var(--nav-h) + env(safe-area-inset-bottom)); }
 #toTop{ bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px); }
 
 @media (min-width:900px){
@@ -1018,13 +1056,13 @@ body.onboarding-open #appNav{ display:none !important; }
   #appNav button{ --pill-top:var(--space-2); flex:none; min-height:64px; }
   body{ padding-left:var(--side-w); }
   .screen{ padding-bottom:96px; } /* P0-1: clears the rail-anchored FABs (52px + 24px gap + margin) */
-  #timerBar{ left:var(--side-w); right:0; bottom:0; }
+  body:has(#timerBar.show) .screen{ padding-bottom:168px; }
+  #timerBar{ inset-inline-start:var(--side-w); bottom:24px; } /* centred in the content area beside the rail */
   #toTop{ bottom:24px; }
   .screen .wrap{ max-width:720px; }
 
   [dir="rtl"] #appNav{ left:auto; right:0; border-right:none; border-left:1px solid var(--line); }
   [dir="rtl"] body{ padding-left:0; padding-right:var(--side-w); }
-  [dir="rtl"] #timerBar{ left:0; right:var(--side-w); }
 }
 
 /* day chips — always visible, replaces the Days hamburger */

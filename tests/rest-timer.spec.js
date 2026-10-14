@@ -129,3 +129,103 @@ for (const [state, expectExact] of [["denied", false], ["granted", true], ["unav
     await context.close();
   });
 }
+
+// ---- circular ring ----
+const ringOffset = (page) => page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("timerFill")).strokeDashoffset.replace(/^calc\(/, "")));
+
+test("ring drains smoothly as time passes", async ({ browser }) => {
+  const { page, context } = await openApp(browser);
+  await stubAlerts(page);
+  const secs = await startRest(page);
+  const start = await ringOffset(page);
+  expect(start).toBeCloseTo(0, 0);
+  await page.clock.runFor(2000);
+  const quarter = await ringOffset(page);
+  expect(quarter).toBeLessThan(-100 * 1.5 / secs);
+  await page.clock.runFor(2000);
+  expect(await ringOffset(page)).toBeLessThan(quarter - 100 * 1.5 / secs);
+  // continuous: moves between whole seconds
+  const a = await ringOffset(page);
+  await page.clock.runFor(100);
+  expect(await ringOffset(page)).toBeLessThan(a);
+  await context.close();
+});
+
+test("widget has timer role, a named label and skip hides it", async ({ browser }) => {
+  const { page, context } = await openApp(browser);
+  await stubAlerts(page);
+  await startRest(page);
+  await expect(page.locator("#timerBar")).toHaveAttribute("role", "timer");
+  await expect(page.locator("#timerBar")).toHaveAttribute("aria-label", /^Rest — .+/);
+  await page.click("#timerSkip");
+  await expect(page.locator("#timerBar")).not.toHaveClass(/show/);
+  await expect(page.locator("#timerBar")).toBeHidden();
+  await context.close();
+});
+
+test("final seconds state applies at 5s or less and the time is announced at 10s", async ({ browser }) => {
+  const { page, context } = await openApp(browser);
+  await stubAlerts(page);
+  const secs = await startRest(page);
+  await screenOffFor(page, (secs - 10) * 1000 - 400);
+  await page.clock.resume();
+  await page.clock.runFor(600);
+  await expect(page.locator("#timerLive")).toHaveText("10 seconds left");
+  await expect(page.locator("#timerBar")).not.toHaveClass(/ending/);
+  await page.clock.runFor(5000);
+  await expect(page.locator("#timerBar")).toHaveClass(/ending/);
+  await expect(page.locator("#timerTime")).toHaveText("00:05");
+  await page.clock.runFor(5500);
+  await expect(page.locator("#timerBar")).not.toHaveClass(/show/);
+  await expect(page.locator("#timerLive")).toHaveText("Rest is over");
+  expect(await page.evaluate(() => window.__beeps)).toBe(1);
+  await context.close();
+});
+
+test("+15 s extends the end time and reschedules the native alert", async ({ browser }) => {
+  const { page, context } = await openApp(browser);
+  await stubAlerts(page);
+  await page.evaluate(() => {
+    window.__notif = { scheduled: [] };
+    window.Capacitor = {
+      isNativePlatform: () => true,
+      Plugins: { LocalNotifications: {
+        checkPermissions: async () => ({ display: "granted" }),
+        requestPermissions: async () => ({ display: "granted" }),
+        createChannel: async () => {},
+        schedule: async (o) => { window.__notif.scheduled.push(o); },
+        cancel: async () => {}
+      } }
+    };
+  });
+  const secs = await startRest(page);
+  await expect.poll(() => page.evaluate(() => window.__notif.scheduled.length)).toBe(1);
+  await page.click("#timerAdd");
+  await expect.poll(() => page.evaluate(() => window.__notif.scheduled.length)).toBe(2);
+  const n = await page.evaluate(() => window.__notif.scheduled[1].notifications[0]);
+  const fireIn = Date.parse(n.schedule.at) - await page.evaluate(() => Date.now());
+  expect(Math.abs(fireIn - (secs + 15) * 1000)).toBeLessThan(1500);
+  const mm = String(Math.floor((secs + 15) / 60)).padStart(2, "0"), ss = String((secs + 15) % 60).padStart(2, "0");
+  await expect(page.locator("#timerTime")).toHaveText(`${mm}:${ss}`);
+  await context.close();
+});
+
+test("reduced motion: no pulse or transitions, ring steps with the displayed second", async ({ browser }) => {
+  const { page, context } = await openApp(browser);
+  await stubAlerts(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const secs = await startRest(page);
+  await screenOffFor(page, (secs - 4) * 1000);
+  await page.clock.resume();
+  await page.clock.runFor(200);
+  await expect(page.locator("#timerBar")).toHaveClass(/ending/);
+  const info = await page.evaluate(() => {
+    const cs = (sel) => getComputedStyle(document.querySelector(sel));
+    return { pulse: cs("#timerTime").animationName, trans: cs("#timerBar").transitionDuration, time: document.getElementById("timerTime").textContent };
+  });
+  expect(info.pulse).toBe("none");
+  expect(parseFloat(info.trans)).toBeLessThan(0.001);
+  const [m, sec] = info.time.split(":").map(Number);
+  expect(await ringOffset(page)).toBeCloseTo(-(1 - (m * 60 + sec) / secs) * 100, 1);
+  await context.close();
+});

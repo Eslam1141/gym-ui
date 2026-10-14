@@ -408,6 +408,9 @@ const T = {
   notesTitle:["Important Notes","ملاحظات مهمة"],
   skip:["Skip","تخطٍّ"],
   restTimer:["Rest — {name}","راحة — {name}"],
+  restAdd:["Add 15 seconds","إضافة 15 ثانية"],
+  restTenLeft:["10 seconds left","باقي 10 ثوانٍ"],
+  restOverLive:["Rest is over","انتهت الراحة"],
   restOverTitle:["Rest is over","انتهت الراحة"],
   restOverBody:["Next set: {name}","المجموعة التالية: {name}"],
   exVideo:["Exercise video","فيديو التمرين"],
@@ -1255,35 +1258,43 @@ videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeVid
 // recomputed and a rest that ended meanwhile alerts straight away. While it
 // runs the screen is kept awake (Wake Lock), and in the native app a local
 // notification is scheduled for the end time so it sounds with the screen off.
-let restInterval = null;
-let restEndAt = 0, restTotal = 0;
+let restInterval = null, restRaf = 0;
+let restEndAt = 0, restTotal = 0, restName = "";
 const timerBar = document.getElementById("timerBar");
 const timerTime = document.getElementById("timerTime");
 const timerLabel = document.getElementById("timerLabel");
 const timerFill = document.getElementById("timerFill");
+const timerLive = document.getElementById("timerLive");
+const reduceMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+const REST_ADD_SECONDS = 15, REST_ENDING_SECONDS = 5;
 
 function startRestTimer(seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
   clearInterval(restInterval);
   restTotal = seconds;
+  restName = name;
   restEndAt = Date.now() + seconds*1000;
   unlockBeep(); // inside the tap, so the end beep isn't blocked by autoplay rules
   holdScreenAwake(true);
   scheduleRestNotification(restEndAt, name);
-  timerLabel.textContent = t("restTimer").replace("{name}", name);
+  const label = t("restTimer").replace("{name}", name);
+  timerBar.setAttribute("aria-label", label);
+  timerLabel.textContent = name;
+  timerBar.classList.remove("done", "ending");
   timerBar.classList.add("show");
-  // Jump to full without animating the bar back up from the previous timer.
-  timerFill.style.transition = "none";
   renderRestTime(seconds, restTotal);
-  void timerFill.offsetWidth;
-  timerFill.style.transition = "";
+  timerLive.textContent = `${label}, ${timerTime.textContent}`;
   restInterval = setInterval(restTick, 250);
+  startRestRing();
 }
 function restTick(){
   if(!restEndAt) return;
   const remaining = Math.max(0, Math.ceil((restEndAt - Date.now())/1000));
   renderRestTime(remaining, restTotal);
+  if(remaining === 10) timerLive.textContent = t("restTenLeft");
   if(remaining <= 0){
+    timerLive.textContent = t("restOverLive");
+    timerBar.classList.add("done"); // the ring fills and pops while the widget leaves
     stopRestTimer();
     if(!document.hidden) cancelRestNotification(); // alerting in-app; no second ring
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
@@ -1292,21 +1303,50 @@ function restTick(){
 }
 function stopRestTimer(){
   clearInterval(restInterval);
+  cancelAnimationFrame(restRaf);
   restEndAt = 0;
-  timerBar.classList.remove("show");
+  timerBar.classList.remove("show", "ending");
   holdScreenAwake(false);
+}
+// The ring sweeps smoothly: while the page is visible it is repainted every
+// frame from the wall-clock end time. Reduced motion keeps the once-a-second
+// steps from renderRestTime instead.
+function paintRestRing(){
+  timerFill.style.setProperty("--p", Math.max(0, Math.min(1, (restEndAt - Date.now())/(restTotal*1000))));
+}
+function startRestRing(){
+  cancelAnimationFrame(restRaf);
+  if(reduceMotionMQ.matches || document.hidden || !restEndAt) return;
+  const frame = ()=>{
+    if(!restEndAt) return;
+    paintRestRing();
+    restRaf = requestAnimationFrame(frame);
+  };
+  restRaf = requestAnimationFrame(frame);
 }
 document.addEventListener("visibilitychange", ()=>{
   if(document.hidden || !restEndAt) return;
   restTick();
-  if(restEndAt) holdScreenAwake(true); // the browser drops the wake lock when hidden
+  if(restEndAt){
+    holdScreenAwake(true); // the browser drops the wake lock when hidden
+    startRestRing();
+  }
 });
 function renderRestTime(remaining, total){
   const m = Math.max(0,Math.floor(remaining/60)).toString().padStart(2,"0");
   const s = Math.max(0,remaining%60).toString().padStart(2,"0");
   timerTime.textContent = `${m}:${s}`;
+  timerBar.classList.toggle("ending", remaining > 0 && remaining <= REST_ENDING_SECONDS);
   timerFill.style.setProperty("--p", Math.max(0, remaining/total));
 }
+document.getElementById("timerAdd").onclick = ()=>{
+  if(!restEndAt) return;
+  restEndAt += REST_ADD_SECONDS*1000;
+  restTotal += REST_ADD_SECONDS;
+  scheduleRestNotification(restEndAt, restName);
+  restTick();
+  paintRestRing();
+};
 document.getElementById("timerSkip").onclick = ()=>{
   stopRestTimer();
   cancelRestNotification();
