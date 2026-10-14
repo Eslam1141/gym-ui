@@ -97,3 +97,35 @@ test("native app schedules an end-of-rest notification and cancels it on skip", 
   await expect.poll(() => page.evaluate(() => window.__notif.cancelled.length)).toBe(before + 1);
   await context.close();
 });
+
+for (const [state, expectExact] of [["denied", false], ["granted", true], ["unavailable", false]]) {
+  test(`native rest alert never opens system settings (exact alarms ${state})`, async ({ browser }) => {
+    const { page, context } = await openApp(browser);
+    await stubAlerts(page);
+    await page.evaluate((state) => {
+      window.__notif = { scheduled: [], settingsCalls: 0 };
+      const ln = {
+        checkPermissions: async () => ({ display: "granted" }),
+        requestPermissions: async () => ({ display: "granted" }),
+        createChannel: async () => {},
+        // The real plugin opens "Alarms & reminders" if this is ever called.
+        changeExactNotificationSetting: async () => { window.__notif.settingsCalls++; return { exact_alarm: "granted" }; },
+        schedule: async (o) => {
+          // ...and also from schedule() when an exact alarm is requested without the permission.
+          if (state !== "granted" && o.notifications.some(n => n.isExactNotification !== false)) window.__notif.settingsCalls++;
+          window.__notif.scheduled.push(o);
+        },
+        cancel: async () => {}
+      };
+      if (state !== "unavailable") ln.checkExactNotificationSetting = async () => ({ exact_alarm: state });
+      window.Capacitor = { isNativePlatform: () => true, Plugins: { LocalNotifications: ln } };
+    }, state);
+    await startRest(page);
+    await expect.poll(() => page.evaluate(() => window.__notif.scheduled.length)).toBe(1);
+    const n = await page.evaluate(() => window.__notif.scheduled[0].notifications[0]);
+    expect(n.isExactNotification).toBe(expectExact);
+    expect(n.schedule.allowWhileIdle).toBe(true);
+    expect(await page.evaluate(() => window.__notif.settingsCalls)).toBe(0);
+    await context.close();
+  });
+}
