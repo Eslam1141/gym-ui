@@ -413,6 +413,13 @@ const T = {
   restOverLive:["Rest is over","انتهت الراحة"],
   restOverTitle:["Rest is over","انتهت الراحة"],
   restOverBody:["Next set: {name}","المجموعة التالية: {name}"],
+  preciseTitle:["Allow precise rest alerts?","تسمح بتنبيهات الراحة بالثانية؟"],
+  preciseTitleF:["Allow precise rest alerts?","تسمحي بتنبيهات الراحة بالثانية؟"],
+  preciseBody:["Your rest alert rings exactly on time, even when the screen is off. You'll confirm it in Android settings.","تنبيه الراحة هيرن في معاده بالظبط حتى لو الشاشة مقفولة. هتأكد ده من إعدادات أندرويد."],
+  preciseBodyF:["Your rest alert rings exactly on time, even when the screen is off. You'll confirm it in Android settings.","تنبيه الراحة هيرن في معاده بالظبط حتى لو الشاشة مقفولة. هتأكدي ده من إعدادات أندرويد."],
+  preciseAllow:["Allow","اسمح"],
+  preciseAllowF:["Allow","اسمحي"],
+  preciseLater:["Not now","مش دلوقتي"],
   exVideo:["Exercise video","فيديو التمرين"],
   settings:["Settings","الإعدادات"],
   planLabel:["Plan","الخطة"],
@@ -1299,6 +1306,7 @@ function restTick(){
     if(!document.hidden) cancelRestNotification(); // alerting in-app; no second ring
     if(navigator.vibrate) navigator.vibrate([200,100,200]);
     beep();
+    offerPreciseAlerts();
   }
 }
 function stopRestTimer(){
@@ -1426,6 +1434,100 @@ function cancelRestNotification(){
   const ln = restNotifier();
   if(ln) ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] }).catch(()=>{});
 }
+
+// One-time opt-in for exact rest alarms (Android 14+ leaves them off by
+// default). Offered after a rest ends, never on launch. The system Settings
+// screen opens ONLY from the Allow tap below; nothing else may call
+// changeExactNotificationSetting.
+const PRECISE_KEY = "etq_precise_alerts_v1";
+let preciseSheet = null, preciseAwaitingSettings = false;
+function preciseAnswered(){
+  try{ return !!localStorage.getItem(PRECISE_KEY); }catch(e){ return true; } // no storage: can't remember, so never nag
+}
+function preciseRemember(answer){
+  try{ localStorage.setItem(PRECISE_KEY, answer); }catch(e){}
+}
+// Major Android version. UA client hints carry the real one (the classic UA
+// string is frozen to "Android 10" in current WebViews), so use them first.
+async function androidMajor(){
+  try{
+    const uad = navigator.userAgentData;
+    if(uad && uad.getHighEntropyValues){
+      const v = await uad.getHighEntropyValues(["platformVersion"]);
+      const n = parseInt(v.platformVersion, 10);
+      if(n > 0) return n;
+    }
+  }catch(e){}
+  const m = /Android (\d+)/.exec(navigator.userAgent || "");
+  return m ? parseInt(m[1], 10) : 0;
+}
+function preciseStr(key){
+  const f = activeLang === "ar" && document.documentElement.dataset.plan === "female" ? T[key + "F"] : null;
+  return f ? f[1] : t(key);
+}
+async function offerPreciseAlerts(){
+  if(preciseSheet || preciseAnswered()) return;
+  const ln = restNotifier();
+  if(!ln || typeof ln.checkExactNotificationSetting !== "function") return;
+  try{
+    const c = window.Capacitor;
+    if(typeof c.getPlatform !== "function" || c.getPlatform() !== "android") return;
+    if(await androidMajor() < 14) return; // Android 14 = API 34
+    if((await ln.checkExactNotificationSetting()).exact_alarm === "granted") return;
+  }catch(e){ return; }
+  // Let the finished-rest pop settle, and don't pile onto another dialog.
+  setTimeout(() => {
+    if(preciseSheet || preciseAnswered() || document.hidden || restEndAt || document.querySelector(".syd")) return;
+    openPreciseSheet(ln);
+  }, 900);
+}
+function openPreciseSheet(ln){
+  const opener = document.activeElement;
+  const el = document.createElement("div");
+  el.className = "syd";
+  el.id = "preciseSheet";
+  el.innerHTML =
+    '<div class="syd-backdrop"></div>' +
+    '<div class="syd-panel" role="dialog" aria-modal="true" aria-labelledby="preTitle" aria-describedby="preBody">' +
+    '<h2 id="preTitle" class="syd-title"></h2>' +
+    '<p id="preBody" class="syd-body"></p>' +
+    '<div class="syd-actions"><button type="button" class="syd-yes"></button><button type="button" class="syd-no"></button></div></div>';
+  el.querySelector(".syd-title").textContent = preciseStr("preciseTitle");
+  el.querySelector(".syd-body").textContent = preciseStr("preciseBody");
+  const yes = el.querySelector(".syd-yes"), no = el.querySelector(".syd-no");
+  yes.textContent = preciseStr("preciseAllow");
+  no.textContent = preciseStr("preciseLater");
+  function close(answer){
+    document.removeEventListener("keydown", onKey, true);
+    preciseRemember(answer);
+    el.remove();
+    preciseSheet = null;
+    if(opener && opener.focus) try{ opener.focus(); }catch(e){}
+  }
+  function onKey(e){
+    if(e.key === "Escape"){ e.stopPropagation(); close("later"); return; }
+    if(e.key !== "Tab") return;
+    if(e.shiftKey && document.activeElement === yes){ e.preventDefault(); no.focus(); }
+    else if(!e.shiftKey && document.activeElement === no){ e.preventDefault(); yes.focus(); }
+  }
+  no.onclick = () => close("later");
+  el.querySelector(".syd-backdrop").onclick = () => close("later");
+  yes.onclick = () => {
+    close("allow");
+    preciseAwaitingSettings = true;
+    try{ Promise.resolve(ln.changeExactNotificationSetting()).catch(() => {}); }catch(e){}
+  };
+  document.body.appendChild(el);
+  preciseSheet = el;
+  document.addEventListener("keydown", onKey, true);
+  yes.focus();
+}
+// Back from system Settings: re-check, so a timer running right now rings exactly.
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden || !preciseAwaitingSettings) return;
+  preciseAwaitingSettings = false;
+  if(restEndAt) scheduleRestNotification(restEndAt, restName); // re-reads the setting
+});
 
 // ---------------- SESSION TIMER (whole workout) ----------------
 const sessionCard = document.getElementById("sessionCard");
