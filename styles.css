@@ -435,6 +435,37 @@ body:has(.celebrate-card.show) #timerBar{ opacity:0; pointer-events:none; }
   #timerBar.done:not(.show){ transition-delay:0s; }
 }
 
+/* exercise timer: same dock; the 3-2-1 count uses a quiet ring so the hold reads as the real start */
+#timerBar.ready .timer-ring-fill{ stroke:var(--paper-dim); }
+#timerBar.ready .timer-core .label{ color:var(--paper); }
+.ex-start{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.ex-start:hover{ background:var(--primary-hover); }
+.ex-start bdi{ font-variant-numeric:tabular-nums; }
+.log-field.filled{ border-color:var(--accent); box-shadow:0 0 0 2px var(--glow); }
+
+/* alarm: full-width stop banner above the tab bar while a finished timer rings */
+#alarmBanner{
+  position:fixed; inset-inline:12px; margin-inline:auto; max-width:560px; z-index:60;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  display:flex; align-items:center; gap:12px; padding:12px; padding-inline-start:16px;
+  border-radius:var(--radius-lg); cursor:pointer;
+  background:var(--primary); color:var(--on-primary); box-shadow:var(--elev-2);
+}
+#alarmBanner[hidden]{ display:none; }
+.alarm-text{ flex:1; min-width:0; display:grid; gap:2px; text-align:start; }
+.alarm-text strong{ font-size:var(--text-xl); font-weight:var(--fw-black); line-height:1.2; }
+.alarm-text span{ font-size:var(--text-sm); opacity:.92; }
+.alarm-stop{
+  flex:none; min-width:96px; min-height:56px; padding:0 20px; border:none; border-radius:var(--radius-pill);
+  background:var(--on-primary); color:var(--primary); font:inherit; font-size:var(--text-lg); font-weight:var(--fw-black); cursor:pointer;
+}
+.alarm-stop:focus-visible{ outline:3px solid var(--on-primary); outline-offset:3px; }
+body:has(#alarmBanner:not([hidden])) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 112px); }
+@media (prefers-reduced-motion:no-preference){
+  @keyframes alarm-ring{ 0%{ box-shadow:var(--elev-2), 0 0 0 0 var(--glow); } 70%,100%{ box-shadow:var(--elev-2), 0 0 0 14px transparent; } }
+  #alarmBanner{ animation:alarm-ring 1.1s ease-out infinite; }
+}
+
 .install-tip{
   background:var(--panel); border:1px solid var(--rust-soft); border-radius:12px;
   padding:14px 16px; margin:16px 0; font-size:var(--text-sm); color:var(--paper-dim); display:none;
@@ -1058,6 +1089,7 @@ body.onboarding-open #appNav{ display:none !important; }
   .screen{ padding-bottom:96px; } /* P0-1: clears the rail-anchored FABs (52px + 24px gap + margin) */
   body:has(#timerBar.show) .screen{ padding-bottom:168px; }
   #timerBar{ inset-inline-start:var(--side-w); bottom:24px; } /* centred in the content area beside the rail */
+  #alarmBanner{ inset-inline-start:calc(var(--side-w) + 12px); bottom:24px; }
   #toTop{ bottom:24px; }
   .screen .wrap{ max-width:720px; }
 
