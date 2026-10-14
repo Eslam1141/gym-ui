@@ -394,6 +394,8 @@ const T = {
   notesTitle:["Important Notes","ملاحظات مهمة"],
   skip:["Skip","تخطٍّ"],
   restTimer:["Rest — {name}","راحة — {name}"],
+  restOverTitle:["Rest is over","انتهت الراحة"],
+  restOverBody:["Next set: {name}","المجموعة التالية: {name}"],
   exVideo:["Exercise video","فيديو التمرين"],
   settings:["Settings","الإعدادات"],
   planLabel:["Plan","الخطة"],
@@ -1233,7 +1235,13 @@ document.getElementById("modalClose").onclick = closeVideoModal;
 videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeVideoModal(); });
 
 // ---------------- REST TIMER (between sets) ----------------
+// Counts down to a wall-clock end time, not by ticks: phones freeze
+// setInterval while the screen is off, so on return the time left is
+// recomputed and a rest that ended meanwhile alerts straight away. While it
+// runs the screen is kept awake (Wake Lock), and in the native app a local
+// notification is scheduled for the end time so it sounds with the screen off.
 let restInterval = null;
+let restEndAt = 0, restTotal = 0;
 const timerBar = document.getElementById("timerBar");
 const timerTime = document.getElementById("timerTime");
 const timerLabel = document.getElementById("timerLabel");
@@ -1242,27 +1250,42 @@ const timerFill = document.getElementById("timerFill");
 function startRestTimer(seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
   clearInterval(restInterval);
-  let remaining = seconds;
-  const total = seconds;
+  restTotal = seconds;
+  restEndAt = Date.now() + seconds*1000;
+  unlockBeep(); // inside the tap, so the end beep isn't blocked by autoplay rules
+  holdScreenAwake(true);
+  scheduleRestNotification(restEndAt, name);
   timerLabel.textContent = t("restTimer").replace("{name}", name);
   timerBar.classList.add("show");
   // Jump to full without animating the bar back up from the previous timer.
   timerFill.style.transition = "none";
-  renderRestTime(remaining, total);
+  renderRestTime(seconds, restTotal);
   void timerFill.offsetWidth;
   timerFill.style.transition = "";
-
-  restInterval = setInterval(()=>{
-    remaining -= 1;
-    renderRestTime(remaining, total);
-    if(remaining <= 0){
-      clearInterval(restInterval);
-      timerBar.classList.remove("show");
-      if(navigator.vibrate) navigator.vibrate([200,100,200]);
-      beep();
-    }
-  }, 1000);
+  restInterval = setInterval(restTick, 250);
 }
+function restTick(){
+  if(!restEndAt) return;
+  const remaining = Math.max(0, Math.ceil((restEndAt - Date.now())/1000));
+  renderRestTime(remaining, restTotal);
+  if(remaining <= 0){
+    stopRestTimer();
+    if(!document.hidden) cancelRestNotification(); // alerting in-app; no second ring
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+    beep();
+  }
+}
+function stopRestTimer(){
+  clearInterval(restInterval);
+  restEndAt = 0;
+  timerBar.classList.remove("show");
+  holdScreenAwake(false);
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden || !restEndAt) return;
+  restTick();
+  if(restEndAt) holdScreenAwake(true); // the browser drops the wake lock when hidden
+});
 function renderRestTime(remaining, total){
   const m = Math.max(0,Math.floor(remaining/60)).toString().padStart(2,"0");
   const s = Math.max(0,remaining%60).toString().padStart(2,"0");
@@ -1270,12 +1293,21 @@ function renderRestTime(remaining, total){
   timerFill.style.setProperty("--p", Math.max(0, remaining/total));
 }
 document.getElementById("timerSkip").onclick = ()=>{
-  clearInterval(restInterval);
-  timerBar.classList.remove("show");
+  stopRestTimer();
+  cancelRestNotification();
 };
+
+let beepCtx = null;
+function unlockBeep(){
+  try{
+    if(!beepCtx) beepCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(beepCtx.state === "suspended") beepCtx.resume();
+  }catch(e){}
+}
 function beep(){
   try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    unlockBeep();
+    const ctx = beepCtx;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
@@ -1284,6 +1316,52 @@ function beep(){
     o.start();
     o.stop(ctx.currentTime + 0.35);
   }catch(e){}
+}
+
+let screenLock = null;
+async function holdScreenAwake(on){
+  try{
+    if(!on){ if(screenLock){ const l = screenLock; screenLock = null; await l.release(); } return; }
+    if(screenLock && !screenLock.released) return;
+    if(!navigator.wakeLock || document.hidden) return;
+    const lock = await navigator.wakeLock.request("screen");
+    if(restEndAt) screenLock = lock;
+    else lock.release(); // skipped or ended while the request was pending
+  }catch(e){ screenLock = null; } // denied (battery saver, unsupported WebView): the end-time math still covers it
+}
+
+// Native app only (Capacitor LocalNotifications): one pending "rest is over"
+// alert, replaced on every start and cancelled on skip.
+const REST_NOTIF_ID = 4242;
+function restNotifier(){
+  const c = window.Capacitor;
+  try{
+    if(!c || typeof c.isNativePlatform !== "function" || !c.isNativePlatform()) return null;
+  }catch(e){ return null; }
+  return (c.Plugins && c.Plugins.LocalNotifications) || null;
+}
+async function scheduleRestNotification(endAt, name){
+  const ln = restNotifier();
+  if(!ln) return;
+  try{
+    let perm = await ln.checkPermissions();
+    if(perm.display !== "granted") perm = await ln.requestPermissions();
+    if(perm.display !== "granted") return;
+    await ln.createChannel({ id:"rest-timer", name:t("restBtn"), importance:5, vibration:true, visibility:1 });
+    await ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] });
+    if(endAt !== restEndAt) return; // skipped or restarted while we were asking
+    await ln.schedule({ notifications:[{
+      id: REST_NOTIF_ID,
+      title: t("restOverTitle"),
+      body: t("restOverBody").replace("{name}", name),
+      channelId: "rest-timer",
+      schedule: { at: new Date(endAt), allowWhileIdle: true }
+    }] });
+  }catch(e){}
+}
+function cancelRestNotification(){
+  const ln = restNotifier();
+  if(ln) ln.cancel({ notifications:[{ id:REST_NOTIF_ID }] }).catch(()=>{});
 }
 
 // ---------------- SESSION TIMER (whole workout) ----------------
