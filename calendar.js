@@ -27,6 +27,7 @@
     noWorkout: ["No workout logged", "لم يُسجَّل تمرين"],
     completed: ["Completed", "مكتمل"],
     inProgress: ["{d}/{t} exercises checked", "{d}/{t} تمارين مؤشَّرة"],
+    syncing: ["Syncing, sign in to save", "بيتزامن، سجّل دخولك عشان يتحفظ"],
     trainingDaysLabel: ["Training days", "أيام التمرين"],
     trainingDaysHint: ["Pick the days you plan to train, so a missed day gets a smarter reminder.", "اختر أيام التمرين حتى يكون تذكير اليوم الفائت أذكى."],
     trainingDaysSignIn: ["Sign in to set your training days.", "سجّل الدخول لتحديد أيام تمرينك."]
@@ -116,7 +117,7 @@
       .then(function (res) { if (!res.ok) throw new Error("workouts " + res.status); return res.json(); })
       .then(function (doc) {
         var map = {};
-        (doc.records || []).forEach(function (r) { map[r.date] = { complete: true, dayId: r.dayId }; });
+        (doc.records || []).forEach(function (r) { map[r.date] = { complete: true, dayId: r.dayId, server: true }; });
         if (window.GymRest) GymRest.setServer(from, to, doc.restDays, doc.restDaysLeftThisWeek);
         return map;
       })
@@ -149,7 +150,11 @@
       var checks = JSON.parse(localStorage.getItem("gym_checks") || "{}");
       var dayChecks = checks[date + "_" + dayId] || {};
       var done = exercises.filter(function (ex) { return !!dayChecks[ex.id]; }).length;
-      if (isAuthed() && done === exercises.length) postCompletion(date, dayId);
+      if (done === exercises.length) {
+        if (isAuthed()) postCompletion(date, dayId);
+        // Session lapsed (not anon preview): keep it for the moment sign-in returns.
+        else if (window.GymRest) GymRest.enqueueLapsed(date, dayId);
+      }
       if (date === todayKey()) refreshStrip();
     } catch (e) {}
   }
@@ -193,12 +198,14 @@
       var btn = document.createElement("button");
       btn.type = "button";
       var rest = !!(entry && entry.rest && !entry.complete);
-      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (rest ? " rest" : "") + (key === tKey ? " today" : "");
+      var pend = !!(entry && entry.pending);
+      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (rest ? " rest" : "") + (pend ? " pending" : "") + (key === tKey ? " today" : "");
       btn.dataset.date = key;
       btn.innerHTML =
         '<span class="cal-dow">' + dowShort(d.getDay()) + '</span>' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
-        (rest ? '<span class="cal-rest-mark" aria-hidden="true"></span><span class="sr-only">' + s("restBadge") + '</span>' : '');
+        (rest ? '<span class="cal-rest-mark" aria-hidden="true"></span><span class="sr-only">' + s("restBadge") + '</span>' : '') +
+        (pend ? '<span class="sr-only">' + s("syncing") + '</span>' : '');
       btn.onclick = function () { openModal(d); };
       stripDays.appendChild(btn);
     });
@@ -287,6 +294,7 @@
         var entry = map[key];
         if (entry && entry.complete) cell.className += " complete";
         else if (entry && entry.rest) cell.className += " rest";
+        else if (entry && entry.pending) cell.className += " pending";
         if (key === tKey) cell.className += " today";
         cell.textContent = String(dayNum);
         cell.dataset.date = key;
@@ -309,7 +317,7 @@
     dayDetail.hidden = false;
     var controls = function (e) { if (window.GymRest) GymRest.renderDetailControls(dayDetail, dateKey, e); };
 
-    if (!entry || (entry.rest && !entry.dayId)) {
+    if (!entry || ((entry.rest || entry.pending) && !entry.dayId)) {
       // Fall back to a local record for this exact date even when the map
       // came from the server (server only stores fully-complete days).
       var local = computeLocalCompletion(dateKey, dateKey)[dateKey];
@@ -325,8 +333,10 @@
     var checks = {};
     try { checks = JSON.parse(localStorage.getItem("gym_checks") || "{}")[dateKey + "_" + entry.dayId] || {}; } catch (e) {}
 
-    var doneCount = entry.complete ? exercises.length : exercises.filter(function (ex) { return !!checks[ex.id]; }).length;
-    var status = entry.complete
+    var doneCount = entry.complete || entry.pending ? exercises.length : exercises.filter(function (ex) { return !!checks[ex.id]; }).length;
+    var status = entry.pending
+      ? '<span class="cal-detail-status pending">' + s("syncing") + '</span>'
+      : entry.complete
       ? '<span class="cal-detail-status done">' + s("completed") + '</span>'
       : '<span class="cal-detail-status">' + fmt(s("inProgress"), { d: doneCount, t: exercises.length }) + '</span>';
 
@@ -512,6 +522,9 @@
       renderDayDetail(selKey, map);
     });
   }
+
+  // A queued completion landing on the server (rest-days.js): syncing -> green.
+  document.addEventListener("gym:workoutcomplete", reload);
 
   window.GymCalendar = {
     onCheckChanged: onCheckChanged,

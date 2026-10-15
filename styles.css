@@ -612,7 +612,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
 /* Centered (not inset-inline-start/end like the FABs) so no RTL flip is
    needed; bottom-anchored above the tab bar like #timerBar/#coachFab. */
 .gym-toast{
-  position:fixed; z-index:190; left:50%;
+  position:fixed; z-index:250; left:50%;
   bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%) translateY(10px);
   display:flex; align-items:center; gap:12px;
@@ -2124,6 +2124,10 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   position:relative; background:transparent; border:1px dashed var(--line-strong);
 }
 .cal-day-cell.rest.today, .cal-grid-cell.rest.today{ border-color:var(--accent); }
+/* Completed locally, waiting for the server to confirm: dashed, never green. */
+.cal-day-cell.pending, .cal-grid-cell.pending{ background:transparent; border:1px dashed var(--primary-text); }
+.cal-day-cell.pending.today, .cal-grid-cell.pending.today{ border-color:var(--accent); }
+.cal-detail-status.pending{ color:var(--primary-text); background:transparent; border:1px dashed var(--primary-text); }
 .cal-rest-mark{
   position:absolute; inset-block-start:4px; inset-inline-end:4px;
   width:6px; height:6px; border-radius:50%;

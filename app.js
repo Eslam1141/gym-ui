@@ -386,6 +386,7 @@ const T = {
   sydNo:["No, I didn't","لا، لم أنهِه"],
   sydSaved:["Yesterday's workout saved","تم حفظ تمرين أمس"],
   sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
+  sydSignIn:["Sign in to save yesterday's workout","سجّل دخولك عشان يتحفظ تمرين امبارح"],
   queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
   hdrAccountMenu:["Account menu","قائمة الحساب"],
   hdrGoProfile:["Go to profile","الذهاب إلى الملف الشخصي"],
