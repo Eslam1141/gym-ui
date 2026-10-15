@@ -14,7 +14,10 @@
  * Completion queue: POST /workouts/complete always sends the client-local
  * `today`. A network/5xx failure queues the item (gymrest_pending); a
  * 400 date_out_of_window (the day fell out of the yesterday window while
- * offline) drops it instead of retrying forever.
+ * offline) drops it instead of retrying forever. A day finished while the
+ * session had lapsed (signed-in-type user, not the anon preview) is queued
+ * without a network call and flushed the moment a token is accepted; the
+ * calendar shows it as syncing, never green, until the server confirms.
  *
  * The gymrest_* keys are deliberately not gym_-prefixed: device-local, never
  * synced (same convention as gymday_last_completed). */
@@ -98,6 +101,11 @@
   // Adds rest entries to a calendar completion map. Training wins: a date with
   // a completion is never shown as rest.
   function decorate(map, from, to) {
+    queue().forEach(function (q) {
+      var e = map[q.date];
+      if (q.date < from || q.date > to || !isEditable(q.date) || (e && e.server)) return;
+      map[q.date] = { complete: false, pending: true, dayId: q.dayId };
+    });
     restList().forEach(function (k) {
       if (k < from || k > to) return;
       var e = map[k];
@@ -275,6 +283,7 @@
 
   // ---------------- completion queue ----------------
   var flushing = false;
+  var flushAgain = false; // a signal (fresh token) arrived mid-flush
 
   function queue() { var q = readJSON(LS_PENDING, []); return Array.isArray(q) ? q : []; }
   function enqueue(item) {
@@ -315,10 +324,36 @@
     });
   }
 
+  // A returning user whose session lapsed (signed in on this device before, no
+  // anon choice since). The anon preview never has anything to save.
+  function lapsedUser() {
+    if (isAuthed() || (window.GymUI && GymUI.isAnon && GymUI.isAnon())) return false;
+    try { return !!localStorage.getItem("gym_user_sub"); } catch (e) { return false; }
+  }
+
+  // Completion finished with no valid token: queue it, no network call.
+  function enqueueLapsed(date, dayId) {
+    if (!lapsedUser()) return false;
+    enqueue({ date: date, dayId: dayId });
+    return true;
+  }
+
+  // Once per local day: a queued yesterday can only be saved if the user signs
+  // in before today ends, so ask now rather than reject it later.
+  var warnedFor = null;
+  function warnQueuedYesterday() {
+    var date = yesterday();
+    if (warnedFor === date || !lapsedUser()) return;
+    if (!queue().some(function (x) { return x.date === date; })) return;
+    warnedFor = date;
+    toast(str("sydSignIn"));
+  }
+
   function notifyDropped() { toast(str("queueDropped")); }
 
   function flushQueue() {
-    if (flushing || !isAuthed()) return Promise.resolve();
+    if (!isAuthed()) return Promise.resolve();
+    if (flushing) { flushAgain = true; return Promise.resolve(); }
     var q = queue();
     if (!q.length) return Promise.resolve();
     flushing = true;
@@ -338,7 +373,10 @@
       // Re-read: submit() or another tab may have enqueued while we were posting.
       writeJSON(LS_PENDING, queue().filter(function (x) { return !settled[x.date + "_" + x.dayId]; }));
       if (dropped) notifyDropped();
-    }).finally(function () { flushing = false; });
+    }).finally(function () {
+      flushing = false;
+      if (flushAgain) { flushAgain = false; flushQueue(); }
+    });
   }
 
   // ---------------- save-yesterday prompt ----------------
@@ -455,10 +493,12 @@
   }
 
   // ---------------- wiring ----------------
-  function onSignal() { migrateLocal(); flushQueue(); maybePrompt(); }
+  function onSignal() { migrateLocal(); flushQueue(); maybePrompt(); warnQueuedYesterday(); }
 
   function init() {
-    document.addEventListener("gym:authchange", function () { setTimeout(onSignal, 400); });
+    document.addEventListener("gym:authchange", function () { flushQueue(); setTimeout(onSignal, 400); });
+    // A refreshed or newly accepted token: don't wait for the next tick.
+    document.addEventListener("gym:tokenaccepted", function () { flushQueue(); });
     document.addEventListener("gym:synctick", function () { flushQueue(); });
     window.addEventListener("online", function () { flushQueue(); });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) onSignal(); });
@@ -478,6 +518,7 @@
     actionButton: actionButton,
     submit: submit,
     notifyDropped: notifyDropped,
+    enqueueLapsed: enqueueLapsed,
     flushQueue: flushQueue,
     maybePrompt: maybePrompt
   };

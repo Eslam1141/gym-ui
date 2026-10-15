@@ -62,7 +62,7 @@ async function mockApi(context, s) {
   });
 }
 
-// opts: { signedIn, lang, theme, plan, checks, ls: {key: value}, server, viewport }
+// opts: { signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
@@ -83,7 +83,8 @@ async function openApp(browser, opts) {
       ls.setItem("gym_plan", o.plan || "male");
       ls.setItem("gym_style", "gym");
       ls.setItem("gym_theme", o.theme || "dark");
-      if (!o.signedIn) ls.setItem("gym_anon", "1");
+      if (!o.signedIn && !o.sub) ls.setItem("gym_anon", "1");
+      if (o.sub) ls.setItem("gym_user_sub", o.sub);
       if (o.checks) ls.setItem("gym_checks", JSON.stringify(o.checks));
       Object.keys(o.ls || {}).forEach((k) => ls.setItem(k, JSON.stringify(o.ls[k])));
       if (o.signedIn) {
