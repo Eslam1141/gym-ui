@@ -463,7 +463,7 @@
     } else {
       var box = el("pvRaGBtn");
       box.innerHTML = "";
-      if (GymSync.renderGoogleButton && window.google && google.accounts && google.accounts.id) {
+      if (GymSync.renderGoogleButton && ((window.google && google.accounts && google.accounts.id) || (GymSync.isNative && GymSync.isNative()))) {
         GymSync.renderGoogleButton(box, { theme: "filled_black", size: "large", type: "standard", text: "signin_with", shape: "pill", logo_alignment: "left", width: 280 });
       } else {
         el("pvRaGErr").dataset.pk = "raGoogleOff";
