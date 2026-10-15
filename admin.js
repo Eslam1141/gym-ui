@@ -462,6 +462,7 @@
     });
 
     var actions = el("div", { class: "adm-actions" });
+    actions.appendChild(el("button", { type: "button", class: "adm-btn", "data-act": "workout-log", text: s("wlOpen"), onclick: function (e) { openWorkoutLog(u, e.currentTarget); } }));
     if (u.hasPassword) actions.appendChild(el("button", { class: "adm-btn", text: s("reset"), onclick: function () {
       api("/users/" + encodeURIComponent(u.id) + "/reset-password", { method: "POST", body: { lang: LANG } }).then(function (r) { done(r, s("resetSent")); });
     } }));
@@ -797,7 +798,398 @@
     ]);
   }
 
-  window.__admin = { api: api, s: s, addStrings: addStrings, el: el, fmtDate: fmtDate, fmtNum: fmtNum, authFailed: authFailed, showError: showError, views: views, render: render, state: state, AR: AR, API_BASE: API_BASE, session: session };
+  // ---- workout log (admin edits a user's completions / rest days) ----
+  // Every server string here (dayId, addedBy, user name/email, error text) is
+  // user- or admin-controlled: textContent only, dir="auto" on free text, no
+  // href/src from data. admin.html doesn't load app.js, so the plan day ids
+  // are listed here; tests/admin-workout-log.spec.js checks they still exist
+  // in app.js.
+  addStrings({
+    wlOpen: ["Workout log", "سجل التمارين"],
+    wlTitle: ["Workout log", "سجل التمارين"],
+    wlClose: ["Close", "إغلاق"],
+    wlPrev: ["Previous month", "الشهر السابق"],
+    wlNext: ["Next month", "الشهر التالي"],
+    wlStreak: ["Current streak", "السلسلة الحالية"],
+    wlTotal: ["Days trained", "أيام التمرين"],
+    wlRestLeft: ["Rest days left this week", "أيام الراحة المتبقية هذا الأسبوع"],
+    wlLegend: ["Green: trained. Dashed: rest day. Outlined: today.", "أخضر: تمرين. متقطع: يوم راحة. بإطار: اليوم."],
+    wlAdminMark: ["admin", "مسؤول"],
+    wlLate: ["late", "متأخر"],
+    wlStTrained: ["trained", "تمرين"],
+    wlStRest: ["rest day", "يوم راحة"],
+    wlStNone: ["nothing logged", "لا شيء مسجّل"],
+    wlStToday: ["today", "اليوم"],
+    wlStFuture: ["in the future", "في المستقبل"],
+    wlListTitle: ["This month", "هذا الشهر"],
+    wlListEmpty: ["Nothing logged this month. Pick a day above to add something.", "لا شيء مسجّل هذا الشهر. اختر يومًا أعلاه للإضافة."],
+    wlRestRow: ["Rest day", "يوم راحة"],
+    wlAddedBy: ["added by {a}", "أضافه {a}"],
+    wlPick: ["Pick a day to see what's logged and change it.", "اختر يومًا لعرض ما سُجّل وتعديله."],
+    wlFuture: ["This day hasn't happened yet, so nothing can be logged for it.", "لم يأتِ هذا اليوم بعد، لذلك لا يمكن تسجيل شيء له."],
+    wlEntries: ["Logged on this day", "المسجّل في هذا اليوم"],
+    wlReason: ["Reason (kept in the audit log)", "السبب (يُحفظ في سجل التدقيق)"],
+    wlCount: ["{n} / 300", "{n} / 300"],
+    wlReasonBad: ["Write a reason of 3 to 300 characters.", "اكتب سببًا من 3 إلى 300 حرف."],
+    wlDayId: ["Workout day", "يوم التمرين"],
+    wlOther: ["Other (type an id)…", "أخرى (اكتب معرّفًا)…"],
+    wlOtherId: ["Day id", "معرّف اليوم"],
+    wlIdBad: ["Use 1 to 64 letters, numbers, _ or -.", "استخدم من 1 إلى 64 حرفًا أو رقمًا أو _ أو -."],
+    wlGrpCur: ["Men's plan", "خطة الرجال"],
+    wlGrpLegacy: ["Men's plan (older)", "خطة الرجال (قديمة)"],
+    wlGrpFem: ["Women's plan", "خطة النساء"],
+    wlGrpCalM: ["Men's calisthenics", "كاليستنكس الرجال"],
+    wlGrpCalF: ["Women's calisthenics", "كاليستنكس النساء"],
+    wlMark: ["Mark complete", "تسجيل كمكتمل"],
+    wlRemove: ["Remove completion", "إزالة الإكمال"],
+    wlRemoveId: ["Remove {d}", "إزالة {d}"],
+    wlAddRest: ["Add rest day", "إضافة يوم راحة"],
+    wlRemoveRest: ["Remove rest day", "إزالة يوم الراحة"],
+    wlConfirmRm: ["Remove {d} on {t}? The streak will be recalculated.", "إزالة {d} بتاريخ {t}؟ ستُعاد حساب السلسلة."],
+    wlConfirmRest: ["Remove the rest day on {t}? The streak will be recalculated.", "إزالة يوم الراحة بتاريخ {t}؟ ستُعاد حساب السلسلة."],
+    wlConfirmGo: ["Remove", "إزالة"],
+    wlDoneMark: ["Marked complete.", "تم التسجيل كمكتمل."],
+    wlDoneMarkExists: ["That day was already logged. Nothing changed.", "هذا اليوم مسجّل مسبقًا. لم يتغير شيء."],
+    wlDoneRm: ["Completion removed.", "تمت إزالة الإكمال."],
+    wlDoneRest: ["Rest day added.", "تمت إضافة يوم الراحة."],
+    wlDoneRestExists: ["That day was already a rest day. Nothing changed.", "هذا اليوم يوم راحة مسبقًا. لم يتغير شيء."],
+    wlDoneRestRm: ["Rest day removed.", "تمت إزالة يوم الراحة."],
+    wlEFuture: ["That date is in the future.", "هذا التاريخ في المستقبل."],
+    wlETrained: ["That day has a completed workout, so it can't be a rest day. Remove the completion first.", "في هذا اليوم تمرين مكتمل، فلا يمكن جعله يوم راحة. أزل الإكمال أولًا."],
+    wlEGone: ["That entry no longer exists. The log was refreshed.", "هذا السجل لم يعد موجودًا. تم تحديث السجل."],
+    wlEUser: ["User not found.", "المستخدم غير موجود."],
+    wlLocked: ["Admins can't change their own log or another admin's.", "لا يمكن للمسؤولين تعديل سجلهم أو سجل مسؤول آخر."],
+    wlELoad: ["Could not load this user's workout log.", "تعذر تحميل سجل تمارين هذا المستخدم."]
+  });
+  var WL_DAY_IDS = [
+    ["wlGrpCur", ["m_upper", "m_lower", "m_backbi", "m_chesttri"]],
+    ["wlGrpLegacy", ["m_upperA", "m_lowerA", "m_upperB", "m_lowerB"]],
+    ["wlGrpFem", ["f_lowerA", "f_upperA", "f_lowerB", "f_upperB"]],
+    ["wlGrpCalM", ["mc_push", "mc_legs", "mc_pull"]],
+    ["wlGrpCalF", ["fc_push", "fc_legs", "fc_pull"]]
+  ];
+  var WL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+  var WL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function p2(n) { return (n < 10 ? "0" : "") + n; }
+  function ymd(y, m, d) { return y + "-" + p2(m + 1) + "-" + p2(d); }
+  function localToday() { var d = new Date(); return ymd(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function dateLabel(key) {
+    var a = key.split("-");
+    try { return new Date(+a[0], +a[1] - 1, +a[2]).toLocaleDateString(AR ? "ar" : "en", { weekday: "short", year: "numeric", month: "short", day: "numeric" }); } catch (e) { return key; }
+  }
+  function monthLabel(y, m) {
+    try { return new Date(y, m, 1).toLocaleDateString(AR ? "ar" : "en", { month: "long", year: "numeric" }); } catch (e) { return y + "-" + p2(m + 1); }
+  }
+  function wlErr(r, kind) {
+    if (r.status === 404) return s(kind === "del" ? "wlEGone" : "wlEUser");
+    switch (r.code) {
+      case "date_in_future": return s("wlEFuture");
+      case "already_trained": return s("wlETrained");
+      case "cannot_modify_admin": return s("wlLocked");
+      case "invalid_request": return r.message || s("eGeneric");
+      default: return s("eGeneric");
+    }
+  }
+
+  var wl; // the open workout-log dialog's state, or undefined
+  function closeWorkoutLog() {
+    if (!wl) return;
+    var st = wl;
+    wl = null;
+    st.dlg.remove(); st.bd.remove();
+    if (st.panelEl) st.panelEl.inert = false;
+    if (st.opener && st.opener.isConnected && st.opener.focus) st.opener.focus();
+  }
+  function openWorkoutLog(u, opener) {
+    if (wl) return;
+    var t = localToday(), parts = t.split("-");
+    var st = wl = { user: u, opener: opener, y: +parts[0], m: +parts[1] - 1, today: t, sel: null, data: null, seq: 0, panelEl: document.getElementById("admPanel") };
+    var me = ((session() && session().profile && session().profile.email) || "").trim().toLowerCase();
+    st.locked = !!u.isAdmin || (!!me && String(u.email || "").trim().toLowerCase() === me);
+    st.panelEl.inert = true;
+    var closeBtn = el("button", { type: "button", class: "adm-btn", text: s("wlClose"), onclick: closeWorkoutLog });
+    var hasName = !!(u.displayName || u.name);
+    var body = el("div", { class: "adm-log-body" });
+    var dlg = el("div", { class: "adm-log", role: "dialog", "aria-modal": "true", "aria-labelledby": "admLogTitle", tabindex: "-1" }, [
+      el("div", { class: "adm-log-head" }, [
+        el("div", null, [
+          el("h2", { id: "admLogTitle", text: s("wlTitle") }),
+          el("p", { class: "adm-sub", dir: "auto", text: u.displayName || u.name || u.email || "" }),
+          hasName ? el("p", { class: "adm-sub", dir: "auto", text: u.email || "" }) : null
+        ]),
+        closeBtn
+      ]),
+      body
+    ]);
+    var bd = el("div", { class: "adm-log-bd" });
+    bd.addEventListener("click", closeWorkoutLog);
+    dlg.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.stopPropagation(); closeWorkoutLog(); return; }
+      if (e.key !== "Tab") return;
+      var f = Array.prototype.filter.call(dlg.querySelectorAll("button,input,select,textarea,[tabindex]"), function (n) {
+        return !n.disabled && n.tabIndex >= 0 && n.offsetParent !== null;
+      });
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === dlg)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    st.dlg = dlg; st.bd = bd; st.body = body;
+    document.body.appendChild(bd); document.body.appendChild(dlg);
+    closeBtn.focus();
+    loadWorkoutLog();
+  }
+
+  // note = {ok, text} to show after an action; refocus = move focus to the selected day afterwards.
+  function loadWorkoutLog(note) {
+    var st = wl, seq = ++st.seq;
+    var last = new Date(st.y, st.m + 1, 0).getDate();
+    var qs = "?from=" + ymd(st.y, st.m, 1) + "&to=" + ymd(st.y, st.m, last) + "&today=" + st.today;
+    if (!st.data) { st.body.textContent = ""; st.body.appendChild(el("p", { class: "adm-msg", text: s("loading") })); }
+    api("/users/" + encodeURIComponent(st.user.id) + "/workouts" + qs).then(function (r) {
+      if (wl !== st || seq !== st.seq) return; // closed, or a newer month/refresh superseded this
+      if (authFailed(r)) { closeWorkoutLog(); return; }
+      if (!r.ok) {
+        st.data = null;
+        st.body.textContent = "";
+        st.body.appendChild(el("p", { class: "adm-err", role: "alert", text: r.status === 404 ? s("wlEUser") : s("wlELoad") }));
+        return;
+      }
+      var d = r.data || {};
+      st.data = {
+        records: (d.records || []).filter(function (x) { return x && WL_DATE_RE.test(x.date); }),
+        restDays: (d.restDays || []).filter(function (x) { return x && WL_DATE_RE.test(x.date); }),
+        streak: d.streak || {}
+      };
+      drawWorkoutLog(note);
+    });
+  }
+
+  function drawWorkoutLog(note) {
+    var st = wl, data = st.data, body = st.body;
+    var hadFocus = body.contains(document.activeElement);
+    body.textContent = "";
+    var sk = data.streak;
+    body.appendChild(el("dl", { class: "adm-log-sum" }, [["wlStreak", sk.currentStreak], ["wlTotal", sk.totalDaysTrained], ["wlRestLeft", sk.restDaysLeftThisWeek]].map(function (x) {
+      return el("div", null, [el("dd", { text: fmtNum(x[1]) }), el("dt", { text: s(x[0]) })]);
+    })));
+
+    var byDate = {}, rest = {};
+    data.records.forEach(function (x) { (byDate[x.date] = byDate[x.date] || []).push(x); });
+    data.restDays.forEach(function (x) { rest[x.date] = x; });
+
+    function shift(n) {
+      st.m += n; if (st.m < 0) { st.m = 11; st.y--; } else if (st.m > 11) { st.m = 0; st.y++; }
+      st.sel = null; st.data = null; st.navFocus = n < 0 ? "prev" : "next"; loadWorkoutLog();
+    }
+    body.appendChild(el("div", { class: "adm-log-nav" }, [
+      el("button", { type: "button", class: "adm-btn", "data-nav": "prev", "aria-label": s("wlPrev"), text: AR ? "›" : "‹", onclick: function () { shift(-1); } }),
+      el("h3", { id: "admLogMonth", class: "adm-log-month", "aria-live": "polite", text: monthLabel(st.y, st.m) }),
+      el("button", { type: "button", class: "adm-btn", "data-nav": "next", "aria-label": s("wlNext"), text: AR ? "‹" : "›", onclick: function () { shift(1); } })
+    ]));
+
+    // Month grid: Monday first; roving tabindex, arrows move by day / week.
+    var grid = el("div", { class: "adm-cal", role: "grid", "aria-labelledby": "admLogMonth" });
+    var head = el("div", { class: "adm-cal-row", role: "row" });
+    for (var i = 0; i < 7; i++) {
+      var wd = "";
+      try { wd = new Date(2024, 0, 1 + i).toLocaleDateString(AR ? "ar" : "en", { weekday: "short" }); } catch (e) {}
+      head.appendChild(el("div", { class: "adm-cal-wd", role: "columnheader", text: wd }));
+    }
+    grid.appendChild(head);
+    var monthKey = ymd(st.y, st.m, 1).slice(0, 7);
+    var daysIn = new Date(st.y, st.m + 1, 0).getDate();
+    var lead = (new Date(st.y, st.m, 1).getDay() + 6) % 7;
+    var focusKey = st.sel || (st.today.slice(0, 7) === monthKey ? st.today : monthKey + "-01");
+    var cells = [], row = null;
+    function dayCell(day) {
+      var key = ymd(st.y, st.m, day), recs = byDate[key] || [], isRest = !!rest[key], future = key > st.today;
+      var adminMark = recs.some(function (x) { return x.source === "admin"; }) || (isRest && rest[key].source === "admin");
+      var cls = "adm-cal-day" + (recs.length ? " is-done" : "") + (isRest && !recs.length ? " is-rest" : "") + (key === st.today ? " is-today" : "") + (future ? " is-future" : "") + (key === st.sel ? " is-sel" : "");
+      var label = dateLabel(key) + ", " + (recs.length ? s("wlStTrained") : isRest ? s("wlStRest") : s("wlStNone")) +
+        (key === st.today ? ", " + s("wlStToday") : "") + (future ? ", " + s("wlStFuture") : "") + (adminMark ? ", " + s("wlAdminMark") : "");
+      var cell = el("div", { class: cls, role: "gridcell", tabindex: key === focusKey ? "0" : "-1", "data-date": key, "aria-label": label, "aria-selected": key === st.sel ? "true" : "false" }, [
+        el("span", { class: "adm-cal-num", text: String(day) }),
+        adminMark ? el("span", { class: "adm-cal-mark", text: s("wlAdminMark") }) : null
+      ]);
+      cell.addEventListener("click", function () { select(key); });
+      cells.push(cell);
+      return cell;
+    }
+    for (var c = 0; c < lead + daysIn; c++) {
+      if (c % 7 === 0) { row = el("div", { class: "adm-cal-row", role: "row" }); grid.appendChild(row); }
+      row.appendChild(c < lead ? el("div", { class: "adm-cal-pad", role: "gridcell", "aria-hidden": "true" }) : dayCell(c - lead + 1));
+    }
+    grid.addEventListener("keydown", function (e) {
+      var cell = e.target.closest && e.target.closest("[data-date]");
+      if (!cell) return;
+      var idx = cells.indexOf(cell), step = 0, dir = AR ? -1 : 1;
+      if (e.key === "ArrowRight") step = dir; else if (e.key === "ArrowLeft") step = -dir;
+      else if (e.key === "ArrowDown") step = 7; else if (e.key === "ArrowUp") step = -7;
+      else if (e.key === "Home") step = -idx; else if (e.key === "End") step = cells.length - 1 - idx;
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(cell.getAttribute("data-date")); return; }
+      else return;
+      e.preventDefault();
+      var to = idx + step;
+      if (to < 0 || to >= cells.length) return;
+      cell.tabIndex = -1; cells[to].tabIndex = 0; cells[to].focus();
+    });
+    body.appendChild(grid);
+    body.appendChild(el("p", { class: "adm-hint", text: s("wlLegend") }));
+
+    // Day list for the month
+    var items = [];
+    data.records.forEach(function (x) { items.push({ date: x.date, rec: x }); });
+    data.restDays.forEach(function (x) { items.push({ date: x.date, rest: x }); });
+    items.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var list = el("ul", { class: "adm-log-list" });
+    items.forEach(function (it) {
+      var src = it.rec || it.rest;
+      list.appendChild(el("li", null, [el("button", { type: "button", class: "adm-log-item", onclick: function () { select(it.date, true); } }, [
+        el("span", { class: "adm-log-date", text: dateLabel(it.date) }),
+        it.rec ? el("b", { dir: "auto", text: String(it.rec.dayId == null ? "" : it.rec.dayId) }) : el("b", { text: s("wlRestRow") }),
+        src.source === "admin" ? el("span", { class: "adm-badge", text: s("wlAdminMark") }) : null,
+        it.rec && it.rec.confirmedLate ? el("span", { class: "adm-badge", text: s("wlLate") }) : null,
+        src.addedBy ? el("span", { class: "adm-sub", dir: "auto", text: s("wlAddedBy", { a: src.addedBy }) }) : null
+      ])]));
+    });
+    body.appendChild(el("section", { class: "adm-section" }, [
+      el("h3", { text: s("wlListTitle") }),
+      items.length ? list : el("p", { class: "adm-sub", text: s("wlListEmpty") })
+    ]));
+
+    var pane = el("section", { class: "adm-section adm-log-pane", "aria-label": s("wlEntries") });
+    body.appendChild(pane);
+
+    function select(key, focusPane) {
+      st.sel = key;
+      cells.forEach(function (n) {
+        var on = n.getAttribute("data-date") === key;
+        n.classList.toggle("is-sel", on); n.setAttribute("aria-selected", on ? "true" : "false"); n.tabIndex = on ? 0 : -1;
+      });
+      drawPane(key, null);
+      if (focusPane) { pane.tabIndex = -1; pane.focus(); }
+    }
+
+    function noteEl(n) { return n ? el("p", { class: n.ok ? "adm-ok" : "adm-err", role: n.ok ? "status" : "alert", text: n.text }) : null; }
+    function drawPane(key, n) {
+      pane.textContent = "";
+      if (!key) { pane.appendChild(el("p", { class: "adm-sub", text: s("wlPick") })); pane.appendChild(noteEl(n)); return; }
+      var recs = byDate[key] || [], restRow = rest[key], future = key > st.today;
+      pane.appendChild(el("h3", { text: dateLabel(key) }));
+      if (recs.length || restRow) {
+        var ul = el("ul", { class: "adm-log-entries" });
+        recs.forEach(function (x) {
+          ul.appendChild(el("li", null, [el("b", { dir: "auto", text: String(x.dayId == null ? "" : x.dayId) }),
+            x.source === "admin" ? el("span", { class: "adm-badge", text: s("wlAdminMark") }) : null,
+            x.confirmedLate ? el("span", { class: "adm-badge", text: s("wlLate") }) : null,
+            x.addedBy ? el("span", { class: "adm-sub", dir: "auto", text: s("wlAddedBy", { a: x.addedBy }) }) : null]));
+        });
+        if (restRow) ul.appendChild(el("li", null, [el("b", { text: s("wlRestRow") }),
+          restRow.source === "admin" ? el("span", { class: "adm-badge", text: s("wlAdminMark") }) : null,
+          restRow.addedBy ? el("span", { class: "adm-sub", dir: "auto", text: s("wlAddedBy", { a: restRow.addedBy }) }) : null]));
+        pane.appendChild(ul);
+      }
+      if (future) { pane.appendChild(el("p", { class: "adm-sub", text: s("wlFuture") })); return; }
+      if (st.locked) { pane.appendChild(el("p", { class: "adm-sub", "data-locked": "", text: s("wlLocked") })); return; }
+
+      // One reason (with a live counter) covers whichever action is taken on this day.
+      var reason = el("textarea", { id: "admLogReason", rows: "2", dir: "auto", "aria-describedby": "admLogCount admLogErr" });
+      var count = el("span", { id: "admLogCount", class: "adm-sub", text: s("wlCount", { n: 0 }) });
+      var err = el("p", { id: "admLogErr", class: "adm-err", role: "alert" });
+      function reasonVal() { return reason.value.trim(); }
+      reason.addEventListener("input", function () {
+        var len = reasonVal().length;
+        count.textContent = s("wlCount", { n: len });
+        count.classList.toggle("adm-over", len > 300);
+        if (err.textContent) err.textContent = "";
+      });
+      function reasonOk() {
+        var len = reasonVal().length;
+        if (len >= 3 && len <= 300) return true;
+        err.textContent = s("wlReasonBad"); reason.focus(); return false;
+      }
+      pane.appendChild(el("div", { class: "adm-form" }, [
+        el("label", { for: "admLogReason" }, [s("wlReason")]), reason,
+        el("div", { class: "adm-log-count" }, [count]), err
+      ]));
+
+      var actions = el("div", { class: "adm-actions" });
+      var confirmBox = el("div");
+      function setBusy(b) { Array.prototype.forEach.call(pane.querySelectorAll("button"), function (x) { x.disabled = b; }); }
+      function run(path, method, bodyObj, okKey, kind) {
+        setBusy(true);
+        api(path, { method: method, body: bodyObj }).then(function (r) {
+          if (wl !== st) return;
+          if (authFailed(r)) { closeWorkoutLog(); return; }
+          if (r.ok) { loadWorkoutLog({ ok: true, text: s(r.status === 200 ? okKey + "Exists" : okKey), refocus: true }); return; }
+          if (r.status === 404 && kind === "del") { loadWorkoutLog({ ok: false, text: wlErr(r, kind), refocus: true }); return; }
+          setBusy(false);
+          err.textContent = wlErr(r, kind);
+        });
+      }
+      var base = "/users/" + encodeURIComponent(st.user.id);
+      function confirmRemove(text, go) {
+        if (!reasonOk()) return;
+        confirmBox.textContent = "";
+        var goBtn = el("button", { type: "button", class: "adm-btn danger", "data-act": "confirm", text: s("wlConfirmGo"), onclick: go });
+        confirmBox.appendChild(el("div", { class: "adm-log-confirm", role: "alertdialog", "aria-label": text }, [
+          el("p", { dir: "auto", text: text }),
+          el("div", { class: "adm-actions" }, [goBtn, el("button", { type: "button", class: "adm-btn", text: s("cancel"), onclick: function () { confirmBox.textContent = ""; } })])
+        ]));
+        goBtn.focus();
+      }
+
+      if (!recs.length) {
+        var sel = el("select", { id: "admLogDay" });
+        WL_DAY_IDS.forEach(function (g) {
+          sel.appendChild(el("optgroup", { label: s(g[0]) }, g[1].map(function (id) { return el("option", { value: id, text: id }); })));
+        });
+        sel.appendChild(el("option", { value: "", text: s("wlOther") }));
+        var other = el("input", { id: "admLogOther", type: "text", maxlength: "64", dir: "ltr", autocomplete: "off" });
+        var otherWrap = el("label", { for: "admLogOther", hidden: true }, [s("wlOtherId"), other]);
+        sel.addEventListener("change", function () { otherWrap.hidden = sel.value !== ""; if (sel.value === "") other.focus(); });
+        pane.appendChild(el("div", { class: "adm-form" }, [el("label", { for: "admLogDay" }, [s("wlDayId")]), sel, otherWrap]));
+        actions.appendChild(el("button", { type: "button", class: "adm-btn primary", "data-act": "mark", text: s("wlMark"), onclick: function () {
+          var id = sel.value || other.value.trim();
+          if (!WL_ID_RE.test(id)) { err.textContent = s("wlIdBad"); (sel.value ? sel : other).focus(); return; }
+          if (!reasonOk()) return;
+          run(base + "/workouts", "POST", { date: key, dayId: id, reason: reasonVal() }, "wlDoneMark", "add");
+        } }));
+      }
+      recs.forEach(function (x) {
+        var id = String(x.dayId == null ? "" : x.dayId);
+        actions.appendChild(el("button", { type: "button", class: "adm-btn danger", "data-act": "remove", text: recs.length > 1 ? s("wlRemoveId", { d: id }) : s("wlRemove"), onclick: function () {
+          confirmRemove(s("wlConfirmRm", { d: id, t: dateLabel(key) }), function () {
+            run(base + "/workouts/" + encodeURIComponent(key) + "/" + encodeURIComponent(id), "DELETE", { reason: reasonVal() }, "wlDoneRm", "del");
+          });
+        } }));
+      });
+      if (restRow) {
+        actions.appendChild(el("button", { type: "button", class: "adm-btn danger", "data-act": "rest-remove", text: s("wlRemoveRest"), onclick: function () {
+          confirmRemove(s("wlConfirmRest", { t: dateLabel(key) }), function () {
+            run(base + "/rest-days/" + encodeURIComponent(key), "DELETE", { reason: reasonVal() }, "wlDoneRestRm", "del");
+          });
+        } }));
+      } else {
+        actions.appendChild(el("button", { type: "button", class: "adm-btn", "data-act": "rest-add", text: s("wlAddRest"), onclick: function () {
+          if (!reasonOk()) return;
+          run(base + "/rest-days", "POST", { date: key, reason: reasonVal() }, "wlDoneRest", "add");
+        } }));
+      }
+      pane.appendChild(actions);
+      pane.appendChild(confirmBox);
+      pane.appendChild(noteEl(n));
+    }
+
+    if (st.sel && st.sel.slice(0, 7) === monthKey) drawPane(st.sel, note); else { st.sel = null; drawPane(null, note); }
+    // Rebuilding the dialog drops focus; put it back on the selected day (or the month).
+    var back = st.navFocus ? body.querySelector('[data-nav="' + st.navFocus + '"]') : (note && note.refocus) || hadFocus ? grid.querySelector('[tabindex="0"]') : null;
+    st.navFocus = null;
+    if (back) back.focus();
+  }
+
+  window.__admin = { api: api, s: s, addStrings: addStrings, el: el, fmtDate: fmtDate, fmtNum: fmtNum, authFailed: authFailed, showError: showError, views: views, wlDayIds: WL_DAY_IDS, render: render, state: state, AR: AR, API_BASE: API_BASE, session: session };
 
   function init() {
     document.documentElement.lang = LANG;
