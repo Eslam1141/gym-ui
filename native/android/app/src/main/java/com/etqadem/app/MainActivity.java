@@ -26,10 +26,12 @@ public class MainActivity extends BridgeActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
+    private SessionVaultPlugin.Sync vaultSync;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(TimerAlarmPlugin.class);
+        registerPlugin(SessionVaultPlugin.class);
         TimerAlarmReceiver.ensureChannel(this);
         super.onCreate(savedInstanceState);
         if (getBridge() == null) return;
@@ -37,9 +39,16 @@ public class MainActivity extends BridgeActivity {
         // answering, so a black-holed first request never reaches it: arm
         // for the initial remote load right here.
         arm(getBridge().getWebView());
+        // Synchronous read of the Keystore-backed session record for
+        // native-shell.js (must exist before sync.js runs; see SessionVaultPlugin).
+        vaultSync = new SessionVaultPlugin.Sync(this, getBridge().getWebView(), getBridge().getServerUrl());
+        vaultSync.lastUrl = getBridge().getServerUrl();
+        getBridge().getWebView().addJavascriptInterface(vaultSync, "EtqSessionVault");
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
             public void onPageStarted(WebView webView) {
+                String u = webView.getUrl();
+                if (vaultSync != null && u != null) vaultSync.lastUrl = u;
                 arm(webView);
             }
 

@@ -8,6 +8,15 @@
  *    Unset on the web: there is no build-time version there.
  *  - Hardware Back: closes the top open sheet/dialog (.syd) or the ringing
  *    timer banner first, then goes back in history, then exits the app.
+ *  - Session store: window.GymSessionStore {get,set,clear} (read by sync.js)
+ *    keeps the app-session refresh record in Android Keystore-backed storage
+ *    (native SessionVault plugin). get() is synchronous: the value is read once
+ *    at parse time through window.EtqSessionVault.getSync (a JS interface
+ *    MainActivity installs before the page loads), so it exists before the
+ *    deferred sync.js runs. set/clear write through to the plugin in order.
+ *    A leftover localStorage "gymauth_refresh" is moved into the vault. Not
+ *    defined on the web or if the native pieces are missing (sync.js then
+ *    uses localStorage).
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -23,6 +32,70 @@
     return c;
   }
   function plugin(c, name) { return (c.Plugins && c.Plugins[name]) || null; }
+
+  // ---- session store (see header) ----
+  var LS_KEY = "gymauth_refresh";
+  var sessionInstalled = false;
+
+  function validRec(r) { return r && typeof r === "object" && typeof r.rt === "string" && r.rt ? r : null; }
+  function parseRec(raw) {
+    if (typeof raw !== "string" || !raw) return null;
+    try { return validRec(JSON.parse(raw)); } catch (e) { return null; }
+  }
+
+  function installSessionStore() {
+    if (sessionInstalled) return;
+    var c = cap();
+    if (!c) return;
+    var vault = plugin(c, "SessionVault");
+    var sync = window.EtqSessionVault;
+    if (!vault || !sync || typeof sync.getSync !== "function") return; // keep sync.js's localStorage store
+    sessionInstalled = true;
+
+    var cache = null;
+    try { cache = parseRec(sync.getSync()); } catch (e) { cache = null; }
+
+    // Writes are chained so a clear() right after a set() cannot be overtaken.
+    var chain = Promise.resolve();
+    function queue(fn) {
+      chain = chain.then(function () {
+        try { return Promise.resolve(fn()).catch(function () {}); } catch (e) {}
+      });
+      return chain;
+    }
+    function persist(rec) { return queue(function () { return vault.set({ value: JSON.stringify(rec) }); }); }
+
+    // Migration: an older build (or a pre-vault session) left the token in localStorage.
+    var legacy = null;
+    try { legacy = parseRec(localStorage.getItem(LS_KEY)); } catch (e) {}
+    var legacyPresent = false;
+    try { legacyPresent = localStorage.getItem(LS_KEY) !== null; } catch (e) {}
+    if (legacyPresent) {
+      if (!cache && legacy) {
+        cache = legacy;
+        // Remove the plaintext copy once the vault has it. If the Keystore
+        // refuses, drop it anyway: the session lives in memory until the app
+        // closes, then the user signs in again. Plaintext on disk is worse.
+        persist(legacy).then(function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} });
+      } else {
+        try { localStorage.removeItem(LS_KEY); } catch (e) {}
+      }
+    }
+
+    window.GymSessionStore = {
+      get: function () { return cache ? { rt: cache.rt, rexp: cache.rexp, method: cache.method } : null; },
+      set: function (rec) {
+        var r = validRec(rec);
+        if (!r) return;
+        cache = { rt: r.rt, rexp: r.rexp, method: r.method };
+        persist(cache);
+      },
+      clear: function () {
+        cache = null;
+        queue(function () { return vault.clear(); });
+      }
+    };
+  }
 
   // Layers Back may dismiss, topmost first. Sheets handle Escape themselves
   // (focus trap, remembered answers), so reuse that rather than removing nodes.
@@ -57,6 +130,7 @@
     var c = cap();
     if (!c) return;
     started = true;
+    installSessionStore();
 
     var app = plugin(c, "App");
     if (app) {
@@ -81,5 +155,6 @@
   }
 
   window.GymNativeShell = { init: init, handleBack: handleBack };
+  installSessionStore();
   init();
 })();
