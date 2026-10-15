@@ -858,6 +858,7 @@
     wlETrained: ["That day has a completed workout, so it can't be a rest day. Remove the completion first.", "في هذا اليوم تمرين مكتمل، فلا يمكن جعله يوم راحة. أزل الإكمال أولًا."],
     wlEGone: ["That entry no longer exists. The log was refreshed.", "هذا السجل لم يعد موجودًا. تم تحديث السجل."],
     wlEUser: ["User not found.", "المستخدم غير موجود."],
+    wlLocked: ["Admins can't change their own log or another admin's.", "لا يمكن للمسؤولين تعديل سجلهم أو سجل مسؤول آخر."],
     wlELoad: ["Could not load this user's workout log.", "تعذر تحميل سجل تمارين هذا المستخدم."]
   });
   var WL_DAY_IDS = [
@@ -884,6 +885,7 @@
     switch (r.code) {
       case "date_in_future": return s("wlEFuture");
       case "already_trained": return s("wlETrained");
+      case "cannot_modify_admin": return s("wlLocked");
       case "invalid_request": return r.message || s("eGeneric");
       default: return s("eGeneric");
     }
@@ -902,6 +904,8 @@
     if (wl) return;
     var t = localToday(), parts = t.split("-");
     var st = wl = { user: u, opener: opener, y: +parts[0], m: +parts[1] - 1, today: t, sel: null, data: null, seq: 0, panelEl: document.getElementById("admPanel") };
+    var me = ((session() && session().profile && session().profile.email) || "").trim().toLowerCase();
+    st.locked = !!u.isAdmin || (!!me && String(u.email || "").trim().toLowerCase() === me);
     st.panelEl.inert = true;
     var closeBtn = el("button", { type: "button", class: "adm-btn", text: s("wlClose"), onclick: closeWorkoutLog });
     var hasName = !!(u.displayName || u.name);
@@ -1087,6 +1091,7 @@
         pane.appendChild(ul);
       }
       if (future) { pane.appendChild(el("p", { class: "adm-sub", text: s("wlFuture") })); return; }
+      if (st.locked) { pane.appendChild(el("p", { class: "adm-sub", "data-locked": "", text: s("wlLocked") })); return; }
 
       // One reason (with a live counter) covers whichever action is taken on this day.
       var reason = el("textarea", { id: "admLogReason", rows: "2", dir: "auto", "aria-describedby": "admLogCount admLogErr" });

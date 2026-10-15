@@ -41,8 +41,8 @@ async function openLog(browser, opts = {}) {
     const method = req.method();
     const json = (status, b) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(b) });
     if (p === "/admin/stats") return json(200, { totalUsers: 1, newUsers: { today: 0, d7: 0, d30: 0 }, activeUsers: { d7: 0, d30: 0 }, blockedUsers: 0, providers: { google: 1, password: 0, both: 0 }, signupsPerDay: [] });
-    if (p === "/admin/users" && method === "GET") return json(200, { total: 1, page: 1, pageSize: 25, users: [USER] });
-    if (p === "/admin/users/u1" && method === "GET") return json(200, USER);
+    if (p === "/admin/users" && method === "GET") return json(200, { total: 1, page: 1, pageSize: 25, users: [opts.user || USER] });
+    if (p === "/admin/users/u1" && method === "GET") return json(200, opts.user || USER);
     if (p === "/admin/users/u1/workouts" && method === "GET") {
       log.gets.push(Object.fromEntries(url.searchParams));
       if (opts.getStatus) return json(opts.getStatus, { error: { code: "not_found", message: "user not found" } });
@@ -334,3 +334,27 @@ test("works at phone width without horizontal scroll", async ({ browser }) => {
   expect(over).toBeLessThanOrEqual(0);
   await context.close();
 });
+
+test("403 cannot_modify_admin shows an inline message and keeps the dialog open", async ({ browser }) => {
+  const on = { "POST /rest-days": (st, body, json) => json(403, { error: { code: "cannot_modify_admin", message: "no" } }) };
+  const { context, page } = await openLog(browser, { on });
+  await cell(page, "2026-10-09").click();
+  await reason(page, "valid reason");
+  await page.locator('[data-act="rest-add"]').click();
+  await expect(page.locator("#admLogErr")).toHaveText("Admins can't change their own log or another admin's.");
+  await expect(page.locator(".adm-cal")).toBeVisible();
+  await expect(page.locator("#admMain .adm-msg")).toHaveCount(0);
+  await context.close();
+});
+
+for (const [name, user] of [["an admin user", { ...USER, isAdmin: true }], ["the signed-in admin (email normalised)", { ...USER, email: "  A@Example.com " }]]) {
+  test("actions are hidden but the calendar still renders for " + name, async ({ browser }) => {
+    const { context, page } = await openLog(browser, { user });
+    await expect(cell(page, "2026-10-13")).toHaveClass(/is-done/);
+    await cell(page, "2026-10-09").click();
+    await expect(page.locator("[data-locked]")).toHaveText("Admins can't change their own log or another admin's.");
+    await expect(page.locator(".adm-log-pane button")).toHaveCount(0);
+    await expect(page.locator("#admLogReason")).toHaveCount(0);
+    await context.close();
+  });
+}
