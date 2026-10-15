@@ -110,3 +110,59 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 .adm-st-in_progress{background:var(--warn);color:#14161B}
 .adm-st-done{background:var(--success);color:#fff}
 .adm-st-wont_do{background:var(--panel2);color:var(--paper-dim)}
+
+/* ---- workout log dialog (opened from the user panel) ---- */
+.adm-log-bd{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30}
+.adm-log{position:fixed;inset-block:0;inset-inline:0;margin:auto;width:min(960px,100vw);height:min(100dvh,860px);background:var(--bg-alt);border:1px solid var(--line);border-radius:var(--radius);z-index:31;overflow-y:auto;padding:16px;box-sizing:border-box;color:var(--paper)}
+.adm-log:focus{outline:none}
+.adm-log-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-block-end:12px}
+.adm-log-head h2{margin:0 0 4px;font-size:var(--text-lg)}
+.adm-log-head p{margin:0;overflow-wrap:anywhere}
+.adm-log-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.adm-log-sum div{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.adm-log-sum dd{margin:0;font-size:var(--text-2xl);font-weight:var(--fw-black)}
+.adm-log-sum dt{color:var(--paper-dim);font-size:var(--text-sm)}
+.adm-log-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-block-end:8px}
+.adm-log-nav .adm-btn{min-width:44px}
+.adm-log-month{margin:0;font-size:var(--text-md)}
+.adm-cal{display:grid;gap:4px}
+.adm-cal-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.adm-cal-wd{text-align:center;color:var(--paper-dim);font-size:var(--text-xs);padding-block:4px}
+.adm-cal-pad{min-height:52px}
+.adm-cal-day{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;background:var(--panel);border:1px solid var(--line);border-radius:10px;cursor:pointer;user-select:none}
+.adm-cal-day:hover{border-color:var(--accent-tint)}
+.adm-cal-day:focus-visible{outline:2px solid var(--accent-tint);outline-offset:2px}
+.adm-cal-day.is-done{background:var(--success-soft);border-color:var(--success);color:var(--success-text)}
+.adm-cal-day.is-rest{border-style:dashed;border-color:var(--line-strong)}
+.adm-cal-day.is-today{box-shadow:0 0 0 2px var(--accent-tint)}
+.adm-cal-day.is-future{opacity:.5}
+.adm-cal-day.is-sel{background:var(--panel2);border-color:var(--paper)}
+.adm-cal-day.is-done.is-sel{background:var(--success-soft)}
+.adm-cal-num{font-weight:700}
+.adm-cal-mark{font-size:var(--text-xs);font-weight:700;line-height:1;padding:2px 5px;border-radius:999px;background:var(--panel2);color:var(--paper)}
+.adm-log-list,.adm-log-entries{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.adm-log-item{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;width:100%;min-height:44px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:inherit;font:inherit;text-align:start;padding:8px 12px;cursor:pointer}
+.adm-log-item:hover,.adm-log-item:focus-visible{border-color:var(--accent-tint)}
+.adm-log-date{color:var(--paper-dim);font-size:var(--text-sm)}
+.adm-log-item b,.adm-log-entries b,.adm-log-pane .adm-sub{overflow-wrap:anywhere}
+.adm-log-entries li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.adm-log-pane h3,.adm-section h3{margin:0 0 8px;font-size:var(--text-md)}
+.adm-log-pane label,.adm-log-pane select{display:block}
+.adm-log-pane select{background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:10px;padding:10px 12px;font:inherit;min-height:44px;width:100%;box-sizing:border-box}
+.adm-log-pane .adm-form input{width:100%}
+.adm-log-count{display:flex;justify-content:flex-end}
+.adm-over{color:var(--danger)}
+.adm-log-confirm{margin-block-start:12px;padding:12px;border:1px solid var(--danger);border-radius:10px}
+.adm-log-confirm p{margin:0;overflow-wrap:anywhere}
+@media (max-width:700px){
+  .adm-log{height:100dvh;border-radius:0;border-inline:0}
+  .adm-log-sum dd{font-size:var(--text-lg)}
+  .adm-cal-day,.adm-cal-pad{min-height:46px}
+  .adm-cal-mark{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline:3px;font-size:9px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .adm-log:not([hidden]){animation:adm-rise .3s cubic-bezier(.2,.7,.2,1) both}
+  .adm-log-bd{animation:adm-fade .25s ease both}
+}
+.adm-cal+.adm-hint{margin-block:8px 12px}
+.adm-log-nav .adm-btn{font-size:var(--text-lg)}
