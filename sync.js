@@ -122,6 +122,35 @@
   // EMAIL_KEY prefills the re-login form. Both cleared by signOut().
   var METHOD_KEY = "gymauth_method";
   var EMAIL_KEY = "gymauth_email";
+
+  // ---- app session (gym-be /auth/session + /auth/refresh) ----
+  // The Google / password sign-in is traded once for a gym-be session: a
+  // 15-min access JWT (kept in memory + the sessionStorage cache above) and
+  // a rotating refresh token that survives restarts. The refresh token lives
+  // behind the small GymSession store below so the APK can swap in native
+  // secure storage; the default is localStorage under a device-local key
+  // (NOT gym_-prefixed => syncable() is false, it never reaches the server,
+  // and clearUserData() leaves it alone).
+  var REFRESH_KEY = "gymauth_refresh";
+  var REFRESH_LEAD_MS = 120000;   // refresh this long before the access token expires
+  var localSessionStore = {
+    get: function () {
+      try {
+        var r = JSON.parse(localStorage.getItem(REFRESH_KEY));
+        return r && typeof r.rt === "string" && r.rt ? r : null;
+      } catch (e) { return null; }
+    },
+    set: function (rec) { try { localStorage.setItem(REFRESH_KEY, JSON.stringify(rec)); } catch (e) {} },
+    clear: function () { try { localStorage.removeItem(REFRESH_KEY); } catch (e) {} }
+  };
+  // TODO(plan step 4, APK): on Capacitor native this is still the localStorage
+  // store. A host (native-shell.js) may define window.GymSessionStore =
+  // { get, set, clear } BEFORE this file runs to keep the refresh token in
+  // Android Keystore-backed storage instead. The interface is synchronous
+  // because boot() must know whether a session exists before the first paint,
+  // so a native adapter has to hydrate its value before sync.js loads.
+  // A record is { rt, rexp (ms), method: "google" | "local" }.
+  function sessionStore() { return window.GymSessionStore || localSessionStore; }
   var profile = null;        // { email, name }
   var debounceTimer = null;
   var intervalId = null;
@@ -406,9 +435,9 @@
   function startTriggers() {
     if (triggersStarted) return;
     triggersStarted = true;
-    window.addEventListener("online", function () { syncNow("online"); });
+    window.addEventListener("online", function () { refreshIfNeeded("online"); syncNow("online"); });
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "visible") syncNow("visible");
+      if (document.visibilityState === "visible") { refreshIfNeeded("visible"); syncNow("visible"); }
       else if (document.visibilityState === "hidden") flushOnHide();
     });
     document.addEventListener("pagehide", flushOnHide);
@@ -422,8 +451,8 @@
   function parseJwt(jwt) {
     try {
       var payload = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      return { exp: payload.exp || 0, email: payload.email || "", name: payload.name || "", sub: payload.sub || "" };
-    } catch (e) { return { exp: 0, email: "", name: "", sub: "" }; }
+      return { exp: payload.exp || 0, email: payload.email || "", name: payload.name || "", sub: payload.sub || "", gsub: payload.gsub || "" };
+    } catch (e) { return { exp: 0, email: "", name: "", sub: "", gsub: "" }; }
   }
 
   function onCredential(response) {
@@ -432,7 +461,7 @@
     // stuck (see PENDING_KEY comment above).
     clearSignInPending();
     if (!response || !response.credential) return;
-    acceptToken(response.credential, "google");
+    startSession(response.credential, "google");
   }
 
   // Email/password sign-in (auth-email.js) hands over the gym-be-issued JWT
@@ -444,7 +473,7 @@
     var p = parseJwt(token || "");
     if (!p.sub || !p.exp || p.exp * 1000 <= nowMs() + 30000) return false;
     clearSignInPending();
-    acceptToken(token, "local");
+    startSession(token, "local");
     return true;
   }
 
@@ -458,7 +487,8 @@
     source = src;
     var p = parseJwt(idToken);
     tokenExpEpoch = p.exp;
-    profile = { email: p.email, name: p.name };
+    // A refreshed access token may omit display claims: keep what we had.
+    profile = { email: p.email || (profile && profile.email) || "", name: p.name || (profile && profile.name) || "" };
     try {
       if (src === "local") {
         localStorage.setItem(METHOD_KEY, "local");
@@ -470,17 +500,24 @@
 
     var storedSub = null;
     try { storedSub = localStorage.getItem("gym_user_sub"); } catch (e) {}
+    // A session access token's `sub` is the gym-be users-doc id and the
+    // Google sub moves to `gsub`, while gym_user_sub on existing devices holds
+    // the Google sub. Identity is gsub || sub, and a stored value matching
+    // either claim is the same account — otherwise every existing Google user
+    // would look like an account switch and get their local data wiped.
+    var uid = p.gsub || p.sub;
+    var sameAccount = !!storedSub && (storedSub === p.sub || storedSub === p.gsub);
 
     // Account switch on a shared browser: the previous user's data is still in
     // localStorage and would otherwise be shown to â€” and pushed up for â€” the
     // new account. Wipe it and reload once; GIS auto-select signs the new
     // account straight back in and its data is pulled fresh. A sessionStorage
     // flag prevents a second wipe+reload if GIS bounces between accounts.
-    if (p.sub && storedSub && storedSub !== p.sub) {
+    if (uid && storedSub && !sameAccount) {
       var justSwitched = false;
       try { justSwitched = sessionStorage.getItem("gym_switch") === "1"; } catch (e) {}
       if (justSwitched) {
-        try { localStorage.setItem("gym_user_sub", p.sub); } catch (e) {}
+        try { localStorage.setItem("gym_user_sub", uid); } catch (e) {}
         try { sessionStorage.removeItem("gym_switch"); } catch (e) {}
       } else if (src === "local") {
         // A local JWT isn't silently re-issued after a reload the way GIS
@@ -489,14 +526,14 @@
         // session (clearUserData() just dropped the cache) so initAuth()
         // restores it on the reload and pulls this account's data fresh.
         clearUserData();
-        try { localStorage.setItem("gym_user_sub", p.sub); } catch (e) {}
+        try { localStorage.setItem("gym_user_sub", uid); } catch (e) {}
         try { localStorage.removeItem("gym_anon"); } catch (e) {}
         saveCachedSession();
         location.reload();
         return;
       } else {
         clearUserData();
-        try { localStorage.setItem("gym_user_sub", p.sub); } catch (e) {}
+        try { localStorage.setItem("gym_user_sub", uid); } catch (e) {}
         try { localStorage.removeItem("gym_anon"); } catch (e) {}
         try { sessionStorage.setItem("gym_switch", "1"); } catch (e) {}
         location.reload();
@@ -510,8 +547,8 @@
     // (anonymous) progress exists up to it â€” a safe one-way LWW migration.
     var firstSignIn = false;
     try {
-      if (p.sub && storedSub !== p.sub) {
-        localStorage.setItem("gym_user_sub", p.sub);
+      if (uid && !sameAccount) {
+        localStorage.setItem("gym_user_sub", uid);
         firstSignIn = true;
       }
     } catch (e) {}
@@ -536,6 +573,11 @@
   function scheduleTokenRefresh() {
     if (refreshTimer) clearTimeout(refreshTimer);
     if (!tokenExpEpoch) return;
+    if (sessionStore().get()) {
+      var wait = tokenExpEpoch * 1000 - nowMs() - REFRESH_LEAD_MS;
+      refreshTimer = setTimeout(function () { refreshSession("timer"); }, wait > 10000 ? wait : 10000);
+      return;
+    }
     if (source === "local") {
       // No refresh endpoint for gym-be's own JWT: when it runs out (the same
       // 30s margin isSignedIn() uses), treat it exactly like a 401 â€” ask the
@@ -555,6 +597,229 @@
         google.accounts.id.prompt();
       }
     }, ms);
+  }
+
+  // ---- app session: exchange, refresh, revoke ----
+  var rawFetch = window.fetch ? window.fetch.bind(window) : null;
+  var refreshing = null;     // the single in-flight refresh (this tab)
+  var needFreshSignIn = false;   // migration: waiting for a fresh Google token
+  var freshTimer = null;
+
+  function deviceLabel() {
+    if (isNative()) {
+      var plat = "android";
+      try { plat = String(window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : "android").toLowerCase(); } catch (e) {}
+      return "Etqadem app (" + (plat === "ios" ? "iOS" : "Android") + ")";
+    }
+    var ua = "";
+    try { ua = navigator.userAgent || ""; } catch (e) {}
+    var os = /Android/.test(ua) ? "Android" : /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Windows/.test(ua) ? "Windows" :
+      /CrOS/.test(ua) ? "ChromeOS" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "";
+    var br = /Edg\//.test(ua) ? "Edge" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\/|FxiOS/.test(ua) ? "Firefox" :
+      /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Chrome\/|CriOS/.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
+    return (os ? br + " on " + os : br).slice(0, 64);
+  }
+
+  // POST JSON to an /auth endpoint. Resolves { status, body }; status 0 =
+  // network failure or timeout. Tokens only ever travel in bodies/headers.
+  function postAuth(path, body, headers) {
+    var h = { "Content-Type": "application/json" };
+    if (headers) for (var k in headers) { if (Object.prototype.hasOwnProperty.call(headers, k)) h[k] = headers[k]; }
+    return fetchWithTimeout(API_BASE + path, { method: "POST", headers: h, body: JSON.stringify(body) })
+      .then(function (res) {
+        return res.json().catch(function () { return null; }).then(function (b) {
+          return { status: res.status, body: b, retryAfter: parseInt(res.headers.get("Retry-After"), 10) || 0 };
+        });
+      })
+      .catch(function () { return { status: 0, body: null, retryAfter: 0 }; });
+  }
+  function errCode(r) { return (r && r.body && r.body.error && (r.body.error.code || r.body.error)) || ""; }
+  function validPair(b) {
+    return !!(b && typeof b.accessToken === "string" && b.accessToken && typeof b.refreshToken === "string" && b.refreshToken);
+  }
+  function saveSession(b, method) {
+    // The refresh token is persisted BEFORE the new access token is used: a
+    // rotated token that only lived in memory would be lost on a crash and
+    // the next refresh with the old one reads as token theft.
+    sessionStore().set({ rt: b.refreshToken, rexp: Date.parse(b.refreshExpiresAt) || 0, method: method });
+  }
+  function revokeRefreshToken(rt) {
+    if (!rt || !rawFetch) return;
+    try {
+      rawFetch(API_BASE + "/auth/logout", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }), keepalive: true
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  // Drop the session credentials (not the user's data): the refresh token,
+  // the cached access token and the refresh timer.
+  function endSession() {
+    sessionStore().clear();
+    clearCachedSession();
+    if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+  }
+
+  // Trade a fresh Google ID token (method "google") or local JWT ("local")
+  // for a session and install it. Resolves { ok } or { ok:false, status, code }.
+  function exchangeSession(raw, method) {
+    var body = { device: deviceLabel() };
+    var headers = null;
+    if (method === "local") headers = { "Authorization": "Bearer " + raw };
+    else body.idToken = raw;
+    return postAuth("/auth/session", body, headers).then(function (r) {
+      if (r.status === 200 && validPair(r.body)) {
+        var prev = sessionStore().get();
+        saveSession(r.body, method);
+        if (prev && prev.rt && prev.rt !== r.body.refreshToken) revokeRefreshToken(prev.rt); // a re-login replaces the old session
+        needFreshSignIn = false;
+        acceptToken(r.body.accessToken, method);
+        return { ok: true };
+      }
+      return { ok: false, status: r.status, code: errCode(r) };
+    });
+  }
+
+  // Fresh sign-in (Google button, native picker, password): get a session.
+  // Anything that stops the exchange (offline, an older backend, a refusal)
+  // falls back to using the raw token for the hour it lasts, exactly as
+  // before sessions existed — the 403 cases are then reported by the first
+  // API call's own handling.
+  function startSession(raw, method) {
+    return exchangeSession(raw, method).then(function (r) {
+      if (!r.ok) {
+        log("[sync] session exchange failed", r.status, r.code);
+        acceptToken(raw, method);
+      }
+    });
+  }
+
+  function failFreshSignIn() {
+    if (!needFreshSignIn) return;
+    needFreshSignIn = false;
+    if (freshTimer) { clearTimeout(freshTimer); freshTimer = null; }
+    endSession();
+    handleAuthLost("expired");
+  }
+
+  // Migration for a device signed in before sessions: the Google / local
+  // token cached in sessionStorage is exchanged once. 401 stale_token means it
+  // is older than the server's 10 min window, so a FRESH token is needed.
+  function migrateCachedSession(c) {
+    var method = c.source === "local" ? "local" : "google";
+    exchangeSession(c.token, method).then(function (r) {
+      if (r.ok || !(r.status === 401 && r.code === "stale_token")) return; // other failures: keep the raw token
+      if (method === "local") { endSession(); handleAuthLost("expired"); return; } // needs the password again
+      needFreshSignIn = true;
+      freshTimer = setTimeout(failFreshSignIn, 8000);
+      if (isNative()) nativeSilentSignIn();
+      else if (window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
+      // else: the GIS script's onload prompts (needFreshSignIn)
+    });
+  }
+
+  // One refresh at a time: in this tab through `refreshing`, across tabs
+  // through a Web Lock (the record is re-read inside it, so a tab that waited
+  // refreshes with the token the other tab just rotated to). Resolves "ok",
+  // "none" (no session), "lost" (session ended), "retry" or "offline".
+  function refreshSession(reason) {
+    if (refreshing) return refreshing;
+    log("[sync] refresh", reason);
+    var run = function () { return doRefresh(); };
+    var p = (navigator.locks && navigator.locks.request)
+      ? navigator.locks.request("gymauth_refresh", run)
+      : run();
+    refreshing = p.then(function (r) { refreshing = null; return r; }, function () { refreshing = null; return "offline"; });
+    return refreshing;
+  }
+
+  function doRefresh() {
+    var rec = sessionStore().get();
+    if (!rec) return Promise.resolve("none");
+    function attempt(n) {
+      return postAuth("/auth/refresh", { refreshToken: rec.rt }).then(function (r) {
+        // A lost response may still have rotated the token server-side: the
+        // 10 s grace window accepts the SAME token once more, right now. Never
+        // later — an old token used after the window is treated as theft.
+        if (n === 0 && (r.status === 0 || r.status === 502 || r.status === 503 || r.status === 504)) return attempt(1);
+        return r;
+      });
+    }
+    return attempt(0).then(function (r) {
+      if (r.status === 200 && validPair(r.body)) {
+        var method = rec.method === "local" ? "local" : "google";
+        saveSession(r.body, method);
+        acceptToken(r.body.accessToken, method);
+        return "ok";
+      }
+      if (r.status === 401 || r.status === 403) {
+        // Invalid, reused or expired (401), or blocked/removed (403): the
+        // session is over. Back to the login screen.
+        if (!source) source = rec.method === "local" ? "local" : "google";
+        endSession();
+        handleAuthLost("expired");
+        if (r.status === 403 && window.GymHeader && GymHeader.onBlocked) {
+          var code = errCode(r);
+          if (code === "account_blocked" || code === "account_removed") GymHeader.onBlocked(code === "account_removed");
+        }
+        return "lost";
+      }
+      if (r.status === 429) {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function () { refreshSession("rate-limit"); }, Math.min(Math.max(r.retryAfter, 5), 300) * 1000);
+        return "retry";
+      }
+      return "offline"; // keep the session; online / visible / the next 401 try again
+    });
+  }
+
+  // On resume / online: refresh when there is no live access token or it is
+  // inside the refresh lead window (the timer may have been throttled).
+  function refreshIfNeeded(reason) {
+    if (!sessionStore().get()) return;
+    if (!idToken || tokenExpEpoch * 1000 - nowMs() < REFRESH_LEAD_MS + 30000) refreshSession(reason);
+  }
+
+  // Any API call that comes back 401 gets ONE refresh and ONE retry with the
+  // new token (concurrent 401s share the in-flight refresh). Installed on
+  // window.fetch so every module's calls are covered without touching them.
+  // /auth/* is excluded, and reauth_required (DELETE /me) is a request for a
+  // real re-login, not an expired token, so it is passed through untouched.
+  function isApiCall(input) {
+    return typeof input === "string" && input.indexOf(API_BASE + "/") === 0 && input.indexOf(API_BASE + "/auth/") !== 0;
+  }
+  function bearerOf(headers) {
+    if (!headers) return "";
+    var v = typeof headers.get === "function" ? headers.get("Authorization") : (headers.Authorization || headers.authorization);
+    return v && v.indexOf("Bearer ") === 0 ? v.slice(7) : "";
+  }
+  function withBearer(init, token) {
+    var h = {}, src = init.headers, out = {};
+    if (src && typeof src.forEach === "function" && !Array.isArray(src)) src.forEach(function (v, k) { h[k] = v; });
+    else if (src) for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) h[k] = src[k]; }
+    delete h.authorization;
+    h.Authorization = "Bearer " + token;
+    for (var i in init) { if (Object.prototype.hasOwnProperty.call(init, i)) out[i] = init[i]; }
+    out.headers = h;
+    return out;
+  }
+  if (rawFetch) {
+    window.fetch = function (input, init) {
+      var p = rawFetch(input, init);
+      if (!init || !isApiCall(input)) return p;
+      var sent = bearerOf(init.headers);
+      if (!sent) return p;
+      return p.then(function (res) {
+        if (res.status !== 401 || !sessionStore().get()) return res;
+        return res.clone().json().catch(function () { return null; }).then(function (b) {
+          if (errCode({ body: b }) === "reauth_required") return res;
+          if (idToken && idToken !== sent) return rawFetch(input, withBearer(init, idToken)); // already refreshed
+          return refreshSession("401").then(function (r) {
+            return r === "ok" && idToken ? rawFetch(input, withBearer(init, idToken)) : res;
+          });
+        });
+      });
+    };
   }
 
   // ---- native Google sign-in (Capacitor app, etqadem-app) ----
@@ -592,13 +857,13 @@
         var token = res && res.result && res.result.idToken;
         if (!token) throw new Error("no idToken");
         clearSignInPending();
-        acceptToken(token, "google");
-        return true;
+        return startSession(token, "google").then(function () { return true; });
       });
   }
   function nativeSilentSignIn() {
     return nativeSignIn(true).catch(function (e) {
       log("[sync] native silent sign-in failed", e && e.message);
+      failFreshSignIn();
       abandonPendingSignIn();
       return false;
     });
@@ -640,6 +905,7 @@
   function handleAuthLost(reason) {
     var wasLocal = source === "local";
     var lostEmail = (profile && profile.email) || "";
+    if (!lostEmail) { try { lostEmail = localStorage.getItem(EMAIL_KEY) || ""; } catch (e) {} }
     // Google keeps its pending GIS re-prompt timer exactly as before; a local
     // session's expiry timer is meaningless once the session is gone.
     if (wasLocal && refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
@@ -657,6 +923,9 @@
   }
 
   function signOut() {
+    var rec = sessionStore().get();
+    if (rec) revokeRefreshToken(rec.rt);
+    endSession();                                // refresh token + cached access token + timer
     handleAuthLost();                            // updates the auth UI + routes to the login screen, see above
     clearUserData();                             // don't leave this account's data for the next person
     try { localStorage.removeItem("gym_user_sub"); } catch (e) {}
@@ -801,6 +1070,8 @@
   //    lapsed is respected on every later cold start, not just this tab.
   function shouldResolveSilently() {
     if (isSignedIn()) return false;
+    // A stored refresh token restores the session by itself (initAuth).
+    if (sessionStore().get()) return true;
     var anon = false;
     try { anon = localStorage.getItem("gym_anon") === "1"; } catch (e) {}
     if (isSignInPending()) {
@@ -848,7 +1119,7 @@
     // Read before the CLIENT_ID gate: an email/password (local) session
     // doesn't depend on Google being configured at all.
     var cached = loadCachedSession();
-    if (!CLIENT_ID && !(cached && cached.source === "local")) {
+    if (!CLIENT_ID && !(cached && cached.source === "local") && !sessionStore().get()) {
       log("[sync] no GOOGLE_CLIENT_ID, sync disabled");
       return;
     }
@@ -861,7 +1132,10 @@
       renderAuthUI();
       startTriggers();
       scheduleTokenRefresh();
-      if (!CLIENT_ID) return; // local session, Google not configured: no GIS to load
+      // Signed in from before the session flow existed: trade the cached
+      // token for a session once (a stale one falls back to a silent Google
+      // sign-in, then to the login screen).
+      if (!sessionStore().get()) migrateCachedSession(cached);
     } else if (shouldResolveSilently()) {
       // No completed session, but one of the three legitimate reasons above
       // to expect a silent re-auth might still land. Nothing to literally
@@ -872,12 +1146,15 @@
       // GIS script hangs and neither onload nor onerror ever fires.
       if (window.GymUI && typeof GymUI.showResolvingSession === "function") GymUI.showResolvingSession();
       setTimeout(abandonPendingSignIn, 8000);
+      // A stored refresh token: restore the session from it right now.
+      if (sessionStore().get()) { startTriggers(); refreshSession("cold"); }
     }
+    if (!CLIENT_ID) return; // local session, Google not configured: no GIS to load
 
     if (isNative()) {
       gisLang = appLang();
       renderAuthUI();
-      if (!isSignedIn() && shouldResolveSilently()) nativeSilentSignIn();
+      if (!isSignedIn() && !sessionStore().get() && shouldResolveSilently()) nativeSilentSignIn();
       return;
     }
 
@@ -900,14 +1177,16 @@
           // anon/first-visit prompts with nothing pending at all; the
           // shouldResolveSilently() gate inside abandonPendingSignIn() is
           // what keeps those a no-op instead of surfacing the login screen.
-          error_callback: function () { abandonPendingSignIn(); }
+          error_callback: function () { failFreshSignIn(); abandonPendingSignIn(); }
         });
         renderAuthUI();
         // Only auto-prompt (One Tap) when we don't already have a live
         // session. Firing it unconditionally alongside the onboarding
         // screen's own explicit "Sign in with Google" button is what made a
         // first-time visit show two separate sign-in prompts.
-        if (!isSignedIn()) {
+        // With a session (refresh token) there is nothing to restore through
+        // Google: only a migration that needs a fresh token prompts.
+        if (needFreshSignIn || (!isSignedIn() && !sessionStore().get())) {
           google.accounts.id.prompt(function (notification) {
             // Only worth interpreting when we're actually holding for one of
             // the reasons above â€” an ordinary anonymous/first-visit prompt
@@ -930,6 +1209,7 @@
     };
     s.onerror = function () {
       log("[sync] GIS script failed to load");
+      failFreshSignIn();
       abandonPendingSignIn();
     };
     document.head.appendChild(s);
@@ -962,6 +1242,8 @@
     signInWithToken: signInWithToken,
     profile: function () { return profile ? { email: profile.email, name: profile.name } : null; },
     signOut: signOut,
+    // True inside the Capacitor app (privacy.js re-auth renders the native button).
+    isNative: isNative,
     // Renders the Google button into `target` (privacy.js re-auth before account deletion).
     renderGoogleButton: renderGoogleButton,
     // True when a sign-in was started on this tab (Google button tapped)
