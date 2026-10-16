@@ -132,18 +132,12 @@
     return !!(fab && chat && form && input);
   }
 
-  // Only steals focus back when the chat is still open AND the input was
-  // the thing focused when the request that led here was sent — otherwise
-  // this fires after the user has already closed the chat, tapped away, or
-  // scrolled elsewhere, and yanking focus back to the input is jarring.
-  // Also skipped entirely on coarse-pointer (touch) devices: programmatic
-  // focus() there pops the on-screen keyboard back up mid-conversation,
-  // which is worse than just leaving focus where the user left it.
-  function isCoarsePointer() {
-    try { return window.matchMedia && window.matchMedia("(pointer: coarse)").matches; } catch (e) { return false; }
-  }
+  // The input is never disabled while a reply is pending (a disabled input
+  // loses focus and Android closes the soft keyboard), and Send does not take
+  // focus (see wire()). This is the safety net: if the input was focused when
+  // the message was sent and the chat is still open, make sure it still is.
   function refocusInput(wasFocused) {
-    if (!open || !wasFocused || isCoarsePointer()) return;
+    if (!open || !wasFocused || document.activeElement === input) return;
     try { input.focus({ preventScroll: true }); } catch (e) {}
   }
 
@@ -321,15 +315,14 @@
 
   function setSending(v) {
     sending = v;
-    sendBtn.disabled = v;
-    input.disabled = v;
+    sendBtn.disabled = v; // submit is also ignored while sending; the input stays enabled so the keyboard stays up
   }
 
   function sendMessage(text) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; } // this new send supersedes any still-typing previous reply
-    var hadFocus = document.activeElement === input; // captured before setSending(true) below disables (and blurs) it
+    var hadFocus = document.activeElement === input;
     pushHistory("user", text);
     msgsEl.querySelector(".coach-chat-empty") && (msgsEl.innerHTML = "");
     msgsEl.appendChild(bubble("user", text));
@@ -569,6 +562,10 @@
     closeBtn.addEventListener("click", closeChat);
     backdrop.addEventListener("click", closeChat);
     document.addEventListener("keydown", function (e) { if (open && e.key === "Escape") closeChat(); });
+    // Tapping Send must not move focus off the input, or the soft keyboard
+    // closes. Only mousedown: preventDefault on touchstart/pointerdown would
+    // also cancel the tap's click (Chrome sends mousedown before the click).
+    sendBtn.addEventListener("mousedown", function (e) { e.preventDefault(); });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       if (sending) return;
