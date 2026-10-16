@@ -620,7 +620,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
   bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%) translateY(10px);
   display:flex; align-items:center; gap:12px;
-  max-width:calc(100% - 32px);
+  max-width:calc(100% - 32px); width:max-content; /* left:50% would otherwise cap the shrink-to-fit width at half the screen */
   background:var(--panel2); border:1px solid var(--line); border-radius:12px;
   padding-block:6px; padding-inline:16px 8px; box-shadow:var(--elev-2, 0 14px 40px rgba(0,0,0,.45));
   opacity:0; pointer-events:none;

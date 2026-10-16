@@ -123,6 +123,9 @@ test("Arabic: ready toast is translated, RTL, dark and light", async ({ browser 
     release(200);
     await expect(page.locator("#gymToast.show")).toContainText("خطتك جاهزة");
     await expect(page.locator("#gymToast .gym-toast-action")).toHaveText("اعرض الخطة");
+    const oneLine = await page.locator("#gymToast .gym-toast-msg").evaluate((m) => m.getBoundingClientRect().height < parseFloat(getComputedStyle(m).fontSize) * 2);
+    expect(oneLine).toBe(true);
+    await page.waitForTimeout(600); // let the toast's entrance settle before the screenshot
     await shot(page, "toast-ready", { lang: "ar", theme });
     await context.close();
   }
