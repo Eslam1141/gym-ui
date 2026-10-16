@@ -1104,23 +1104,12 @@ body:has(#timerBar.show) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-ar
 }
 #appNav button > *{ position:relative; }
 #appNav button svg{ width:22px; height:22px; fill:currentColor; }
-/* Background work on a tab (the Coach plan request): is-working shows a hollow ring
-   at the icon's corner (still, under reduced motion); has-update swaps it for a solid dot. */
-#appNav button.is-working::after{
-  content:""; position:absolute; top:calc(var(--pill-top) + 1px); inset-inline-start:calc(50% + 10px);
-  width:9px; height:9px; box-sizing:border-box; border-radius:50%;
-  border:2px solid var(--primary); background:var(--nav-bg);
-  animation:navWorking 1.2s var(--ease) infinite;
-}
-#appNav button.has-update::after{ display:none; }
+/* Background work on a tab (the Coach plan request): is-working makes the Coach icon
+   climb (see .etq-pacer); has-update adds a solid dot at the icon's corner. */
 #appNav .nav-dot{
   position:absolute; top:calc(var(--pill-top) + 1px); inset-inline-start:calc(50% + 10px);
   width:10px; height:10px; box-sizing:border-box; border-radius:50%;
   background:var(--primary); border:2px solid var(--nav-bg);
-}
-@keyframes navWorking{ 50%{ transform:scale(1.35); opacity:.45; } }
-@media (prefers-reduced-motion:reduce){
-  #appNav button.is-working::after{ animation:none; }
 }
 #appNav button[aria-current="page"]{ color:var(--primary-text); }
 #appNav button[aria-current="page"]::before{ transform:none; opacity:1; }
@@ -1251,24 +1240,43 @@ body.rest-view .warmup-card, body.rest-view #resetLink{ display:none; }
   background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg);
   display:flex; flex-direction:column; align-items:center; gap:12px;
 }
-/* shared coach mascot (mascot.js): colours are tokens, so it follows theme + plan */
-.etq-mascot{
-  --m-head:var(--primary); --m-face:var(--on-primary); --m-step:var(--ink); --m-band:var(--highlight);
+/* Coach icon "Pacer" (mascot.js + the nav icon): three steps and a dot. Colours are tokens, so it
+   follows theme + plan. The dot rests on the top step; .is-climbing (and the nav's is-working)
+   replays the login stair: the dot hops step to step ~1.2s apart, each step glows as it lands,
+   and at the top the dot fades out and restarts at the bottom (see ob-climb in onboarding.css). */
+.etq-pacer{
+  --p-step:var(--accent); --p-dot:var(--accent-tint); --p-rest:.55;
   display:block; overflow:visible;
 }
-.etq-mascot.on-primary{ --m-head:var(--on-primary); --m-face:var(--primary); --m-step:var(--on-primary); --m-band:var(--primary); }
-.etq-mascot .m-head{ fill:var(--m-head); }
-.etq-mascot .m-face{ fill:var(--m-face); }
-.etq-mascot .m-step{ fill:var(--m-step); }
-.etq-mascot .m-band{ fill:var(--m-band); }
-.etq-mascot .m-smile{ fill:none; stroke:var(--m-face); stroke-width:2.6; stroke-linecap:round; }
-.etq-mascot.on-primary .m-step{ fill-opacity:.6; }
-.etq-mascot.on-primary .m-band{ fill-opacity:.35; }
-.coach-mascot{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.22)); }
+.etq-pacer.on-primary{ --p-step:var(--on-primary); --p-dot:var(--on-primary); }
+#appNav .etq-pacer{ --p-step:currentColor; }
+.etq-pacer .p-step{ fill:var(--p-step); opacity:var(--p-rest); }
+.etq-pacer .p-dot{ fill:var(--p-dot); transform:translate(15px, -8px); }
+/* Steps ascend toward the reading direction's end edge. */
+[dir="rtl"] .etq-pacer .p-art{ transform:scaleX(-1); transform-origin:12px 12px; }
+.coach-loading .etq-pacer{ margin:0 auto 12px; }
 @media (prefers-reduced-motion:no-preference){
-  .etq-mascot.is-live .m-eye{ transform-box:fill-box; transform-origin:center; animation:etq-blink 5.5s infinite; }
+  .etq-pacer.is-climbing .p-dot, #appNav button.is-working .p-dot{ animation:pacer-climb 3.6s linear infinite; }
+  .etq-pacer.is-climbing .p-step, #appNav button.is-working .p-step{
+    animation:pacer-land 3.6s var(--ease) infinite; animation-delay:calc(var(--k) * 1.2s - 3.6s);
+  }
 }
-@keyframes etq-blink{ 0%,94%,100%{ transform:scaleY(1); } 97%{ transform:scaleY(.1); } }
+@keyframes pacer-climb{
+  0%{ transform:translate(0, 0); opacity:0; animation-timing-function:var(--ease-out); }
+  4%{ transform:translate(0, 0); opacity:1; }
+  21%{ transform:translate(3.75px, -7px); animation-timing-function:var(--ease); }
+  37%{ transform:translate(7.5px, -4px); }
+  54%{ transform:translate(11.25px, -10.5px); animation-timing-function:var(--ease); }
+  70%{ transform:translate(15px, -8px); }
+  80%{ transform:translate(15px, -8px); opacity:1; }
+  92%{ transform:translate(15px, -8px); opacity:0; }
+  100%{ transform:translate(0, 0); opacity:0; }
+}
+@keyframes pacer-land{
+  0%{ opacity:1; }
+  30%{ opacity:var(--p-rest); }
+  100%{ opacity:var(--p-rest); }
+}
 .coach-teaser h2{ margin:0; font-size:var(--text-lg); font-weight:var(--fw-black); }
 .coach-tease-body{ margin:0; color:var(--paper-dim); font-size:var(--text-base); max-width:40ch; }
 .coach-bullets{ list-style:none; margin:4px 0 6px; padding:0; text-align:start; width:100%; max-width:300px; }
@@ -1276,7 +1284,7 @@ body.rest-view .warmup-card, body.rest-view #resetLink{ display:none; }
 .coach-bullets li::before{
   content:"\2713"; position:absolute; inset-inline-start:0; color:var(--green); font-weight:var(--fw-black);
 }
-/* the Coach hero has no icon (the themed mascot lives in the teaser / result) */
+/* the Coach hero has no icon (the Pacer lives in the teaser / result / loading view) */
 #screen-coach > .wrap > header.hero{ padding-top:8px; }
 
 /* ---- Coach: form ---- */
@@ -1977,7 +1985,7 @@ body:has(.wb-screen) #coachFab, body:has(.wb-screen) #coachFabTip{ display:none;
   #bgfx, #appNav, #timerBar, #miniTimer, #toTop, #onboarding,
   #coachFab, #coachFabTip, #coachChat,
   #screen-plan, #screen-more, #videoModal, #calendarStrip, #calendarModal,
-  .coach-actions, .coach-links, .coach-res-head .coach-mascot, .coach-tip-btn{ display:none !important; }
+  .coach-actions, .coach-links, .coach-res-head .coach-pacer, .coach-tip-btn{ display:none !important; }
   html, body{ background:#fff !important; color:#000 !important; }
   body{ padding:0 !important; }
   #screen-coach{ display:block !important; padding:0 !important; }

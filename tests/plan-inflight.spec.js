@@ -136,11 +136,11 @@ test("reduced motion: working indicator is static", async ({ browser }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await startPlan(page);
   await tab(page, "food");
-  const ring = await coachBtn(page).evaluate((b) => {
-    const cs = getComputedStyle(b, "::after");
-    return { anim: cs.animationName, w: cs.width };
+  const icon = await coachBtn(page).evaluate((b) => {
+    const cs = getComputedStyle(b.querySelector(".p-dot"));
+    return { anim: cs.animationName, stepAnim: getComputedStyle(b.querySelector(".p-step")).animationName };
   });
-  expect(ring).toEqual({ anim: "none", w: "9px" });
+  expect(icon).toEqual({ anim: "none", stepAnim: "none" });
   release(200);
   await context.close();
 });

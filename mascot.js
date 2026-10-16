@@ -1,33 +1,33 @@
-/* Etqadem coach mascot: one shared drawing for the chat FAB/header (chat.js)
-   and the Coach hero/result (coach.js). It is the stair-climber logo's teal
-   head with a headband and the logo's three steps, so it reads as the same
-   family. All colours come from CSS custom properties (see .etq-mascot in
-   styles.css), so it follows light/dark/auto and the women-plan accent.
-   EtqademMascot.create({ size, tone, live }) returns a decorative <svg>
-   (aria-hidden). tone "brand" (default) sits on a surface; tone "on-primary"
-   sits on a --primary fill (FAB, chat header). live adds an occasional blink. */
+/* Etqadem coach icon, "Pacer": the brand's three steps with an accent dot that
+   climbs them. One shared drawing for the chat FAB/header (chat.js), the Coach
+   hero/result (coach.js) and the celebration card (celebrate.js); the bottom-nav
+   Coach icon in index.html uses the same markup. Colours and the climb animation
+   live in styles.css (.etq-pacer), so it follows light/dark/auto, the women-plan
+   accent, RTL and reduced motion.
+   EtqademMascot.create({ size, tone, climb }) returns a decorative <svg>
+   (aria-hidden). tone "on-primary" sits on a --primary fill (FAB, chat header).
+   climb runs the hop animation (while a plan is generating); otherwise the dot
+   rests on the top step. */
 (function () {
   "use strict";
   var NS = "http://www.w3.org/2000/svg";
   var BODY =
-    '<rect class="m-step" x="6" y="52" width="16" height="10" rx="3"/>' +
-    '<rect class="m-step" x="24" y="46" width="16" height="16" rx="3"/>' +
-    '<rect class="m-step" x="42" y="40" width="16" height="22" rx="3"/>' +
-    '<circle class="m-head" cx="27" cy="25" r="17"/>' +
-    '<path class="m-band" d="M14.04 14H39.96L42.5 18H11.5Z"/>' +
-    '<circle class="m-face m-eye" cx="21" cy="25" r="2.6"/>' +
-    '<circle class="m-face m-eye" cx="33" cy="25" r="2.6"/>' +
-    '<path class="m-smile" d="M20 32Q27 38 34 32"/>';
+    '<g class="p-art">' +
+    '<rect class="p-step" style="--k:0" x="2" y="15" width="5" height="7" rx="1.5"/>' +
+    '<rect class="p-step" style="--k:1" x="9.5" y="11" width="5" height="11" rx="1.5"/>' +
+    '<rect class="p-step" style="--k:2" x="17" y="7" width="5" height="15" rx="1.5"/>' +
+    '<circle class="p-dot" cx="4.5" cy="11.5" r="2"/>' +
+    '</g>';
 
   function create(opts) {
     opts = opts || {};
     var svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", "0 0 64 64");
+    svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("focusable", "false");
     if (opts.size) { svg.setAttribute("width", opts.size); svg.setAttribute("height", opts.size); }
-    svg.setAttribute("class", "etq-mascot" +
-      (opts.tone === "on-primary" ? " on-primary" : "") + (opts.live ? " is-live" : ""));
+    svg.setAttribute("class", "etq-pacer" +
+      (opts.tone === "on-primary" ? " on-primary" : "") + (opts.climb ? " is-climbing" : ""));
     svg.innerHTML = BODY;
     return svg;
   }
