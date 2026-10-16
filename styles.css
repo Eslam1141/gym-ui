@@ -620,7 +620,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
   bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
   transform:translateX(-50%) translateY(10px);
   display:flex; align-items:center; gap:12px;
-  max-width:calc(100% - 32px);
+  max-width:calc(100% - 32px); width:max-content; /* left:50% would otherwise cap the shrink-to-fit width at half the screen */
   background:var(--panel2); border:1px solid var(--line); border-radius:12px;
   padding-block:6px; padding-inline:16px 8px; box-shadow:var(--elev-2, 0 14px 40px rgba(0,0,0,.45));
   opacity:0; pointer-events:none;
@@ -1104,6 +1104,24 @@ body:has(#timerBar.show) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-ar
 }
 #appNav button > *{ position:relative; }
 #appNav button svg{ width:22px; height:22px; fill:currentColor; }
+/* Background work on a tab (the Coach plan request): is-working shows a hollow ring
+   at the icon's corner (still, under reduced motion); has-update swaps it for a solid dot. */
+#appNav button.is-working::after{
+  content:""; position:absolute; top:calc(var(--pill-top) + 1px); inset-inline-start:calc(50% + 10px);
+  width:9px; height:9px; box-sizing:border-box; border-radius:50%;
+  border:2px solid var(--primary); background:var(--nav-bg);
+  animation:navWorking 1.2s var(--ease) infinite;
+}
+#appNav button.has-update::after{ display:none; }
+#appNav .nav-dot{
+  position:absolute; top:calc(var(--pill-top) + 1px); inset-inline-start:calc(50% + 10px);
+  width:10px; height:10px; box-sizing:border-box; border-radius:50%;
+  background:var(--primary); border:2px solid var(--nav-bg);
+}
+@keyframes navWorking{ 50%{ transform:scale(1.35); opacity:.45; } }
+@media (prefers-reduced-motion:reduce){
+  #appNav button.is-working::after{ animation:none; }
+}
 #appNav button[aria-current="page"]{ color:var(--primary-text); }
 #appNav button[aria-current="page"]::before{ transform:none; opacity:1; }
 #appNav button:hover:not([aria-current="page"]){ color:var(--ink); }
