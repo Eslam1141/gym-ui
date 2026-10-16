@@ -36,7 +36,7 @@ async function openAdmin(browser, { width = 1280, height = 900, lang = "en", the
 // Every row of the grid must run edge to edge: no holes at any breakpoint.
 async function gridIsGapFree(page) {
   return page.evaluate(() => {
-    const g = document.querySelector(".adm-grid").getBoundingClientRect();
+    const gel = document.querySelector(".adm-grid"), gap = parseFloat(getComputedStyle(gel).columnGap), g = gel.getBoundingClientRect();
     const rows = {};
     document.querySelectorAll(".adm-tile").forEach((t) => {
       const r = t.getBoundingClientRect();
@@ -44,11 +44,11 @@ async function gridIsGapFree(page) {
     });
     return Object.values(rows).every((rs) =>
       Math.abs(Math.min(...rs.map((r) => r.left)) - g.left) < 1 && Math.abs(Math.max(...rs.map((r) => r.right)) - g.right) < 1 &&
-      Math.abs(rs.reduce((a, r) => a + r.width, 0) - (g.width - (rs.length - 1) * 12)) < 2);
+      Math.abs(rs.reduce((a, r) => a + r.width, 0) - (g.width - (rs.length - 1) * gap)) < 2);
   });
 }
 
-for (const [name, width, cols] of [["desktop", 1280, 4], ["tablet", 700, 2], ["phone", 360, 1]]) {
+for (const [name, width, cols] of [["desktop", 1280, 4], ["tablet", 700, 2], ["phone", 360, 2]]) {
   test(`overview is a gap-free ${cols}-column tile grid (${name})`, async ({ browser }) => {
     const { context, page } = await openAdmin(browser, { width });
     const tpl = await page.locator(".adm-grid").evaluate((g) => getComputedStyle(g).gridTemplateColumns.split(" ").length);
@@ -57,6 +57,20 @@ for (const [name, width, cols] of [["desktop", 1280, 4], ["tablet", 700, 2], ["p
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.locator(".adm-card")).toHaveCount(7);
     await expect(page.locator(".adm-card .adm-ico")).toHaveCount(7);
+    await context.close();
+  });
+}
+
+for (const lang of ["en", "ar"]) {
+  test(`phone 360 (${lang}): 2-up KPI tiles, one-line scrollable tabs, no overflow`, async ({ browser }) => {
+    const { context, page } = await openAdmin(browser, { width: 360, lang });
+    expect(await gridIsGapFree(page)).toBe(true);
+    const w = await page.evaluate(() => [...document.querySelectorAll(".adm-card:not(.adm-t-wide)")].map((c) => Math.round(c.getBoundingClientRect().width)));
+    expect(new Set(w).size).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const tabs = await page.evaluate(() => [...document.querySelectorAll("#admTabs button")].map((b) => Math.round(b.getBoundingClientRect().height)));
+    expect(Math.max(...tabs)).toBeLessThan(60);
+    expect(await page.evaluate(() => { const n = document.getElementById("admTabs"); return n.scrollWidth > n.clientWidth; })).toBe(true);
     await context.close();
   });
 }
