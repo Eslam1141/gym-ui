@@ -53,6 +53,8 @@ test("Back closes the open sheet first, then exits the app", async ({ browser })
   await expect(page.locator("#feedbackSheet")).toHaveCount(0);
   expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
   await back(page);
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0); // first Back on Plan only warns
+  await back(page);
   expect(await page.evaluate(() => window.__shell.exit)).toBe(1);
   await context.close();
 });
@@ -75,6 +77,104 @@ test("Back with no layer open goes back in history when it can", async ({ browse
   await page.evaluate(() => { window.__hb = 0; history.back = () => { window.__hb++; }; });
   await back(page, true);
   expect(await page.evaluate(() => [window.__hb, window.__shell.exit])).toEqual([1, 0]);
+  await context.close();
+});
+
+const tabNow = (page) => page.evaluate(() => GymUI.currentTab());
+const goTab = (page, t) => page.click('#appNav button[data-tab="' + t + '"]');
+
+test("Back returns through tab switches, then Plan, then asks before exiting", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockShell(page);
+  await goTab(page, "food");
+  await goTab(page, "more");
+  expect(await tabNow(page)).toBe("more");
+  await back(page);
+  expect(await tabNow(page)).toBe("food");
+  await back(page);
+  expect(await tabNow(page)).toBe("plan");
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
+  await expect(page.locator("#gymToast")).toHaveCount(0);
+  await context.close();
+});
+
+test("Back from a non-home tab with no history goes to Plan", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await page.evaluate(() => localStorage.setItem("gym_tab", "food"));
+  await page.reload();
+  await page.waitForFunction(() => window.GymUI && window.GymNativeShell);
+  await mockShell(page);
+  expect(await tabNow(page)).toBe("food");
+  await back(page);
+  expect(await tabNow(page)).toBe("plan");
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
+  await context.close();
+});
+
+test("Back out of a sub-screen returns to its parent, then the previous tab", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true });
+  await mockShell(page);
+  await goTab(page, "coach");
+  await expect(page.locator("#coachBody")).toBeVisible();
+  await page.evaluate(() => GymCoach.myPlans());
+  await expect(page.locator(".coach-myplans-head")).toBeVisible();
+  await back(page);
+  await expect(page.locator(".coach-myplans-head")).toHaveCount(0);
+  expect(await tabNow(page)).toBe("coach");
+  await back(page);
+  expect(await tabNow(page)).toBe("plan");
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
+  await context.close();
+});
+
+test("on-screen Back of a sub-screen leaves no stale entry for hardware Back", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true });
+  await mockShell(page);
+  await goTab(page, "coach");
+  await page.evaluate(() => GymCoach.myPlans());
+  await page.click(".coach-myplans-head .coach-secondary");
+  await expect(page.locator(".coach-myplans-head")).toHaveCount(0);
+  await back(page);
+  expect(await tabNow(page)).toBe("plan");
+  await context.close();
+});
+
+test("Back on Plan: toast first, exit on the second press within 2 s, re-arms after", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockShell(page);
+  await back(page);
+  await expect(page.locator("#gymToast")).toContainText("Press back again to exit");
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
+  await page.screenshot({ path: process.env.BACK_SHOT || "test-results/exit-toast.png" });
+  await back(page);
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(1);
+  // a lone press after the window only warns again
+  await page.evaluate(() => { window.__now = Date.now; });
+  await page.evaluate(() => { const t = Date.now(); Date.now = () => t + 5000; });
+  await back(page);
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(1);
+  await context.close();
+});
+
+test("exit warning is in Arabic when the app is", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false, lang: "ar" });
+  await mockShell(page);
+  await back(page);
+  await expect(page.locator("#gymToast")).toContainText("اضغط رجوع مرة أخرى للخروج");
+  await context.close();
+});
+
+test("a sheet closes before any tab or sub-screen Back", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockShell(page);
+  await goTab(page, "food");
+  await page.click("#feedbackBtn");
+  await expect(page.locator("#feedbackSheet [role=dialog]")).toBeVisible();
+  await back(page);
+  await expect(page.locator("#feedbackSheet")).toHaveCount(0);
+  expect(await tabNow(page)).toBe("food");
+  await back(page);
+  expect(await tabNow(page)).toBe("plan");
   await context.close();
 });
 
