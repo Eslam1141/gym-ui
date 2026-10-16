@@ -54,6 +54,10 @@ sets
 reps
 150s
 rest
+Set 1 · ⁦6-8⁩ reps
+Set 2 · ⁦6-8⁩ reps
+Set 3 · ⁦6-8⁩ reps
+Set 4 · ⁦6-8⁩ reps
 kg
 reps
 Save
@@ -67,6 +71,10 @@ sets
 reps
 120s
 rest
+Set 1 · ⁦8-10⁩ reps
+Set 2 · ⁦8-10⁩ reps
+Set 3 · ⁦8-10⁩ reps
+Set 4 · ⁦8-10⁩ reps
 kg
 reps
 Save
@@ -80,6 +88,9 @@ sets
 reps
 75s
 rest
+Set 1 · ⁦10-12⁩ reps
+Set 2 · ⁦10-12⁩ reps
+Set 3 · ⁦10-12⁩ reps
 kg
 reps
 Save
@@ -93,6 +104,10 @@ sets
 reps
 90s
 rest
+Set 1 · ⁦8-10⁩ reps
+Set 2 · ⁦8-10⁩ reps
+Set 3 · ⁦8-10⁩ reps
+Set 4 · ⁦8-10⁩ reps
 kg
 reps
 Save
@@ -106,6 +121,9 @@ sets
 reps
 30s
 rest
+Set 1 · ⁦15-20⁩ reps
+Set 2 · ⁦15-20⁩ reps
+Set 3 · ⁦15-20⁩ reps
 kg
 reps
 Save
@@ -119,6 +137,9 @@ sets
 reps
 30s
 rest
+Set 1 · ⁦15-20⁩ reps
+Set 2 · ⁦15-20⁩ reps
+Set 3 · ⁦15-20⁩ reps
 kg
 reps
 Save

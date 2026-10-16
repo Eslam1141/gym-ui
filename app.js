@@ -453,6 +453,7 @@ const T = {
   warmup2:["<b>Loosen the day's joints</b> — 5-8 slow reps each. Upper-body days: band pull-aparts, shoulder dislocates, arm circles, cat-cow. Lower-body days: leg swings front & side, hip circles, 10 bodyweight squats, walking lunges.","<b>حرّك مفاصل اليوم</b> — 5-8 تكرارات بطيئة لكل حركة. أيام الجزء العلوي: شد المطاط، تدوير الكتف والذراعين، القطة-البقرة. أيام الجزء السفلي: أرجحة الساق أماماً وجانباً، تدوير الورك، 10 سكوات بوزن الجسم، طعنات مشي."],
   warmup3:["<b>Ramp up the first lift only</b> — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.","<b>تدرّج في التمرين الأول فقط</b> — بار فارغ ×10، ثم ~50% ×5، ~70% ×3، ~85% ×1. استرِح 60-90 ثانية وأوقف كل مجموعة قبل الإجهاد. (في الكاليسثينكس: مجموعة خفيفة واحدة من الحركة الأولى.)"],
   warmup4:["<b>Start working set 1.</b> Isolation moves (raises, curls, extensions) need just one light feeder set.","<b>ابدأ المجموعة الأولى الفعلية.</b> تمارين العزل (الرفرفة، المرجحة، التمديد) تحتاج مجموعة تحضيرية خفيفة واحدة فقط."],
+  setsGroup:["Sets","المجموعات"], setLblReps:["Set {n} · {r} reps","المجموعة {n} · {r} تكرار"], setLblSec:["Set {n} · {r} sec","المجموعة {n} · {r} ث"], setLblRaw:["Set {n} · {r}","المجموعة {n} · {r}"],
   sets:["sets","مجموعات"], reps:["reps","تكرار"], rest:["rest","راحة"],
   save:["Save","حفظ"], saved:["✓ Saved","✓ تم الحفظ"], restBtn:["Rest","راحة"],
   lastLog:["Last: {w} kg × {r}","الأخير: {w} كجم × {r}"],
@@ -1041,6 +1042,33 @@ function notifySync(key){
 }
 
 let checks = loadJSON("gym_checks", {});
+// Per-set ticks, keyed like gym_checks ("YYYY-MM-DD_dayId"): { exId: [bool, ...] }.
+// Only today's keys are kept, so the sets start empty again on a new day.
+let setChecks = loadJSON("gym_setchecks", {});
+function saveSetChecks(){
+  const today = todayStr() + "_";
+  Object.keys(setChecks).forEach(k=>{ if(k.indexOf(today) !== 0) delete setChecks[k]; });
+  saveJSON("gym_setchecks", setChecks);
+}
+function setCount(ex){ return Math.min(10, Math.max(1, parseInt(ex.sets, 10) || 1)); }
+// Stored ticks, or all/none when the exercise was marked done another way
+// (the big checkbox, "save yesterday") and has no per-set record.
+function setState(key, ex, done){
+  const n = setCount(ex), saved = (setChecks[key] || {})[ex.id];
+  return Array.from({length:n}, (_, i)=> Array.isArray(saved) ? !!saved[i] : done);
+}
+function setLabel(ex, n){
+  const reps = String(ex.reps == null ? "" : ex.reps).trim();
+  const m = /^(\d+(?:\s*[-–]\s*\d+)?)\s*(?:s|secs?|seconds?)\b/i.exec(reps);
+  const tpl = m ? "setLblSec" : (/^\d+(?:\s*[-–]\s*\d+)?$/.test(reps) ? "setLblReps" : "setLblRaw");
+  return t(tpl).replace("{n}", n).replace("{r}", "⁦" + (m ? m[1] : reps) + "⁩"); // isolate the range so RTL does not flip "6-8"
+}
+function hapticTick(){
+  try {
+    const h = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Haptics;
+    if(h && typeof h.impact === "function") h.impact({ style:"LIGHT" });
+  } catch(e){}
+}
 let weights = loadJSON("gym_weights", {});
 let sessions = loadJSON("gym_sessions", {});
 let activeSession = loadJSON("gym_session_active", null);
@@ -1174,6 +1202,12 @@ function renderExercises(){
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
         <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
+      <div class="set-row" role="group" aria-label="${t("setsGroup")}">
+        ${setState(key, ex, done).map((on, si)=>`<button type="button" class="set-chk${on?' on':''}" role="checkbox" aria-checked="${on}" data-set-ex="${eid}" data-set="${si}">
+          <span class="set-box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
+          <span class="set-txt">${esc(setLabel(ex, si + 1))}</span>
+        </button>`).join("")}
+      </div>
       <div class="ex-actions">
         ${tsec ? `<button class="btn-sm ex-start" data-extimer="${eid}" data-sec="${tsec}" data-name="${nm}">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -1214,30 +1248,73 @@ function renderExercises(){
   animateCards = false;
 
   // --- checkbox: flip just this card, no list rebuild ---
+  // Single path for "exercise done" so the big checkbox and the last set tick
+  // share the same progress / streak / calendar side effects.
+  function setExDone(id, on){
+    const k = sessionKey(activeDay);
+    const wasComplete = isDayComplete(activeDay);
+    checks[k] = checks[k] || {};
+    checks[k][id] = on;
+    saveJSON("gym_checks", checks);
+    const el = exList.querySelector(`.check[data-id="${id}"]`);
+    if(el){
+      const was = el.classList.contains("on");
+      el.classList.toggle("on", on);
+      if(on && !was && window.GymMotion) GymMotion.pop(el);
+      const card = el.closest(".ex-card");
+      if(card) card.classList.toggle("done", on);
+    }
+    updateProgress();
+    // Record the moment this day's checklist *transitions* to complete
+    // (not on every click once already complete) so applyDayRotation()
+    // can auto-select the next day in rotation on a later day's visit.
+    if(!wasComplete && isDayComplete(activeDay)){
+      saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
+      if(window.GymCelebrate) GymCelebrate.day(activeDay);
+    }
+    if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
+      window.GymCalendar.onCheckChanged(activeDay, todayStr());
+    }
+  }
+  function paintSets(id, state){
+    exList.querySelectorAll(`.set-chk[data-set-ex="${id}"]`).forEach((b, i)=>{
+      b.classList.toggle("on", !!state[i]);
+      b.setAttribute("aria-checked", String(!!state[i]));
+    });
+  }
   exList.querySelectorAll(".check").forEach(el=>{
     el.onclick = ()=>{
       const id = el.dataset.id;
       const k = sessionKey(activeDay);
-      const wasComplete = isDayComplete(activeDay);
-      checks[k] = checks[k] || {};
-      checks[k][id] = !checks[k][id];
-      saveJSON("gym_checks", checks);
-      const on = !!checks[k][id];
-      el.classList.toggle("on", on);
-      if(on && window.GymMotion) GymMotion.pop(el);
-      const card = el.closest(".ex-card");
-      if(card) card.classList.toggle("done", on);
-      updateProgress();
-      // Record the moment this day's checklist *transitions* to complete
-      // (not on every click once already complete) so applyDayRotation()
-      // can auto-select the next day in rotation on a later day's visit.
-      if(!wasComplete && isDayComplete(activeDay)){
-        saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
-        if(window.GymCelebrate) GymCelebrate.day(activeDay);
+      const on = !((checks[k] || {})[id]);
+      const ex = day.exercises.find(x=>x.id===id);
+      if(ex){
+        const st = Array(setCount(ex)).fill(on);
+        setChecks[k] = setChecks[k] || {};
+        setChecks[k][id] = st;
+        saveSetChecks();
+        paintSets(id, st);
       }
-      if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
-        window.GymCalendar.onCheckChanged(activeDay, todayStr());
-      }
+      setExDone(id, on);
+    };
+  });
+
+  // --- set checkboxes: all sets ticked = exercise done, untick one = not done ---
+  exList.querySelectorAll(".set-chk").forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.setEx, i = +btn.dataset.set;
+      const k = sessionKey(activeDay);
+      const ex = day.exercises.find(x=>x.id===id);
+      if(!ex) return;
+      const st = setState(k, ex, !!(checks[k] || {})[id]);
+      st[i] = !st[i];
+      setChecks[k] = setChecks[k] || {};
+      setChecks[k][id] = st;
+      saveSetChecks();
+      paintSets(id, st);
+      if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn.querySelector(".set-box")); }
+      const all = st.every(Boolean);
+      if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
     };
   });
 
@@ -1409,9 +1486,12 @@ document.addEventListener("gym:restchange", ()=>{ if(restSlot !== null && weekSl
 document.getElementById("resetLink").onclick = ()=>{
   const dayKey = sessionKey(activeDay);
   const prevChecks = checks[dayKey];
-  if(prevChecks === undefined) return; // nothing to reset
+  const prevSets = setChecks[dayKey];
+  if(prevChecks === undefined && prevSets === undefined) return; // nothing to reset
   delete checks[dayKey];
+  delete setChecks[dayKey];
   saveJSON("gym_checks", checks);
+  saveSetChecks();
   animateCards = true;
   renderAll();
   if(window.GymToast && typeof window.GymToast.show === "function"){
@@ -1426,6 +1506,8 @@ document.getElementById("resetLink").onclick = ()=>{
         // they're the more recent user action.
         checks[dayKey] = Object.assign({}, prevChecks, checks[dayKey]);
         saveJSON("gym_checks", checks);
+        if(prevSets) setChecks[dayKey] = Object.assign({}, prevSets, setChecks[dayKey]);
+        saveSetChecks();
         animateCards = true;
         renderAll();
       }
