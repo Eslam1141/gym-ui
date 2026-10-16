@@ -171,6 +171,11 @@
     errBody: ["The coach service isn't responding right now. Please try again in a moment.", "خدمة المدرّب لا تستجيب حالياً. يرجى المحاولة بعد قليل."],
     err502: ["The AI service is temporarily unavailable. Please try again shortly.", "خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. حاول بعد قليل."],
     retry: ["Try again", "أعد المحاولة"],
+    readyToast: ["Your plan is ready", "خطتك جاهزة"],
+    readyOpen: ["View plan", "اعرض الخطة"],
+    failToast: ["Couldn't build your plan", "تعذّر بناء خطتك"],
+    failOpen: ["See why", "التفاصيل"],
+    navReady: ["New plan ready", "خطة جديدة جاهزة"],
     refusedTitle: ["Let's keep this safe", "لنُبقِ الأمر آمناً"],
     histEmpty: ["No past assessments yet.", "لا توجد تقييمات سابقة بعد."],
     histOpen: ["Open", "افتح"],
@@ -1124,11 +1129,57 @@
   }
 
   // One assessment request at a time (GymAct.once holds until the promise settles).
+  // `inflight` tracks it across tab switches: returning to Coach re-shows the
+  // loading view, and a result that lands while the user is elsewhere is held
+  // in `deferred` (painted on the next refresh) and announced by toast + nav dot.
+  var inflight = false;
+  var deferred = null;
   var runAssessment = GymAct.once(function (reqBody, strong) { return runAssessmentRaw(reqBody, strong); });
+  function onCoach() { return document.body.getAttribute("data-tab") === "coach"; }
+  function coachNavBtn() { return document.querySelector('#appNav button[data-tab="coach"]'); }
+  function setWorking(on) {
+    inflight = on;
+    var b = coachNavBtn();
+    if (!b) return;
+    b.classList.toggle("is-working", on);
+    if (on) b.setAttribute("aria-busy", "true"); else b.removeAttribute("aria-busy");
+  }
+  function setReadyDot(on) {
+    var b = coachNavBtn();
+    if (!b) return;
+    var dot = b.querySelector(".nav-dot");
+    if (on && !dot) {
+      b.classList.add("has-update");
+      b.appendChild(h("span", { class: "nav-dot" }, h("span", { class: "sr-only" }, s("navReady"))));
+    } else if (!on && dot) {
+      b.classList.remove("has-update");
+      dot.remove();
+    }
+  }
+  // navigate() flips data-tab inside the view transition, after refresh() ran,
+  // so the dot clears off the attribute itself.
+  new MutationObserver(function () { if (onCoach()) setReadyDot(false); })
+    .observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+  // Paint `show` now when Coach is open; otherwise hold it for the return and
+  // tell the user (toast with a button that opens Coach, plus the nav dot).
+  function present(show, ok) {
+    if (onCoach()) { show(); return; }
+    deferred = show;
+    setReadyDot(true);
+    if (window.GymToast) {
+      GymToast.show({
+        message: s(ok ? "readyToast" : "failToast"),
+        actionLabel: s(ok ? "readyOpen" : "failOpen"),
+        onAction: function () { if (window.GymUI && GymUI.navigate) GymUI.navigate("coach"); },
+        duration: 9000
+      });
+    }
+  }
   function runAssessmentRaw(reqBody, strong) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     renderLoading();
+    setWorking(true);
     var url = ASSIST_BASE + "/assessment" + (strong ? "?model=strong" : "");
     return fetchTimeout(url, {
       method: "POST",
@@ -1136,7 +1187,7 @@
       body: JSON.stringify(reqBody)
     }).then(function (res) {
       if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); return null; }
-      if (res.status === 429) { renderQuota(res.headers.get("X-RateLimit-Reset")); return null; }
+      if (res.status === 429) { var reset = res.headers.get("X-RateLimit-Reset"); present(function () { renderQuota(reset); }, false); return null; }
       return res.json().then(function (body) { return { status: res.status, body: body }; })
         .catch(function () { return { status: res.status, body: null }; });
     }).then(function (r) {
@@ -1146,16 +1197,20 @@
       if (r.status === 200 && r.body) {
         r.body._reqStrong = strong;
         saveJSON(LAST_KEY, r.body);
-        renderResult(r.body);
+        present(function () { renderResult(r.body); }, true);
       } else if (r.status === 422) {
-        renderRefusal((r.body && r.body.error && r.body.error.message) || "");
+        present(function () { renderRefusal((r.body && r.body.error && r.body.error.message) || ""); }, false);
       } else {
         if (window.console) console.warn("[coach] assessment failed", r.status, r.body);
-        renderError(reqBody, strong, r.status);
+        present(function () { renderError(reqBody, strong, r.status); }, false);
       }
     }).catch(function (err) {
       if (window.console) console.warn("[coach] assessment error", err && err.message);
-      renderError(reqBody, strong, 0);
+      present(function () { renderError(reqBody, strong, 0); }, false);
+    }).then(function () {
+      setWorking(false);
+      // 401 / sign-in prompts leave nothing to show: drop the stale loading view.
+      if (onCoach() && document.querySelector("#coachBody .coach-ai-loading")) refresh();
     });
   }
 
@@ -1567,7 +1622,9 @@
   function refresh() {
     if (!document.getElementById("coachBody")) return;
     var authed = window.GymUI && GymUI.isAuthed && GymUI.isAuthed();
-    if (!authed) { renderTeaser(); return; }
+    if (!authed) { deferred = null; renderTeaser(); return; }
+    if (inflight) { renderLoading(); return; }
+    if (deferred) { var d = deferred; deferred = null; d(); return; }
     var last = loadJSON(LAST_KEY, null);
     if (last && last.computed) renderResult(last);
     else renderForm();
