@@ -77,6 +77,35 @@
     visceralFatLevel: ["Visceral fat level", "مستوى الدهون الحشوية"],
     bmrKcal: ["Measured BMR (kcal)", "معدل الأيض المُقاس (سعرة)"],
     notes: ["Notes", "ملاحظات"],
+    ibTitle: ["Read numbers from a photo (optional)", "قراءة الأرقام من صورة (اختياري)"],
+    ibNotice: ["We send your photo to Anthropic, our AI provider in the United States, only to read 5 numbers: body fat %, skeletal muscle mass, visceral fat level, BMR and weight. We don't save the photo. Anthropic normally deletes it within 30 days and doesn't use it to train AI. Only the numbers you keep in the form are saved, with your plan. You can type the numbers yourself instead.",
+      "نرسل صورتك إلى شركة Anthropic، مزوّد الذكاء الاصطناعي لدينا في الولايات المتحدة الأمريكية، لقراءة 5 أرقام فقط: نسبة الدهون، والكتلة العضلية الهيكلية، ومستوى الدهون الحشوية، ومعدل الأيض الأساسي، والوزن. لا نحتفظ بالصورة، وتحذفها Anthropic عادةً خلال 30 يومًا ولا تستخدمها في تدريب الذكاء الاصطناعي. ولا يُحفظ إلا الأرقام التي تُبقيها في النموذج، وذلك مع خطتك. ويمكنك بدلًا من ذلك كتابة الأرقام بنفسك."],
+    ibConsent: ["I agree to send this photo, which includes my health information, to Anthropic in the United States for this purpose. I can withdraw this at any time in More → Privacy & data.",
+      "أوافق على إرسال هذه الصورة، التي تتضمن معلومات صحية عني، إلى شركة Anthropic في الولايات المتحدة الأمريكية لهذا الغرض، ويمكنني سحب هذه الموافقة في أي وقت من: المزيد ← الخصوصية والبيانات."],
+    ibRepeat: ["Sent to Anthropic (US) to read the numbers; we don't save the photo. Crop out your name and ID.",
+      "تُرسل إلى Anthropic (الولايات المتحدة) لقراءة الأرقام، ولا نحتفظ بالصورة. احذف اسمك ورقم هويتك من الصورة."],
+    ibChange: ["Change", "تغيير"],
+    ibCrop: ["Keep only the results table. Your name, ID and phone number aren't needed. Crop the photo, or cover them before taking it.",
+      "أبقِ جدول النتائج فقط؛ فلا حاجة إلى اسمك أو رقم هويتك أو رقم هاتفك. قصّ الصورة، أو غطِّها قبل التصوير."],
+    ibChoose: ["Choose photo", "اختر صورة"],
+    ibTypeInstead: ["Type numbers instead", "أكتب الأرقام بنفسي"],
+    ibReading: ["Reading your photo…", "جارٍ قراءة صورتك…"],
+    ibFilled: ["Filled {n} fields. Check these numbers against your printout. AI can misread them.",
+      "تمت تعبئة {n} حقول. راجع هذه الأرقام وقارنها بورقة النتائج، فقد يخطئ الذكاء الاصطناعي في قراءتها."],
+    ibNone: ["We couldn't find any numbers in that photo. Try a sharper, straight-on shot, or type them in.",
+      "لم نجد أي أرقام في هذه الصورة. جرّب صورة أوضح ومن الأمام، أو اكتب الأرقام بنفسك."],
+    ibFromPhoto: ["From photo", "من الصورة"],
+    ibBadImg: ["That file couldn't be opened as an image.", "تعذّر فتح هذا الملف كصورة."],
+    ibTooBig: ["That photo is too large. Try a smaller one.", "هذه الصورة كبيرة جداً. جرّب صورة أصغر."],
+    ibErr415: ["Use a JPEG, PNG or WebP photo.", "استخدم صورة بصيغة JPEG أو PNG أو WebP."],
+    ibErr422: ["We couldn't read that photo. Try a clearer, straight-on shot, or type the numbers in. This try used one of today's plan requests.",
+      "لم نتمكن من قراءة الصورة. جرّب صورة أوضح ومن الأمام، أو اكتب الأرقام بنفسك. استُهلكت بهذه المحاولة إحدى طلبات الخطط اليوم."],
+    ibErr429: ["You've reached today's limit for plans and photos. Try again tomorrow, or type the numbers in.",
+      "بلغت حدّ اليوم للخطط والصور. حاول غداً، أو اكتب الأرقام بنفسك."],
+    ibErr503: ["The photo reader is busy right now. Try again in a minute.", "قارئ الصور مشغول حالياً. حاول بعد دقيقة."],
+    ibErrGen: ["Couldn't upload the photo. Check your connection and try again.", "تعذّر رفع الصورة. تحقق من اتصالك وحاول مرة أخرى."],
+    resTips: ["Key tips", "نصائح أساسية"],
+    ringLabel: ["Calories from protein {p}%, carbs {c}%, fat {f}%", "السعرات من البروتين {p}%، الكارب {c}%، الدهون {f}%"],
     generate: ["Generate my plan", "أنشئ خطتي"],
     generating: ["Building your plan… this can take 15–30s", "جارٍ بناء خطتك… قد تستغرق 15–30 ثانية"],
     wbEntryBtn: ["Customize your own plan", "خصص خطتك الخاصة"],
@@ -231,8 +260,11 @@
   function downloadPdfFallback() {
     var prev = document.title, done = false;
     document.title = s("pdfTitle") + " — " + fmtDate(Date.now());
+    var shut = Array.prototype.filter.call(document.querySelectorAll(".coach-result details"), function (d) { return !d.open; });
+    shut.forEach(function (d) { d.open = true; }); // a closed <details> prints empty
     var restore = function () {
       if (done) return; done = true;
+      shut.forEach(function (d) { d.open = false; });
       document.title = prev;
       window.removeEventListener("afterprint", restore);
     };
@@ -286,6 +318,7 @@
           var root = clonedCard || clonedDoc.querySelector(".coach-result");
           if (!root) return;
           root.querySelectorAll(".coach-actions, .coach-links").forEach(function (el) { el.style.display = "none"; });
+          root.querySelectorAll("details").forEach(function (d) { d.open = true; }); // saved image carries the whole plan
           var head = root.querySelector(".coach-print-head");
           if (head) head.style.display = "block";
         }
@@ -303,6 +336,57 @@
         }, "image/png");
       }, function () { downloadPdfFallback(); });
     } catch (e) { downloadPdfFallback(); }
+  }
+
+  // ---------------- InBody photo -> prefill ----------------
+  var IB_MAX_EDGE = 1568;          // px, long edge after re-encode
+  var IB_MAX_BYTES = 880 * 1024;   // server takes <=900 KB; stay under
+  var IB_IN_MAX = 15 * 1024 * 1024; // refuse absurd inputs before decoding
+  var IB_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  var IB_QUALITY = [0.85, 0.7, 0.55, 0.4];
+  // Testers only until consent is recorded server-side: off unless etq_ff_inbody === "1".
+  function inbodyUploadOn() {
+    try { return localStorage.getItem("etq_ff_inbody") === "1"; } catch (e) { return false; }
+  }
+  var ibConsented = false; // this session only; a server-side record is a backend follow-up
+  var IB_FIELDS = ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal", "weightKg"];
+
+  function decodeImage(file) {
+    function viaImg() {
+      return new Promise(function (resolve, reject) {
+        var url = URL.createObjectURL(file), im = new Image();
+        im.onload = function () { URL.revokeObjectURL(url); resolve(im); };
+        im.onerror = function () { URL.revokeObjectURL(url); reject(new Error("decode")); };
+        im.src = url;
+      });
+    }
+    return window.createImageBitmap ? createImageBitmap(file).catch(viaImg) : viaImg();
+  }
+  // Re-encode through a canvas: long edge <= 1568px, JPEG q~0.85, stepping the
+  // quality (then the size) down until it fits. A canvas export carries no
+  // EXIF, so camera GPS/device data never leaves the phone.
+  function downscaleImage(file) {
+    return decodeImage(file).then(function (img) {
+      var w = img.naturalWidth || img.width, ht = img.naturalHeight || img.height;
+      if (!w || !ht) throw new Error("decode");
+      var k = Math.min(1, IB_MAX_EDGE / Math.max(w, ht));
+      function encode(cw, ch, qi) {
+        var cv = document.createElement("canvas");
+        cv.width = cw; cv.height = ch;
+        var ctx = cv.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cw, ch); // PNG/WebP transparency -> white, not black
+        ctx.drawImage(img, 0, 0, cw, ch);
+        return new Promise(function (resolve) { cv.toBlob(resolve, "image/jpeg", IB_QUALITY[qi]); }).then(function (blob) {
+          if (!blob) throw new Error("encode");
+          if (blob.size <= IB_MAX_BYTES) return blob;
+          if (qi + 1 < IB_QUALITY.length) return encode(cw, ch, qi + 1);
+          if (cw > 640) return encode(Math.round(cw * 0.8), Math.round(ch * 0.8), IB_QUALITY.length - 1);
+          throw new Error("toobig");
+        });
+      }
+      return encode(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(ht * k)), 0)
+        .finally(function () { if (img.close) img.close(); });
+    });
   }
 
   // ---------------- field spec (drives render + validation) ----------------
@@ -714,7 +798,109 @@
     form.appendChild(dietGroup);
 
     // InBody (collapsible, optional)
+    var ibFile = h("input", { type: "file", id: "coachIbFile", class: "coach-ib-file", accept: IB_TYPES.join(",") });
+    var ibStatus = h("p", { class: "coach-ib-status", role: "status", "aria-live": "polite" });
+    var ibBusy = false;
+    function ibGate() { ibFile.disabled = ibBusy || !ibConsented; }
+    function ibSay(text, kind) { ibStatus.textContent = text; ibStatus.className = "coach-ib-status" + (kind ? " is-" + kind : ""); }
+    function ibClearMarks() {
+      form.querySelectorAll(".is-prefilled").forEach(function (f) {
+        f.classList.remove("is-prefilled");
+        var t = f.querySelector(".coach-prefill-tag"); if (t) t.remove();
+      });
+    }
+    function ibApply(data) {
+      var n = 0;
+      ibClearMarks();
+      IB_FIELDS.forEach(function (k) {
+        var v = Number(data && data[k]);
+        if (data == null || data[k] == null || !isFinite(v)) return;
+        v = (k === "visceralFatLevel" || k === "bmrKcal") ? Math.round(v) : round(v, 1);
+        var input = form.querySelector('[name="' + k + '"]');
+        if (!input) return;
+        st[k] = String(v);
+        input.value = st[k];
+        var fEl = input.closest(".coach-field");
+        if (fEl) {
+          fEl.classList.add("is-prefilled");
+          fEl.querySelector(".coach-field-l").appendChild(h("span", { class: "coach-prefill-tag" }, s("ibFromPhoto")));
+        }
+        n++;
+      });
+      persist(); refreshValidity();
+      if (!n) { ibSay(s("ibNone"), "error"); return; }
+      ibSay(msg(["ibFilled", { n: n }]), "ok");
+    }
+    function ibFail(status) {
+      var key = status === 413 ? "ibTooBig" : status === 415 ? "ibErr415" : status === 422 ? "ibErr422"
+        : status === 429 ? "ibErr429" : status === 503 ? "ibErr503" : "ibErrGen";
+      ibSay(s(key), "error");
+    }
+    function ibUploadFile(file) {
+      var token = authToken();
+      if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
+      if (IB_TYPES.indexOf(file.type) === -1) { ibFail(415); return; }
+      if (file.size > IB_IN_MAX) { ibFail(413); return; }
+      ibBusy = true; ibGate();
+      ibSay(s("ibReading"), "busy");
+      downscaleImage(file).then(function (blob) {
+        var fd = new FormData();
+        fd.append("image", blob, "inbody.jpg");
+        return fetchTimeout(ASSIST_BASE + "/inbody/extract", {
+          method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd
+        });
+      }).then(function (res) {
+        if (res.status === 401) { ibSay("", ""); if (window.GymUI) GymUI.promptSignIn(); return; }
+        if (!res.ok) { ibFail(res.status); return; }
+        return res.json().then(ibApply, function () { ibFail(0); });
+      }).catch(function (err) {
+        ibSay(s(err && err.message === "decode" ? "ibBadImg" : err && err.message === "toobig" ? "ibTooBig" : "ibErrGen"), "error");
+      }).then(function () { ibBusy = false; ibGate(); });
+    }
+    ibFile.addEventListener("change", function () {
+      var f = ibFile.files && ibFile.files[0];
+      ibFile.value = ""; // picking the same photo again must fire change again
+      if (f && !ibBusy) ibUploadFile(f);
+    });
+    // typing over a photo-filled value means the user has reviewed it
+    form.addEventListener("input", function (e) {
+      var fEl = e.target.closest && e.target.closest(".is-prefilled");
+      if (!fEl) return;
+      fEl.classList.remove("is-prefilled");
+      var t = fEl.querySelector(".coach-prefill-tag"); if (t) t.remove();
+    });
+    var ibUpload = null;
+    if (inbodyUploadOn()) {
+      var ibAsk = h("div", { class: "coach-ib-ask" });
+      var ibAgree = h("input", { type: "checkbox", id: "coachIbAgree" });
+      var ibPaint = function () {
+        ibAsk.innerHTML = "";
+        if (ibConsented) {
+          ibAsk.appendChild(h("p", { class: "coach-ib-repeat" }, s("ibRepeat") + " ",
+            h("button", { type: "button", class: "coach-link", on: { click: function () { ibConsented = false; ibAgree.checked = false; ibPaint(); } } }, s("ibChange"))));
+        } else {
+          ibAsk.appendChild(h("p", { class: "coach-ib-notice" }, s("ibNotice")));
+          ibAsk.appendChild(h("label", { class: "coach-check coach-ib-agree", for: "coachIbAgree" }, ibAgree, h("span", {}, s("ibConsent"))));
+        }
+        ibGate();
+      };
+      ibAgree.addEventListener("change", function () { ibConsented = ibAgree.checked; ibGate(); }); // box stays on screen once ticked; the short repeat line shows from the next render
+      ibUpload = h("div", { class: "coach-ib-upload" },
+        h("h4", { class: "coach-ib-h" }, s("ibTitle")),
+        ibAsk,
+        h("p", { class: "coach-ib-crop" }, s("ibCrop")),
+        h("div", { class: "coach-ib-btns" },
+          ibFile,
+          h("label", { class: "coach-ib-pick", for: "coachIbFile" }, s("ibChoose")),
+          h("button", { type: "button", class: "coach-secondary coach-ib-type", on: { click: function () {
+            ibUpload.hidden = true;
+            var first = form.querySelector('input[name="bodyFatPct"]'); if (first) first.focus();
+          } } }, s("ibTypeInstead"))),
+        ibStatus);
+      ibPaint();
+    }
     var ibBody = h("div", { class: "coach-ib-body" },
+      ibUpload,
       h("div", { class: "coach-row" },
         field("bodyFatPct", "bodyFatPct", numInput("bodyFatPct", st.bodyFatPct)),
         field("skeletalMuscleMassKg", "skeletalMuscleMassKg", numInput("skeletalMuscleMassKg", st.skeletalMuscleMassKg))),
@@ -899,7 +1085,7 @@
     document.querySelectorAll(".coach-tip-btn.open").forEach(function (b) { b.classList.remove("open"); });
   });
 
-  function statTile(labelKey, value, unit, explainKey) {
+  function statTile(labelKey, value, unit, explainKey, mod, sub) {
     var lbl = h("div", { class: "coach-stat-l" }, s(labelKey));
     if (explainKey) {
       var info = h("button", {
@@ -913,9 +1099,83 @@
       }, "i", h("span", { class: "coach-tip", role: "tooltip" }, s(explainKey)));
       lbl.appendChild(info);
     }
-    return h("div", { class: "coach-stat" },
+    return h("div", { class: "coach-stat" + (mod ? " " + mod : "") },
       h("div", { class: "coach-stat-v" }, String(value), unit ? h("span", {}, " " + unit) : null),
-      lbl);
+      lbl,
+      sub ? h("div", { class: "coach-stat-sub" }, sub) : null);
+  }
+
+  // Donut of where the target calories come from (protein/carbs 4 kcal/g,
+  // fat 9). Arcs grow in once on paint; reduced motion draws them finished.
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS(SVG_NS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    return n;
+  }
+  function macroShares(c) {
+    var kc = { p: (c.proteinG || 0) * 4, c: (c.carbG || 0) * 4, f: (c.fatG || 0) * 9 };
+    var tot = kc.p + kc.c + kc.f;
+    if (!(tot > 0)) return null;
+    return { p: kc.p / tot, c: kc.c / tot, f: kc.f / tot };
+  }
+  function macroRing(sh) {
+    var R = 46, C = 2 * Math.PI * R, GAP = 3.5;
+    var pct = function (x) { return Math.round(x * 100); };
+    var svg = svgEl("svg", { viewBox: "0 0 120 120", class: "coach-ring", role: "img",
+      "aria-label": msg(["ringLabel", { p: pct(sh.p), c: pct(sh.c), f: pct(sh.f) }]) });
+    svg.appendChild(svgEl("circle", { cx: 60, cy: 60, r: R, class: "coach-ring-track" }));
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var start = 0, arcs = [];
+    ["p", "c", "f"].forEach(function (k) {
+      var len = Math.max(0, sh[k] * C - GAP);
+      var arc = svgEl("circle", { cx: 60, cy: 60, r: R, class: "coach-ring-arc coach-ring-" + k,
+        transform: "rotate(-90 60 60)", "stroke-dashoffset": String(-start),
+        "stroke-dasharray": reduce ? len + " " + (C - len) : "0 " + C });
+      start += sh[k] * C;
+      svg.appendChild(arc);
+      arcs.push([arc, len]);
+    });
+    if (!reduce) {
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        arcs.forEach(function (a, i) {
+          a[0].style.transitionDelay = (i * 140) + "ms";
+          a[0].setAttribute("stroke-dasharray", a[1] + " " + (C - a[1]));
+        });
+      }); });
+    }
+    return svg;
+  }
+
+  function clip(t, n) {
+    t = String(t == null ? "" : t).trim();
+    if (t.length <= n) return t;
+    var cut = t.slice(0, n), sp = cut.lastIndexOf(" ");
+    return (sp > n * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s,;:.\-]+$/, "") + "…";
+  }
+  // 3-5 scannable bullets: up to 3 diet notes, then swaps, then whatever is left.
+  function keyTips(r) {
+    var dp = r.dietPlan || {}, wp = r.workoutPlan || {};
+    var notes = (dp.notes || []).slice(), swaps = (dp.swaps || []).slice();
+    var wnotes = (wp.notes || []).slice();
+    var pool = [].concat(notes.splice(0, 3), swaps.splice(0, 2), notes, swaps, wnotes);
+    var seen = {}, out = [];
+    pool.forEach(function (t) {
+      if (typeof t !== "string" || !t.trim() || seen[t] || out.length >= 5) return;
+      seen[t] = 1; out.push(clip(t, 150));
+    });
+    if (out.length < 3 && dp.hydrationL) out.push(s("hydration") + ": " + dp.hydrationL + " " + s("liters"));
+    return out;
+  }
+
+  // Collapsible section: <details> so long text stays reachable but out of the way.
+  function details(title, bodyKids, opts) {
+    opts = opts || {};
+    var sum = h("summary", { class: "coach-details-sum" },
+      h("span", { class: "coach-details-t" }, title),
+      opts.meta ? h("span", { class: "coach-details-meta" }, opts.meta) : null);
+    return h.apply(null, ["details", { class: "coach-details" + (opts.cls ? " " + opts.cls : ""), open: opts.open ? "open" : false }, sum]
+      .concat([h.apply(null, ["div", { class: "coach-details-body" }].concat(bodyKids))]));
   }
 
   // Small standalone confirm modal, appended straight to <body> (not
@@ -943,14 +1203,21 @@
 
   function renderResult(r) {
     var c = r.computed || {};
-    var stats = h("div", { class: "coach-stats" },
-      statTile("bmi", round(c.bmi, 1), c.bmiClass ? (s(c.bmiClass) || c.bmiClass) : "", "bmiExplain"),
-      statTile("bmr", Math.round(c.bmrKcal || 0), s("kcal"), "bmrExplain"),
-      statTile("tdee", Math.round(c.tdeeKcal || 0), s("kcal"), "tdeeExplain"),
-      statTile("target", Math.round(c.targetKcal || 0), s("kcal") + s("perDay"), "targetExplain"),
-      statTile("protein", Math.round(c.proteinG || 0), s("gram"), "proteinExplain"),
-      statTile("fat", Math.round(c.fatG || 0), s("gram"), "fatExplain"),
-      statTile("carb", Math.round(c.carbG || 0), s("gram"), "carbExplain"));
+    var sh = macroShares(c);
+    var pct = function (k) { return sh ? Math.round(sh[k] * 100) + "%" : ""; };
+    var ring = sh ? macroRing(sh) : null;
+    var kcalTile = statTile("target", Math.round(c.targetKcal || 0), s("kcal") + s("perDay"), "targetExplain", "coach-stat--kcal");
+    if (ring) kcalTile.insertBefore(h("div", { class: "coach-ring-wrap" }, ring), kcalTile.firstChild);
+    var hero = h("div", { class: "coach-hero" },
+      kcalTile,
+      statTile("protein", Math.round(c.proteinG || 0), s("gram"), "proteinExplain", "coach-stat--macro coach-m-p", pct("p")),
+      statTile("carb", Math.round(c.carbG || 0), s("gram"), "carbExplain", "coach-stat--macro coach-m-c", pct("c")),
+      statTile("fat", Math.round(c.fatG || 0), s("gram"), "fatExplain", "coach-stat--macro coach-m-f", pct("f")));
+    var chips = h("div", { class: "coach-chips" },
+      statTile("bmi", round(c.bmi, 1), c.bmiClass ? (s(c.bmiClass) || c.bmiClass) : "", "bmiExplain", "coach-stat--chip"),
+      statTile("bmr", Math.round(c.bmrKcal || 0), s("kcal"), "bmrExplain", "coach-stat--chip"),
+      statTile("tdee", Math.round(c.tdeeKcal || 0), s("kcal"), "tdeeExplain", "coach-stat--chip"));
+    var tips = r.dietPlan ? keyTips(r) : [];
 
     var sections = [
       h("div", { class: "coach-print-head" }, s("pdfTitle") + " — " + fmtDate(r.createdAt || Date.now())),
@@ -963,11 +1230,15 @@
     if (window.GymCheckin) sections.push(GymCheckin.renderCard());
     // stats (BMI/BMR/TDEE/macros) only make sense when a diet plan was generated;
     // also guards against a "both" response that came back missing dietPlan.
-    if (r.want !== "workout" && r.dietPlan) sections.push(stats);
-    if (r.summary) sections.push(h("div", { class: "coach-block card-fx" },
-      h("h3", {}, s("resSummary")), h("p", {}, r.summary)));
+    if (r.want !== "workout" && r.dietPlan) { sections.push(hero); sections.push(chips); }
+    if (tips.length && r.want !== "workout") {
+      sections.push(h("section", { class: "coach-tips" },
+        h("h3", {}, s("resTips")),
+        h.apply(null, ["ul", {}].concat(tips.map(function (t) { return h("li", {}, t); })))));
+    }
+    if (r.summary) sections.push(details(s("resSummary"), [h("p", {}, r.summary)], { open: String(r.summary).length <= 180 }));
     if (r.dietPlan) sections.push(renderDiet(r.dietPlan));
-    if (r.workoutPlan) sections.push(renderWorkout(r.workoutPlan));
+    if (r.workoutPlan) sections.push(renderWorkout(r.workoutPlan, r.want === "workout" || !r.dietPlan));
     if (r.disclaimers && r.disclaimers.length) {
       sections.push(h("div", { class: "coach-disc" },
         h("h3", {}, s("disclaimers")),
@@ -1096,27 +1367,28 @@
   function renderDiet(dp) {
     var kids = [h("h3", {}, s("resDiet"))];
     if (dp.styleLabel) kids.push(h("div", { class: "coach-tag" }, dp.styleLabel));
-    (dp.meals || []).forEach(function (m) {
-      kids.push(h("div", { class: "coach-meal card-fx" },
-        h("div", { class: "coach-meal-top" },
-          h("b", {}, m.name),
-          h("span", {}, Math.round(m.kcal || 0) + " " + s("kcal") + (m.proteinG ? "  ·  " + m.proteinG + s("gram") + " " + s("protein") : ""))),
-        h.apply(null, ["ul", {}].concat((m.items || []).map(function (it) { return h("li", {}, mealItemText(it)); })))));
+    var cards = (dp.meals || []).map(function (m) {
+      return h("article", { class: "coach-mcard" },
+        h("div", { class: "coach-mcard-top" },
+          h("h4", {}, m.name),
+          h("div", { class: "coach-mcard-kcal" }, h("b", {}, String(Math.round(m.kcal || 0))), " " + s("kcal"))),
+        m.proteinG ? h("div", { class: "coach-mcard-prot" }, m.proteinG + " " + s("gram") + " " + s("protein")) : null,
+        h.apply(null, ["ul", {}].concat((m.items || []).map(function (it) { return h("li", {}, mealItemText(it)); }))));
     });
+    if (cards.length) kids.push(h.apply(null, ["div", { class: "coach-meals" }].concat(cards)));
     if (dp.hydrationL) kids.push(h("p", { class: "coach-sub-line" }, s("hydration") + ": " + dp.hydrationL + " " + s("liters")));
-    if (dp.swaps && dp.swaps.length) kids.push(h("div", { class: "coach-sub" },
-      h("b", {}, s("swaps")),
-      h.apply(null, ["ul", {}].concat(dp.swaps.map(function (x) { return h("li", {}, x); })))));
-    if (dp.notes && dp.notes.length) kids.push(h.apply(null, ["ul", { class: "coach-notelist" }].concat(dp.notes.map(function (x) { return h("li", {}, x); }))));
+    if (dp.swaps && dp.swaps.length) kids.push(details(s("swaps"),
+      [h.apply(null, ["ul", { class: "coach-notelist" }].concat(dp.swaps.map(function (x) { return h("li", {}, x); })))]));
+    if (dp.notes && dp.notes.length) kids.push(details(s("notes"),
+      [h.apply(null, ["ul", { class: "coach-notelist" }].concat(dp.notes.map(function (x) { return h("li", {}, x); })))]));
     return h.apply(null, ["div", { class: "coach-block" }].concat(kids));
   }
 
-  function renderWorkout(wp) {
-    var kids = [h("h3", {}, s("resWorkout"))];
+  function renderWorkout(wp, open) {
     var meta = [];
     if (wp.split) meta.push(s("split") + ": " + wp.split);
     if (wp.daysPerWeek) meta.push(wp.daysPerWeek + " " + s("daysWk"));
-    if (meta.length) kids.push(h("div", { class: "coach-tag" }, meta.join("  ·  ")));
+    var kids = [];
     (wp.days || []).forEach(function (d) {
       var ex = (d.exercises || []).map(function (e) {
         return h("div", { class: "coach-ex" },
@@ -1128,7 +1400,7 @@
     if (wp.progression) kids.push(h("p", { class: "coach-sub-line" }, s("progression") + ": " + wp.progression));
     if (wp.cardio) kids.push(h("p", { class: "coach-sub-line" }, s("cardio") + ": " + wp.cardio));
     if (wp.notes && wp.notes.length) kids.push(h.apply(null, ["ul", { class: "coach-notelist" }].concat(wp.notes.map(function (x) { return h("li", {}, x); }))));
-    return h.apply(null, ["div", { class: "coach-block" }].concat(kids));
+    return details(s("resWorkout"), kids, { open: open, meta: meta.join("  ·  "), cls: "coach-workout" });
   }
 
   function mapWorkout(wp) {
