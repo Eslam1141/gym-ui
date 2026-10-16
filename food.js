@@ -14,17 +14,21 @@
  * into localStorage; the backend is the source of truth for meals, unlike
  * the gym_-prefixed offline-first keys sync.js manages.
  *
- * Only two things are read from outside this file, both best-effort and
- * optional: window.GymSync.token()/isSignedIn() (auth) and
- * localStorage.gymcoach_last (the last AI assessment's computed macro
- * targets, if any — used only to draw a kcal progress bar; its absence
- * just means no target bar is shown). */
+ * Only a few things are read from outside this file, all best-effort and
+ * optional: window.GymSync.token()/isSignedIn() (auth) and the computed macro
+ * targets of the last AI assessment — localStorage.gymcoach_last (written by
+ * Coach on this device) or localStorage.gymcoach_target (this file's own cache
+ * of the newest server-side assessment, fetched once per page session for
+ * plans made on another device). Used only to draw a kcal progress bar; with
+ * neither, a hint pointing to Coach is shown instead. */
 (function () {
   "use strict";
 
   var API_BASE = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "");
   var FOODS_URL = API_BASE + "/foods";
   var MEALS_URL = API_BASE + "/meals";
+  var ASSIST_BASE = API_BASE + "/assistant";
+  var TARGET_KEY = "gymcoach_target";
   var FETCH_TIMEOUT_MS = 15000;
   var SEARCH_DEBOUNCE_MS = 350;
   var MIN_QUERY_LEN = 2;
@@ -57,6 +61,8 @@
     progressLabel: ["Calories eaten today against your daily target", "السعرات المتناولة اليوم مقابل هدفك اليومي"],
     over: ["+{n} kcal over", "+{n} سعرة فوق الهدف"],
     proteinProgress: ["Protein eaten against your daily target", "البروتين المتناول مقابل هدفك اليومي"],
+    targetHint: ["Generate a plan in Coach to see your daily target", "أنشئ خطة في المدرب لترى هدفك اليومي"],
+    openCoach: ["Open Coach", "افتح المدرب"],
     approxNote: ["Some totals are estimated, not lab-measured", "بعض القيم تقديرية وليست مقاسة معملياً"],
     approxTag: ["est.", "تقديري"],
     searchLabel: ["Add a food", "أضف طعاماً"],
@@ -176,6 +182,8 @@
   }
   function resetUserState() {
     progressEl = null;
+    targetFetched = false;
+    targetPending = false;
     state.meals = [];
     state.loadingMeals = false;
     state.mealsError = false;
@@ -225,14 +233,63 @@
     } catch (e) { return dateStr; }
   }
 
-  function targetInfo() {
+  // The newest assessment's computed targets: Coach's local gymcoach_last, or
+  // the cached server copy (gymcoach_target) when that is newer. A
+  // gymcoach_last without a timestamp wins: a plan was just made on this device.
+  function readTarget(key) {
     try {
-      var raw = localStorage.getItem("gymcoach_last");
-      if (!raw) return null;
-      var last = JSON.parse(raw);
-      if (last && last.computed && last.computed.targetKcal) return last.computed;
+      var v = JSON.parse(localStorage.getItem(key));
+      if (v && v.computed && v.computed.targetKcal) return v;
     } catch (e) {}
     return null;
+  }
+  function stamp(v) { var t = Date.parse(v && v.createdAt); return isNaN(t) ? 0 : t; }
+  function targetInfo() {
+    var last = readTarget("gymcoach_last");
+    var srv = readTarget(TARGET_KEY);
+    if (srv && (srv.sub || null) !== (currentUserSub() || null)) srv = null;
+    if (last && (!srv || !stamp(last) || stamp(last) >= stamp(srv))) return last.computed;
+    return srv ? srv.computed : null;
+  }
+
+  // Plans made on another device (e.g. the Android app) never reach this
+  // device's gymcoach_last, so ask the assistant API once per page session.
+  var targetFetched = false, targetPending = false;
+  function fetchServerTarget() {
+    var token = authToken();
+    if (targetFetched || !token) return;
+    var sub = currentUserSub();
+    targetFetched = true;
+    targetPending = true;
+    // An account switch mid-fetch (resetUserState) must not cache or paint the
+    // previous user's target under the new account.
+    var stale = function () { return authToken() !== token || currentUserSub() !== sub; };
+    var opts = function () { return { headers: { "Authorization": "Bearer " + token } }; };
+    var json = function (r) { if (!r.ok) throw new Error("http " + r.status); return r.json(); };
+    fetchTimeout(ASSIST_BASE + "/history?limit=1", opts()).then(json).then(function (doc) {
+      var it = doc && doc.items && doc.items[0];
+      if (!it) return null;
+      if (it.computed) return it;
+      return fetchTimeout(ASSIST_BASE + "/assessment/" + encodeURIComponent(it.id), opts()).then(json);
+    }).then(function (a) {
+      if (!a || !a.computed || !a.computed.targetKcal || stale()) return;
+      try {
+        localStorage.setItem(TARGET_KEY, JSON.stringify({ computed: a.computed, createdAt: a.createdAt, sub: sub }));
+      } catch (e) {}
+    }).catch(function () {}).then(function () {
+      if (stale()) return;
+      targetPending = false;
+      paintTotals();
+    });
+  }
+
+  function targetHint() {
+    return h("div", { class: "food-target-hint" },
+      h("p", {}, s("targetHint")),
+      h("button", {
+        type: "button", class: "coach-secondary",
+        on: { click: function () { if (window.GymUI) GymUI.navigate("coach"); } }
+      }, s("openCoach")));
   }
 
   function sumTotals(meals) {
@@ -563,6 +620,10 @@
         statTile(s("fat"), totals.fat, s("gram")))
     ];
     if (target && target.targetKcal) kids.push(paintProgress(totals, target));
+    else if (!target) {
+      fetchServerTarget();
+      if (!targetPending) kids.push(targetHint());
+    }
     if (totals.approximate) {
       kids.push(h("div", { class: "food-approx-note" }, s("approxNote")));
     }

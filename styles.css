@@ -2210,6 +2210,9 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 .food-progress-prot .food-progress-track{ height:5px; }
 .food-progress-prot .food-progress-fill{ background:var(--paper-dim); }
 .food-progress [hidden]{ display:none; }
+.food-target-hint{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
+.food-target-hint p{ margin:0; flex:1 1 200px; font-size:var(--text-sm); color:var(--paper-dim); }
+.food-target-hint .coach-secondary{ min-height:44px; }
 .food-approx-note{ font-size:var(--text-xs); color:var(--paper-dim); }
 .food-search{ padding:14px; border-radius:var(--radius); background:var(--panel); border:1px solid var(--line); }
 .food-search-hint{ font-size:var(--text-sm); color:var(--paper-dim); padding:10px 2px; }
