@@ -250,3 +250,33 @@ test("timer end uses the TimerAlarm plugin (insistent alarm) instead of a plain 
   expect(await page.evaluate(() => window.__shell.lnScheduled)).toBeUndefined();
   await context.close();
 });
+
+test("system bar icons follow the app theme, not the phone's (SystemBars.setStyle)", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true, theme: "dark" });
+  await page.evaluate(() => {
+    window.__bars = [];
+    window.Capacitor = {
+      isNativePlatform: () => true, getPlatform: () => "android",
+      Plugins: { SystemBars: { setStyle: async (x) => { window.__bars.push(x.style); } } }
+    };
+    window.GymNativeShell.init();
+  });
+  await expect.poll(() => page.evaluate(() => window.__bars.slice())).toEqual(["DARK"]); // dark app: light icons
+  await page.evaluate(() => window.GymTheme.setMode("light"));
+  await expect.poll(() => page.evaluate(() => window.__bars.slice())).toEqual(["DARK", "LIGHT"]); // light app: dark icons
+  await page.evaluate(() => window.GymTheme.setMode("dark"));
+  await expect.poll(() => page.evaluate(() => window.__bars.slice())).toEqual(["DARK", "LIGHT", "DARK"]);
+  await context.close();
+});
+
+test("web / missing SystemBars: theme changes never throw", async ({ browser }) => {
+  const { context, page, consoleErrors } = await openApp(browser, { signedIn: true });
+  await page.evaluate(() => { window.GymTheme.setMode("light"); window.GymTheme.setMode("dark"); });
+  await page.evaluate(() => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android", Plugins: {} };
+    window.GymNativeShell.init();
+    window.GymTheme.setMode("light");
+  });
+  expect(consoleErrors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]);
+  await context.close();
+});

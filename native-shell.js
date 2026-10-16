@@ -19,6 +19,9 @@
  *    A leftover localStorage "gymauth_refresh" is moved into the vault. Not
  *    defined on the web or if the native pieces are missing (sync.js then
  *    uses localStorage).
+ *  - System bar icons: Capacitor core SystemBars.setStyle follows the APP theme
+ *    (data-theme), not the phone's: dark app = style DARK (light icons), light
+ *    app = style LIGHT (dark icons). Re-applied whenever data-theme changes.
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -148,12 +151,27 @@
     if (window.GymToast) GymToast.show({ message: exitHint(), duration: EXIT_WINDOW_MS });
   }
 
+  var barsWatching = false;
+  function syncSystemBars() {
+    var c = cap(), bars = c && plugin(c, "SystemBars");
+    if (!bars || typeof bars.setStyle !== "function") return;
+    var light = document.documentElement.dataset.theme === "light";
+    try { Promise.resolve(bars.setStyle({ style: light ? "LIGHT" : "DARK" })).catch(function () {}); } catch (e) {}
+  }
+  function watchSystemBars() {
+    syncSystemBars();
+    if (barsWatching || typeof MutationObserver !== "function") return;
+    barsWatching = true;
+    new MutationObserver(syncSystemBars).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }
+
   function init() {
     if (started) return;
     var c = cap();
     if (!c) return;
     started = true;
     installSessionStore();
+    watchSystemBars();
 
     var app = plugin(c, "App");
     if (app) {
