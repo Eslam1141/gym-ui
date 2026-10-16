@@ -146,6 +146,7 @@
   }
 
   // ---------------- DOM ----------------
+  var shownStreak = null; // last streak painted; null until first paint
   var bar, streakEl, bellSlot, avatarBtn, avatarImg, menu;
 
   var DEFAULT_AVATAR = "icons/avatar-default.svg";
@@ -167,7 +168,7 @@
       '  <button type="button" class="tb-avatar" id="tbAvatar" aria-haspopup="menu" aria-expanded="false">' +
       '    <img alt="" id="tbAvatarImg" width="36" height="36">' +
       '  </button>' +
-      '  <div class="tb-menu" id="tbMenu" role="menu" hidden>' +
+      '  <div class="tb-menu m-menu" id="tbMenu" role="menu" hidden>' +
       '    <div class="tb-menu-name" id="tbMenuName"></div>' +
       '    <button type="button" role="menuitem" id="tbMenuProfile"></button>' +
       '    <button type="button" role="menuitem" id="tbMenuAdmin" hidden></button>' +
@@ -190,7 +191,7 @@
 
     avatarBtn.addEventListener("click", function (e) {
       e.stopPropagation();
-      setMenuOpen(menu.hidden);
+      setMenuOpen(avatarBtn.getAttribute("aria-expanded") !== "true");
     });
     document.getElementById("tbMenuProfile").addEventListener("click", function () {
       setMenuOpen(false);
@@ -237,7 +238,7 @@
 
   function setMenuOpen(open) {
     if (!menu) return;
-    menu.hidden = !open;
+    if (window.GymMotion) { if (open) GymMotion.show(menu); else GymMotion.hide(menu); } else menu.hidden = !open;
     avatarBtn.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) {
       var first = document.getElementById("tbMenuProfile");
@@ -256,6 +257,8 @@
     if (streak > 0) {
       streakEl.hidden = false;
       streakEl.textContent = "🔥" + streak;
+      if (shownStreak !== null && streak > shownStreak && window.GymMotion) GymMotion.pop(streakEl);
+      shownStreak = streak;
       // Today not trained yet: the streak is still alive (it only breaks after
       // a full missed day), so show it dimmed instead of hiding it.
       var pending = me.todayDone === false && me.todayRested !== true;
@@ -266,6 +269,7 @@
     } else {
       streakEl.hidden = true;
       streakEl.textContent = "";
+      shownStreak = (show && me) ? 0 : null; // no profile yet / signed out: forget, so the first load does not pop
     }
 
     var src = photoData || DEFAULT_AVATAR;
