@@ -200,6 +200,15 @@
     var en = f.nameEn || "", ar = f.nameAr || "";
     return lang() === "ar" ? (ar || en) : (en || ar);
   }
+  // Language of the search query: the majority script of its letters, or
+  // the app language when there are no letters or the scripts tie.
+  function queryLang(q) {
+    var ar = (q.match(/[؀-ۿݐ-ݿࢠ-ࣿ]/g) || []).length;
+    var en = (q.match(/[A-Za-z]/g) || []).length;
+    if (ar > en) return "ar";
+    if (en > ar) return "en";
+    return lang();
+  }
   function servingHint(f) {
     var srv = f.serving;
     if (!srv || !srv.grams) return "";
@@ -280,6 +289,7 @@
     var mySeq = ++searchSeq;
     state.searching = true;
     state.searchError = false;
+    state.resultsLang = queryLang(q);
     paintSearch();
     var token = authToken();
     if (!token) { state.searching = false; if (window.GymUI) GymUI.promptSignIn(); paintSearch(); return; }
@@ -682,14 +692,25 @@
   }
 
   function resultRow(food) {
+    var ql = state.resultsLang || lang();
+    var other = ql === "ar" ? "en" : "ar";
+    var names = { en: food.nameEn || "", ar: food.nameAr || "" };
+    var main = names[ql] || names[other];
+    var sub = names[ql] && names[other] && names[other] !== names[ql] ? names[other] : "";
     var meta = Math.round((food.per100g && food.per100g.kcal) || 0) + " " + s("kcal") + s("perHundred");
-    var srv = servingHint(food);
-    if (srv) meta += " · " + srv;
+    var srv = food.serving;
+    var label = srv && (ql === "ar" ? srv.labelAr : srv.labelEn);
+    var metaKids = [meta];
+    if (srv && srv.grams) {
+      metaKids[0] += " · " + Math.round(srv.grams) + s("gram") + (label ? " (" : "");
+      if (label) metaKids.push(h("span", { class: "food-result-srv", lang: ql, dir: ql === "ar" ? "rtl" : "ltr" }, label), ")");
+    }
     return h("button", {
       type: "button", class: "food-result-row",
       on: { click: function () { selectFood(food); } }
-    }, h("div", { class: "food-result-name" }, foodName(food)),
-       h("div", { class: "food-result-meta" }, meta));
+    }, h("div", { class: "food-result-name", lang: names[ql] ? ql : other, dir: (names[ql] ? ql : other) === "ar" ? "rtl" : "ltr" }, main),
+       sub ? h("div", { class: "food-result-sub", lang: other, dir: other === "ar" ? "rtl" : "ltr" }, sub) : null,
+       h("div", { class: "food-result-meta" }, metaKids));
   }
 
   function addPanel() {
