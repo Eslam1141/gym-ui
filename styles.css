@@ -2230,3 +2230,21 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   animation:sydRise var(--dur-med) var(--ease-spring);
 }
 @media (prefers-reduced-motion:reduce){ .fb-done-mark{ animation:none; } }
+
+/* Per-set checkboxes: a wrapping row of compact numbered chips (reps are in the meta line above). */
+.set-row{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px 38px; }
+[dir="rtl"] .set-row{ margin:0 38px 12px 0; }
+.set-chk{
+  display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  min-width:48px; min-height:48px; padding:0 12px; border-radius:var(--radius, 12px);
+  border:1.5px solid var(--line); background:var(--bg-alt); color:var(--paper);
+  font:inherit; font-size:var(--text-base); font-weight:700; cursor:pointer;
+  transition:border-color var(--dur-fast, .15s) var(--ease, ease), background var(--dur-fast, .15s) var(--ease, ease), color var(--dur-fast, .15s) var(--ease, ease);
+}
+.set-chk:focus-visible{ outline:2px solid var(--rust); outline-offset:2px; }
+.set-chk svg{ width:0; height:18px; fill:#fff; opacity:0; transition:width .15s, opacity .15s; }
+.set-chk.on{ border-color:var(--green); background:var(--green); color:#fff; }
+.set-chk.on svg{ width:18px; opacity:1; }
+@media (prefers-reduced-motion: reduce){
+  .set-chk, .set-chk svg{ transition:none; }
+}
