@@ -7,9 +7,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.WebView;
+import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
+
+import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
     // A remote main-frame load that neither finishes nor errors (black-holed
@@ -23,6 +28,12 @@ public class MainActivity extends BridgeActivity {
     static boolean isForeground() {
         return foreground;
     }
+
+    // Back on the bundled offline page: Capacitor's JS bridge is not injected
+    // there (remote-server mode), so the web code's press-twice-to-exit cannot
+    // run. Handle it natively with the same pattern and copy.
+    private static final long EXIT_WINDOW_MS = 2000;
+    private long exitArmedAt = 0;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
@@ -39,6 +50,30 @@ public class MainActivity extends BridgeActivity {
         // answering, so a black-holed first request never reaches it: arm
         // for the initial remote load right here.
         arm(getBridge().getWebView());
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView wv = getBridge().getWebView();
+                if (!isLocal(wv)) {
+                    // Not the offline page: hand Back to Capacitor's own handler.
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                    setEnabled(true);
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (exitArmedAt != 0 && now - exitArmedAt <= EXIT_WINDOW_MS) {
+                    exitArmedAt = 0;
+                    finish();
+                    return;
+                }
+                exitArmedAt = now;
+                boolean ar = "ar".equals(Locale.getDefault().getLanguage());
+                Toast.makeText(MainActivity.this,
+                    ar ? "اضغط رجوع مرة أخرى للخروج" : "Press back again to exit",
+                    Toast.LENGTH_SHORT).show();
+            }
+        });
         // Synchronous read of the Keystore-backed session record for
         // native-shell.js (must exist before sync.js runs; see SessionVaultPlugin).
         vaultSync = new SessionVaultPlugin.Sync(this, getBridge().getWebView(), getBridge().getServerUrl());
