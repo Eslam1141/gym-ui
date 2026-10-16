@@ -2190,6 +2190,8 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 }
 .food-result-row:hover, .food-result-row:focus-visible{ background:var(--bg-alt); border-color:var(--accent); }
 .food-result-name{ font-size:var(--text-base); font-weight:700; }
+.food-result-srv{ unicode-bidi:isolate; }
+.food-result-sub{ font-size:var(--text-sm); color:var(--paper-dim); }
 .food-result-meta{ font-size:var(--text-xs); color:var(--paper-dim); }
 .food-add-panel{ display:flex; flex-direction:column; gap:4px; margin-top:10px; padding-top:12px; border-top:1px solid var(--line); }
 .food-add-name{ font-size:var(--text-base); font-weight:700; color:var(--paper); }
