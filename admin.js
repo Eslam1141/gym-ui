@@ -10,7 +10,8 @@
 
   var STR = {
     title: ["Admin dashboard", "لوحة الإدارة"],
-    back: ["← Back to app", "→ العودة إلى التطبيق"],
+    back: ["App", "التطبيق"],
+    backAria: ["Back to app", "العودة إلى التطبيق"],
     tabOverview: ["Overview", "نظرة عامة"],
     tabUsers: ["Users", "المستخدمون"],
     tabRemoved: ["Removed users", "المستخدمون المحذوفون"],
@@ -38,6 +39,13 @@
     pGoogle: ["Google", "Google"],
     pPassword: ["Email & password", "البريد وكلمة المرور"],
     pBoth: ["Both", "كلاهما"],
+    pTotal: ["Total users", "إجمالي المستخدمين"],
+    pCanGoogle: ["Can use Google", "يمكنهم استخدام Google"],
+    pCanEmail: ["Can use email", "يمكنهم استخدام البريد"],
+    pLinked: ["Both linked", "ربطوا الاثنين"],
+    dWeek: ["+{n} this week", "+{n} هذا الأسبوع"],
+    dAvg: ["{p} vs weekly average", "{p} مقارنة بمتوسط الأسبوع"],
+    dShare: ["{p} of all users", "{p} من كل المستخدمين"],
     search: ["Search by email or name", "ابحث بالبريد أو الاسم"],
     sortNew: ["Newest first", "الأحدث أولًا"],
     sortSeen: ["Recently active", "النشطون مؤخرًا"],
@@ -207,6 +215,14 @@
   }
 
   // ---- overview ----
+  var ICONS = {
+    users: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.3c2 .8 3.5 2.6 3.5 5.7"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c0-3.6 3-6 7-6 1.5 0 2.8.3 4 .9"/><path d="M19 14v6M16 17h6"/></svg>',
+    cal7: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17M8 14h2M12 14h2M16 14h.01"/></svg>',
+    cal30: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17M8 14h2M12 14h2M16 14h2M8 17h2M12 17h2"/></svg>',
+    pulse: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>',
+    ban: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>'
+  };
   views.overview = function () { loadOverview(false); };
   // quiet = live refresh: keep what's on screen if it fails, no loading
   // placeholder, no entrance animation or count-up.
@@ -218,34 +234,56 @@
       var st = r.data;
       main.classList.toggle("adm-quiet", quiet);
       main.textContent = "";
+      var tot = st.totalUsers || 0;
+      var pctOf = function (n) { return tot ? Math.round(100 * n / tot) : 0; };
+      var pcs = function (n) { return fmtNum(n) + "%"; };
+      var share = function (n) { return n > 0 && pctOf(n) < 1 ? "<1%" : pcs(pctOf(n)); };
+      // 7-day delta against the weekly average of the 23 days before it
+      var prevWeek = (st.newUsers.d30 - st.newUsers.d7) / 23 * 7;
+      var trend = prevWeek > 0 ? Math.round(100 * (st.newUsers.d7 - prevWeek) / prevWeek) : null;
       var cards = [
-        ["cTotal", st.totalUsers], ["cToday", st.newUsers.today], ["c7", st.newUsers.d7], ["c30", st.newUsers.d30],
-        ["cA7", st.activeUsers.d7], ["cA30", st.activeUsers.d30], ["cBlocked", st.blockedUsers]
+        ["cTotal", tot, "users", st.newUsers.d7 > 0 ? { t: s("dWeek", { n: fmtNum(st.newUsers.d7) }) } : null, "wide"],
+        ["cToday", st.newUsers.today, "plus"],
+        ["c7", st.newUsers.d7, "cal7", trend == null ? null : { t: s("dAvg", { p: (trend > 0 ? "+" : "") + pcs(trend) }), dir: trend > 0 ? "up" : trend < 0 ? "down" : "" }],
+        ["c30", st.newUsers.d30, "cal30"],
+        ["cA7", st.activeUsers.d7, "pulse", { t: s("dShare", { p: share(st.activeUsers.d7) }) }],
+        ["cA30", st.activeUsers.d30, "pulse", { t: s("dShare", { p: share(st.activeUsers.d30) }) }],
+        ["cBlocked", st.blockedUsers, "ban", st.blockedUsers ? { t: s("dShare", { p: share(st.blockedUsers) }) } : null, "warn"]
       ];
-      main.appendChild(el("div", { class: "adm-cards" }, cards.map(function (c, i) {
+      var tiles = cards.map(function (c, i) {
         var num = quiet ? el("b", { text: fmtNum(c[1]) }) : countUp(el("b"), c[1]);
-        var card = el("div", { class: "adm-card" }, [num, el("span", { text: s(c[0]) })]);
-        card.style.setProperty("--i", i);
-        return card;
-      })));
+        var ico = el("span", { class: "adm-ico", "aria-hidden": "true" });
+        ico.innerHTML = ICONS[c[2]];
+        var tile = el("div", { class: "adm-tile adm-card" + (c[4] ? " adm-t-" + c[4] : "") }, [
+          ico, num, el("span", { class: "adm-lbl", text: s(c[0]) }),
+          c[3] ? el("i", { class: "adm-delta" + (c[3].dir ? " " + c[3].dir : ""), text: c[3].t }) : null
+        ]);
+        tile.style.setProperty("--i", i);
+        return tile;
+      });
       var series = st.signupsPerDay || [];
       var sum = series.reduce(function (a, d) { return a + d.count; }, 0);
       var peak = series.reduce(function (b, d) { return d.count > (b ? b.count : -1) ? d : b; }, null);
-      main.appendChild(el("section", { class: "adm-section" }, [
+      var chartTile = el("section", { class: "adm-tile adm-section adm-t-chart" }, [
         el("h2", { text: s("chartTitle") }),
         el("p", { class: "adm-hint", text: s("chartHint") }),
         el("p", { class: "adm-sum", text: s("chartSum", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? fmtNum(peak.count) : 0, t: fmtNum(st.newUsers.today) }) }),
         chart(series),
         series.length ? el("div", { class: "adm-axis" }, [el("span", { text: series[0].date }), el("span", { text: series[series.length - 1].date })]) : null
-      ]));
-      var p = st.providers, total = (p.google + p.password + p.both) || 1;
-      main.appendChild(el("section", { class: "adm-section" }, [
+      ]);
+      chartTile.style.setProperty("--i", cards.length);
+      var p = st.providers, base = tot || (p.google + p.password + p.both) || 1;
+      var provRows = [["pTotal", base], ["pCanGoogle", p.google + p.both], ["pCanEmail", p.password + p.both], ["pLinked", p.both]];
+      var provTile = el("section", { class: "adm-tile adm-section adm-t-prov" }, [
         el("h2", { text: s("provTitle") }),
-        el("div", { class: "adm-bars" }, [["pGoogle", p.google], ["pPassword", p.password], ["pBoth", p.both]].map(function (x) {
-          var bar = el("i"); bar.style.width = Math.round(100 * x[1] / total) + "%";
-          return el("div", null, [el("span", { text: s(x[0]) }), el("span", null, [bar]), el("span", { text: fmtNum(x[1]) })]);
+        el("div", { class: "adm-bars" }, provRows.map(function (x) {
+          var share = Math.min(100, Math.round(100 * x[1] / base));
+          var bar = el("i"); bar.style.width = share + "%";
+          return el("div", null, [el("span", { text: s(x[0]) }), el("span", { class: "adm-track" }, [bar]), el("span", { text: fmtNum(x[1]) + " · " + fmtNum(share) + "%" })]);
         }))
-      ]));
+      ]);
+      provTile.style.setProperty("--i", cards.length + 1);
+      main.appendChild(el("div", { class: "adm-grid" }, tiles.concat([chartTile, provTile])));
       stampUpdated();
     });
   }
@@ -1196,7 +1234,13 @@
     document.documentElement.dir = AR ? "rtl" : "ltr";
     main = document.getElementById("admMain");
     document.getElementById("admTitle").textContent = s("title");
-    document.getElementById("admBack").textContent = s("back");
+    var back = document.getElementById("admBack");
+    back.textContent = "";
+    var bi = el("span", { class: "adm-back-ico", "aria-hidden": "true" });
+    bi.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+    back.appendChild(bi);
+    back.appendChild(el("span", { text: s("back") }));
+    back.setAttribute("aria-label", s("backAria"));
     document.getElementById("tabOverview").textContent = s("tabOverview");
     document.getElementById("tabUsers").textContent = s("tabUsers");
     document.getElementById("tabRemoved").textContent = s("tabRemoved");

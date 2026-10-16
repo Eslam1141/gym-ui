@@ -49,10 +49,14 @@
     yesterday: ["Yesterday", "أمس"],
     tomorrow: ["Tomorrow", "غداً"],
     kcal: ["kcal", "سعرة"],
+    calories: ["Calories", "السعرات"],
     gram: ["g", "جم"],
     protein: ["Protein", "بروتين"],
     carbs: ["Carbs", "كارب"],
     fat: ["Fat", "دهون"],
+    progressLabel: ["Calories eaten today against your daily target", "السعرات المتناولة اليوم مقابل هدفك اليومي"],
+    over: ["+{n} kcal over", "+{n} سعرة فوق الهدف"],
+    proteinProgress: ["Protein eaten against your daily target", "البروتين المتناول مقابل هدفك اليومي"],
     approxNote: ["Some totals are estimated, not lab-measured", "بعض القيم تقديرية وليست مقاسة معملياً"],
     approxTag: ["est.", "تقديري"],
     searchLabel: ["Add a food", "أضف طعاماً"],
@@ -171,6 +175,7 @@
     try { return localStorage.getItem("gym_user_sub") || null; } catch (e) { return null; }
   }
   function resetUserState() {
+    progressEl = null;
     state.meals = [];
     state.loadingMeals = false;
     state.mealsError = false;
@@ -452,34 +457,121 @@
       h("div", { class: "coach-stat-l" }, label));
   }
 
+  // ---------------- kcal progress bar ----------------
+  // One node survives every repaint (paintTotals rebuilds its host) so the
+  // fill slides and the number counts from what was on screen, not from 0.
+  var progressEl = null;
+  function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+
+  function progressState(ratio) {
+    return ratio > 1 ? "over" : ratio >= 0.9 ? "near" : "under";
+  }
+
+  function countTo(node, to) {
+    var from = Number(node.getAttribute("data-v")) || 0;
+    node.setAttribute("data-v", String(to));
+    if (node._raf) cancelAnimationFrame(node._raf);
+    if (reduceMotion() || from === to || !window.requestAnimationFrame) { node.textContent = String(to); return; }
+    var t0 = 0;
+    node._raf = requestAnimationFrame(function tick(t) {
+      if (!t0) t0 = t;
+      var p = Math.min(1, (t - t0) / 600);
+      node.textContent = String(Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) node._raf = requestAnimationFrame(tick);
+    });
+  }
+
+  function setBar(track, value, max) {
+    var ratio = max ? value / max : 0;
+    track.setAttribute("aria-valuenow", String(Math.round(value)));
+    track.setAttribute("aria-valuemax", String(Math.round(max)));
+    var fill = track.firstChild, p = String(Math.max(0, Math.min(1, ratio)));
+    if (track.isConnected) fill.style.setProperty("--p", p);
+    else if (window.requestAnimationFrame) { // fresh node: let the empty state paint first so the fill slides in
+      requestAnimationFrame(function () { requestAnimationFrame(function () { fill.style.setProperty("--p", p); }); });
+    } else fill.style.setProperty("--p", p);
+    return ratio;
+  }
+
+  function buildBar(label) {
+    return h("div", { class: "food-progress-track", role: "progressbar", "aria-label": label, "aria-valuemin": "0", "aria-valuenow": "0", "aria-valuemax": "1" },
+      h("div", { class: "food-progress-fill", style: "--p:0" }));
+  }
+
+  function paintProgress(totals, target) {
+    if (!progressEl) {
+      progressEl = h("div", { class: "food-progress", "data-state": "under" },
+        h("div", { class: "food-progress-label" },
+          // ⁦…⁩ (FSI/PDI) isolate the "N / N" ratio so the bidi
+          // algorithm never reorders it inside an RTL (Arabic) paragraph —
+          // without this, "248 / 2200" visually flips to "2200 / 248".
+          h("span", { class: "food-progress-ratio" }, "⁦", h("b", { class: "food-progress-num" }, "0"), h("span", { class: "food-progress-max" }), "⁩"),
+          h("span", { class: "food-progress-over", hidden: "" })),
+        buildBar(s("progressLabel")),
+        h("div", { class: "food-progress-prot", hidden: "" },
+          h("div", { class: "food-progress-label" },
+            h("span", {}, s("protein")),
+            h("span", { class: "food-progress-ratio" }, "⁦", h("b", { class: "food-progress-pnum" }, "0"), h("span", { class: "food-progress-pmax" }), "⁩")),
+          buildBar(s("proteinProgress"))));
+    }
+    var el = progressEl;
+    var kcal = Math.round(totals.kcal), max = Math.round(target.targetKcal);
+    var track = el.querySelector(".food-progress-track");
+    var ratio = setBar(track, kcal, max);
+    var state0 = progressState(ratio);
+    el.setAttribute("data-state", state0);
+    track.setAttribute("aria-valuetext", kcal + " / " + max + " " + s("kcal"));
+    countTo(el.querySelector(".food-progress-num"), kcal);
+    el.querySelector(".food-progress-max").textContent = " / " + max + " " + s("kcal");
+    var over = el.querySelector(".food-progress-over");
+    over.hidden = ratio <= 1;
+    over.textContent = ratio > 1 ? s("over").replace("{n}", String(kcal - max)) : "";
+    var prot = el.querySelector(".food-progress-prot");
+    var pMax = Math.round(target.proteinG || 0);
+    prot.hidden = !pMax;
+    if (pMax) {
+      var pv = Math.round(totals.protein);
+      var pt = prot.querySelector(".food-progress-track");
+      setBar(pt, pv, pMax);
+      pt.setAttribute("aria-valuetext", pv + " / " + pMax + " " + s("gram"));
+      countTo(prot.querySelector(".food-progress-pnum"), pv);
+      prot.querySelector(".food-progress-pmax").textContent = " / " + pMax + " " + s("gram");
+    }
+    return el;
+  }
+
   function paintTotals() {
     var host = document.getElementById("foodTotalsHost");
     if (!host) return;
-    host.innerHTML = "";
     var totals = sumTotals(state.meals);
     var target = targetInfo();
     var kids = [
       h("div", { class: "coach-stats" },
-        statTile(s("kcal"), totals.kcal, s("kcal")),
+        statTile(s("calories"), totals.kcal, ""),
         statTile(s("protein"), totals.protein, s("gram")),
         statTile(s("carbs"), totals.carbs, s("gram")),
         statTile(s("fat"), totals.fat, s("gram")))
     ];
-    if (target && target.targetKcal) {
-      var pct = Math.max(0, Math.min(100, Math.round((totals.kcal / target.targetKcal) * 100)));
-      kids.push(h("div", { class: "food-progress" },
-        // ⁦…⁩ (FSI/PDI) isolate the "N / N" ratio so the bidi
-        // algorithm never reorders it inside an RTL (Arabic) paragraph —
-        // without this, "248 / 2200" visually flips to "2200 / 248".
-        h("div", { class: "food-progress-label" },
-          "⁦" + Math.round(totals.kcal) + " / " + Math.round(target.targetKcal) + "⁩ " + s("kcal")),
-        h("div", { class: "food-progress-track" },
-          h("div", { class: "food-progress-fill", style: "--p:" + (pct / 100) }))));
-    }
+    if (target && target.targetKcal) kids.push(paintProgress(totals, target));
     if (totals.approximate) {
       kids.push(h("div", { class: "food-approx-note" }, s("approxNote")));
     }
-    host.appendChild(h("div", { class: "food-totals card-fx" }, kids));
+    // Keep the card and the progress node alive across repaints: a node that
+    // is detached and re-inserted loses its transition.
+    var card = host.firstElementChild;
+    if (!card || !card.classList.contains("food-totals")) {
+      host.innerHTML = "";
+      card = h("div", { class: "food-totals card-fx" });
+      host.appendChild(card);
+    }
+    var keep = kids.indexOf(progressEl) >= 0 ? progressEl : null;
+    Array.prototype.slice.call(card.children).forEach(function (c) { if (c !== keep) card.removeChild(c); });
+    var seen = false;
+    kids.forEach(function (k) {
+      if (k === keep) { seen = true; if (k.parentNode !== card) card.appendChild(k); }
+      else if (seen || !keep || keep.parentNode !== card) card.appendChild(k);
+      else card.insertBefore(k, keep);
+    });
   }
 
   function mealRow(m) {
