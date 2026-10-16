@@ -158,9 +158,61 @@
 .wb-scrim.wb-sheet-in{ animation:wb-fade-in var(--dur-med) var(--ease-out) backwards; }
 .wb-scrim.wb-sheet-out{ animation:wb-fade-out var(--dur-med) var(--ease-out) forwards; }
 
+/* ---- show/hide (GymMotion.show / GymMotion.hide) ----
+   .m-ovl   full-screen overlay: the scrim fades, and its .m-ovl-card child
+            rises and settles. Wire a new overlay by adding those classes.
+   .m-menu  popover/menu: grows from its anchor corner (top, inline-end).
+   JS adds .m-in / .m-out; hide() waits for the root's animationend. */
+@keyframes m-fade-in{ from{ opacity:0; } }
+@keyframes m-fade-out{ to{ opacity:0; } }
+@keyframes m-card-in{ from{ opacity:0; transform:translate3d(0, 12px, 0) scale(.97); } }
+@keyframes m-card-out{ to{ opacity:0; transform:translate3d(0, 8px, 0) scale(.98); } }
+@keyframes m-menu-in{ from{ opacity:0; transform:translate3d(0, -6px, 0) scale(.96); } }
+@keyframes m-menu-out{ to{ opacity:0; transform:translate3d(0, -4px, 0) scale(.97); } }
+.m-ovl.m-in{ animation:m-fade-in var(--dur-med) var(--ease-out) backwards; }
+.m-ovl.m-in > .m-ovl-card{ animation:m-card-in var(--dur-med) var(--ease-out) backwards; }
+.m-ovl.m-out{ animation:m-fade-out var(--dur-fast) var(--ease) forwards; pointer-events:none; }
+.m-ovl.m-out > .m-ovl-card{ animation:m-card-out var(--dur-fast) var(--ease) forwards; }
+.m-menu{ transform-origin:top right; }
+[dir="rtl"] .m-menu{ transform-origin:top left; }
+.m-menu.m-in{ animation:m-menu-in var(--dur-fast) var(--ease-out) backwards; }
+.m-menu.m-out{ animation:m-menu-out var(--dur-fast) var(--ease) forwards; pointer-events:none; }
+
+/* ---- bell swing: once, when the unread count rises (GymMotion.play) ---- */
+@keyframes m-swing{
+  0%, 100%{ transform:rotate(0); }
+  20%{ transform:rotate(14deg); }
+  45%{ transform:rotate(-10deg); }
+  70%{ transform:rotate(6deg); }
+}
+.tb-bell.m-swing svg{ transform-origin:50% 8%; animation:m-swing .6s var(--ease-out) 1; }
+
+/* ---- list rows: only the inserted/removed row moves (food meals) ---- */
+@keyframes m-row-out{
+  to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--m-dist) * 1.2), 0, 0) scale(.97); }
+}
+.m-row-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
+.m-row-out{ animation:m-row-out var(--dur-med) var(--ease) forwards; pointer-events:none; }
+
+/* ---- press feedback for tappable cards and rows (touch-first) ----
+   Zero specificity so a component's own :active look still wins. Buttons
+   already have the global scale(.97); rows get a gentler .98 plus a tint. */
+:where(.notif-item, .cal-grid-cell, .tb-menu button, .food-result-row){
+  transition:transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease);
+}
+:where(.notif-item, .cal-grid-cell:not(.empty), .tb-menu button, .food-result-row):active{
+  transform:scale(.98); background-color:var(--panel2);
+}
+@media (hover:hover) and (pointer:fine){
+  :where(.food-result-row):hover{ filter:brightness(1.06); }
+}
+
 /* ---- reduced motion: no movement, no looping, state changes are instant ---- */
 @media (prefers-reduced-motion:reduce){
   .m-enter > *, .m-pop{ animation:none; }
+  .m-ovl.m-in, .m-ovl.m-out, .m-ovl.m-in > .m-ovl-card, .m-ovl.m-out > .m-ovl-card,
+  .m-menu.m-in, .m-menu.m-out, .tb-bell.m-swing svg, .m-row-in, .m-row-out{ animation:none; }
+  :where(.notif-item, .cal-grid-cell, .tb-menu button, .food-result-row):active{ transform:none; }
   .wb-in, .wb-out, .wb-shake, .wb-picked, .wb-added-row .wb-add,
   .wb-sheet.wb-sheet-in, .wb-sheet.wb-sheet-out, .wb-scrim.wb-sheet-in, .wb-scrim.wb-sheet-out{ animation:none; }
   .wb-ex, .wb-tab, .wb-tray, .wb-panel, .wb-review-chev, .wb-group-chev{ transition:none; }
