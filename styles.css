@@ -2221,27 +2221,20 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
 }
 @media (prefers-reduced-motion:reduce){ .fb-done-mark{ animation:none; } }
 
-/* Per-set checkboxes: one 48px-tall row per set under the exercise meta. */
+/* Per-set checkboxes: a wrapping row of compact numbered chips (reps are in the meta line above). */
 .set-row{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px 38px; }
 [dir="rtl"] .set-row{ margin:0 38px 12px 0; }
 .set-chk{
-  display:inline-flex; align-items:center; gap:10px; min-height:48px;
-  padding:6px 14px 6px 8px; border-radius:var(--radius, 12px);
+  display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  min-width:48px; min-height:48px; padding:0 12px; border-radius:var(--radius, 12px);
   border:1.5px solid var(--line); background:var(--bg-alt); color:var(--paper);
-  font:inherit; font-size:var(--text-sm); cursor:pointer;
-  transition:border-color var(--dur-fast, .15s) var(--ease, ease), background var(--dur-fast, .15s) var(--ease, ease);
+  font:inherit; font-size:var(--text-base); font-weight:700; cursor:pointer;
+  transition:border-color var(--dur-fast, .15s) var(--ease, ease), background var(--dur-fast, .15s) var(--ease, ease), color var(--dur-fast, .15s) var(--ease, ease);
 }
-[dir="rtl"] .set-chk{ padding:6px 8px 6px 14px; }
 .set-chk:focus-visible{ outline:2px solid var(--rust); outline-offset:2px; }
-.set-box{
-  flex:none; width:28px; height:28px; border-radius:8px;
-  border:2px solid var(--line); display:flex; align-items:center; justify-content:center;
-  transition:background var(--dur-fast, .15s) var(--ease, ease), border-color var(--dur-fast, .15s) var(--ease, ease);
-}
-.set-box svg{ width:17px; height:17px; fill:#fff; opacity:0; transform:scale(.4); transition:opacity .15s, transform .2s var(--ease-spring, ease); }
-.set-chk.on{ border-color:var(--green); background:var(--green-soft); }
-.set-chk.on .set-box{ background:var(--green); border-color:var(--green); }
-.set-chk.on .set-box svg{ opacity:1; transform:none; }
+.set-chk svg{ width:0; height:18px; fill:#fff; opacity:0; transition:width .15s, opacity .15s; }
+.set-chk.on{ border-color:var(--green); background:var(--green); color:#fff; }
+.set-chk.on svg{ width:18px; opacity:1; }
 @media (prefers-reduced-motion: reduce){
-  .set-chk, .set-box, .set-box svg{ transition:none; }
+  .set-chk, .set-chk svg{ transition:none; }
 }

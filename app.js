@@ -1061,7 +1061,7 @@ function setLabel(ex, n){
   const reps = String(ex.reps == null ? "" : ex.reps).trim();
   const m = /^(\d+(?:\s*[-–]\s*\d+)?)\s*(?:s|secs?|seconds?)\b/i.exec(reps);
   const tpl = m ? "setLblSec" : (/^\d+(?:\s*[-–]\s*\d+)?$/.test(reps) ? "setLblReps" : "setLblRaw");
-  return t(tpl).replace("{n}", n).replace("{r}", "⁦" + (m ? m[1] : reps) + "⁩"); // isolate the range so RTL does not flip "6-8"
+  return t(tpl).replace("{n}", n).replace("{r}", m ? m[1] : reps); // spoken label only; the visible chip is just the set number
 }
 function hapticTick(){
   try {
@@ -1203,9 +1203,9 @@ function renderExercises(){
         <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
       <div class="set-row" role="group" aria-label="${t("setsGroup")}">
-        ${setState(key, ex, done).map((on, si)=>`<button type="button" class="set-chk${on?' on':''}" role="checkbox" aria-checked="${on}" data-set-ex="${eid}" data-set="${si}">
-          <span class="set-box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
-          <span class="set-txt">${esc(setLabel(ex, si + 1))}</span>
+        ${setState(key, ex, done).map((on, si)=>`<button type="button" class="set-chk${on?' on':''}" role="checkbox" aria-label="${esc(setLabel(ex, si + 1))}" aria-checked="${on}" data-set-ex="${eid}" data-set="${si}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+          <span class="set-num" aria-hidden="true">${si + 1}</span>
         </button>`).join("")}
       </div>
       <div class="ex-actions">
@@ -1312,7 +1312,7 @@ function renderExercises(){
       setChecks[k][id] = st;
       saveSetChecks();
       paintSets(id, st);
-      if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn.querySelector(".set-box")); }
+      if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn); }
       const all = st.every(Boolean);
       if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
     };

@@ -19,7 +19,8 @@ test.describe("per-set checkboxes", () => {
     const n = await sets(page).count();
     expect(n).toBeGreaterThanOrEqual(2);
     await expect(sets(page).first()).toHaveAttribute("role", "checkbox");
-    await expect(sets(page).first()).toHaveText(/Set 1 · ⁦\d+(-\d+)?⁩ reps/);
+    await expect(sets(page).first()).toHaveAttribute("aria-label", /^Set 1 · \d+(-\d+)? reps$/);
+    await expect(sets(page).first()).toHaveText("1");
     const box = await sets(page).first().boundingBox();
     expect(box.height).toBeGreaterThanOrEqual(44);
     expect(box.width).toBeGreaterThanOrEqual(44);
@@ -87,9 +88,9 @@ test.describe("per-set checkboxes", () => {
     const { context, page } = await openApp(browser, { signedIn: true, lang: "ar", plan: "female" });
     await expect(firstCard(page)).toBeVisible(T);
     expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
-    await expect(sets(page).first()).toHaveText(/المجموعة 1 · /);
+    await expect(sets(page).first()).toHaveAttribute("aria-label", /^المجموعة 1 · /);
     const lbl = await page.evaluate(() => [setLabel({ sets: 3, reps: "30-45s" }, 2), setLabel({ sets: 3, reps: "12" }, 1)]);
-    expect(lbl).toEqual(["المجموعة 2 · ⁦30-45⁩ ث", "المجموعة 1 · ⁦12⁩ تكرار"]);
+    expect(lbl).toEqual(["المجموعة 2 · 30-45 ث", "المجموعة 1 · 12 تكرار"]);
     await context.close();
   });
 });
