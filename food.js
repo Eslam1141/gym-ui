@@ -258,8 +258,12 @@
   function fetchServerTarget() {
     var token = authToken();
     if (targetFetched || !token) return;
+    var sub = currentUserSub();
     targetFetched = true;
     targetPending = true;
+    // An account switch mid-fetch (resetUserState) must not cache or paint the
+    // previous user's target under the new account.
+    var stale = function () { return authToken() !== token || currentUserSub() !== sub; };
     var opts = function () { return { headers: { "Authorization": "Bearer " + token } }; };
     var json = function (r) { if (!r.ok) throw new Error("http " + r.status); return r.json(); };
     fetchTimeout(ASSIST_BASE + "/history?limit=1", opts()).then(json).then(function (doc) {
@@ -268,11 +272,12 @@
       if (it.computed) return it;
       return fetchTimeout(ASSIST_BASE + "/assessment/" + encodeURIComponent(it.id), opts()).then(json);
     }).then(function (a) {
-      if (!a || !a.computed || !a.computed.targetKcal) return;
+      if (!a || !a.computed || !a.computed.targetKcal || stale()) return;
       try {
-        localStorage.setItem(TARGET_KEY, JSON.stringify({ computed: a.computed, createdAt: a.createdAt, sub: currentUserSub() }));
+        localStorage.setItem(TARGET_KEY, JSON.stringify({ computed: a.computed, createdAt: a.createdAt, sub: sub }));
       } catch (e) {}
     }).catch(function () {}).then(function () {
+      if (stale()) return;
       targetPending = false;
       paintTotals();
     });
