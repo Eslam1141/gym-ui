@@ -583,3 +583,12 @@ if (SHOTS) {
     }
   }
 }
+
+test("result: New assessment opens the form (the click event is not taken as saved form state)", async ({ browser }) => {
+  const { context, page, consoleErrors } = await openCoachResult({ browser, motion: "reduce" });
+  await page.locator(".coach-actions .coach-secondary").first().click();
+  await expect(page.locator("#coachBody form.coach-form")).toBeVisible();
+  await expect(page.locator(".coach-hero")).toHaveCount(0);
+  expect(consoleErrors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]); // no script errors
+  await context.close();
+});
