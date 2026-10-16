@@ -65,7 +65,21 @@ for (const lang of ["en", "ar"]) for (const theme of ["dark", "light"]) {
     const app = await openApp(browser, { signedIn: true, lang, theme, ls: { gym_coach_form_draft: DRAFT } });
     const { context, page } = app;
     const release = await holdPlan(app);
-    await shot(page, "nav-idle", lang, theme);
+    await page.waitForFunction(() => {
+      const l = document.getElementById("bootLoader");
+      if (!l) return true;
+      const cs = getComputedStyle(l);
+      return cs.display === "none" || cs.visibility === "hidden" || +cs.opacity === 0;
+    });
+    await expect(page.locator("#appNav")).toBeVisible();
+    await page.waitForTimeout(500);
+    if (SHOTS) {
+      expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
+      expect(await page.evaluate(() => document.documentElement.dir)).toBe(lang === "ar" ? "rtl" : "ltr");
+      expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme);
+      fs.mkdirSync(SHOTS, { recursive: true });
+      await page.screenshot({ path: path.join(SHOTS, `nav-idle-${lang}-${theme}.png`), clip: { x: 0, y: 664, width: 390, height: 180 } });
+    }
     await page.click('#appNav button[data-tab="coach"]');
     await page.locator("#coachBody form button[type=submit]").first().click();
     await expect(page.locator(".coach-ai-loading")).toBeVisible();
