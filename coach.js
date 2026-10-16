@@ -17,7 +17,8 @@
 (function () {
   "use strict";
 
-  var ASSIST_BASE = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "") + "/assistant";
+  var API_ROOT = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "");
+  var ASSIST_BASE = API_ROOT + "/assistant";
   // Must comfortably exceed the backend's own outer request deadline
   // (REQUEST_TIMEOUT, currently 80s in deploy/helm/gym-assistant/values.yaml)
   // or this abort fires before the backend's retry loop can succeed — a
@@ -33,6 +34,11 @@
   // ---------------- i18n ----------------
   if (!window.GymDom) throw new Error("coach.js: dom.js must load first");
   var h = GymDom.h, lang = GymDom.lang;
+  // Version of the InBody consent wording (ibNotice + ibConsent below). Change it
+  // whenever that text changes: everyone is then asked to agree again.
+  var IB_CONSENT_TYPE = "inbody_ai";
+  var IB_CONSENT_VERSION = "2026-10-16";
+
   var STR = {
     teaseTitle: ["Meet your AI coach", "تعرّف على مدرّبك الذكي"],
     teaseBody: ["A diet and training plan calculated from your body numbers and goal — then filled in by Claude. Free with a Google account.",
@@ -84,7 +90,17 @@
       "أوافق على إرسال هذه الصورة، التي تتضمن معلومات صحية عني، إلى شركة Anthropic في الولايات المتحدة الأمريكية لهذا الغرض، ويمكنني سحب هذه الموافقة في أي وقت من: المزيد ← الخصوصية والبيانات."],
     ibRepeat: ["Sent to Anthropic (US) to read the numbers; we don't save the photo. Crop out your name and ID.",
       "تُرسل إلى Anthropic (الولايات المتحدة) لقراءة الأرقام، ولا نحتفظ بالصورة. احذف اسمك ورقم هويتك من الصورة."],
-    ibChange: ["Change", "تغيير"],
+    ibAgreedOn: ["You agreed on {d}.", "وافقت بتاريخ {d}."],
+    ibAgreed: ["You agreed to this.", "لقد وافقت على ذلك."],
+    ibWithdraw: ["Withdraw consent", "سحب الموافقة"],
+    ibSaving: ["Saving your agreement…", "جارٍ حفظ موافقتك…"],
+    ibConsentErr: ["Couldn't save your agreement, so photo upload is still off. Check your connection and try again.",
+      "تعذّر حفظ موافقتك، لذلك ما زال رفع الصورة متوقفاً. تحقق من اتصالك وحاول مرة أخرى."],
+    ibWithdrawn: ["Consent withdrawn. Photo upload is off until you agree again.", "تم سحب الموافقة. رفع الصور متوقف حتى توافق مرة أخرى."],
+    ibWithdrawErr: ["Couldn't withdraw your consent. It's still active. Check your connection and try again.",
+      "تعذّر سحب موافقتك وما زالت سارية. تحقق من اتصالك وحاول مرة أخرى."],
+    ibNeedConsent: ["We need your agreement before we can read photos. Tick the box below to continue, or type the numbers yourself.",
+      "نحتاج موافقتك قبل قراءة الصور. فعّل المربع أدناه للمتابعة، أو اكتب الأرقام بنفسك."],
     ibCrop: ["Keep only the results table. Your name, ID and phone number aren't needed. Crop the photo, or cover them before taking it.",
       "أبقِ جدول النتائج فقط؛ فلا حاجة إلى اسمك أو رقم هويتك أو رقم هاتفك. قصّ الصورة، أو غطِّها قبل التصوير."],
     ibChoose: ["Choose photo", "اختر صورة"],
@@ -348,7 +364,25 @@
   function inbodyUploadOn() {
     try { return localStorage.getItem("etq_ff_inbody") === "1"; } catch (e) { return false; }
   }
-  var ibConsented = false; // this session only; a server-side record is a backend follow-up
+  var ibConsented = false;   // mirrors the server record: an active inbody_ai consent for IB_CONSENT_VERSION
+  var ibConsentedAt = "";    // grantedAt of that record
+  var ibSync = null;         // repaints the open form's consent UI (set by renderForm, called by privacy.js's event)
+  function consentUrl(suffix) { return API_ROOT + "/me/consents" + (suffix || ""); }
+  function consentCall(method, suffix, body) {
+    var opts = { method: method, headers: { "Authorization": "Bearer " + authToken() } };
+    if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    return fetchTimeout(consentUrl(suffix), opts);
+  }
+  function activeInbodyConsent(list) {
+    for (var i = 0; list && i < list.length; i++) {
+      var c = list[i];
+      if (c && c.type === IB_CONSENT_TYPE && !c.withdrawnAt && c.textVersion === IB_CONSENT_VERSION) return c;
+    }
+    return null;
+  }
+  // privacy.js withdrew the consent from More -> Privacy & data
+  document.addEventListener("etq:inbody-consent-withdrawn", function () { ibConsented = false; ibConsentedAt = ""; if (ibSync) ibSync(); });
+  function ibAnnounce() { document.dispatchEvent(new CustomEvent("etq:inbody-consent-changed", { detail: { granted: ibConsented } })); }
   var IB_FIELDS = ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal", "weightKg"];
 
   function decodeImage(file) {
@@ -801,7 +835,8 @@
     var ibFile = h("input", { type: "file", id: "coachIbFile", class: "coach-ib-file", accept: IB_TYPES.join(",") });
     var ibStatus = h("p", { class: "coach-ib-status", role: "status", "aria-live": "polite" });
     var ibBusy = false;
-    function ibGate() { ibFile.disabled = ibBusy || !ibConsented; }
+    var ibConsentBusy = false, ibPending = ""; // ibPending: "grant" | "withdraw" while a request is in flight
+    function ibGate() { ibFile.disabled = ibBusy || ibConsentBusy || !ibConsented; }
     function ibSay(text, kind) { ibStatus.textContent = text; ibStatus.className = "coach-ib-status" + (kind ? " is-" + kind : ""); }
     function ibClearMarks() {
       form.querySelectorAll(".is-prefilled").forEach(function (f) {
@@ -851,6 +886,7 @@
         });
       }).then(function (res) {
         if (res.status === 401) { ibSay("", ""); if (window.GymUI) GymUI.promptSignIn(); return; }
+        if (res.status === 403) { ibSay("", ""); ibConsented = false; ibConsentedAt = ""; ibPaint(s("ibNeedConsent"), "error"); ibAgree.focus(); return; }
         if (!res.ok) { ibFail(res.status); return; }
         return res.json().then(ibApply, function () { ibFail(0); });
       }).catch(function (err) {
@@ -869,22 +905,65 @@
       fEl.classList.remove("is-prefilled");
       var t = fEl.querySelector(".coach-prefill-tag"); if (t) t.remove();
     });
-    var ibUpload = null;
+    var ibUpload = null, ibAgree = null, ibPaint = null;
     if (inbodyUploadOn()) {
-      var ibAsk = h("div", { class: "coach-ib-ask" });
-      var ibAgree = h("input", { type: "checkbox", id: "coachIbAgree" });
-      var ibPaint = function () {
-        ibAsk.innerHTML = "";
-        if (ibConsented) {
-          ibAsk.appendChild(h("p", { class: "coach-ib-repeat" }, s("ibRepeat") + " ",
-            h("button", { type: "button", class: "coach-link", on: { click: function () { ibConsented = false; ibAgree.checked = false; ibPaint(); } } }, s("ibChange"))));
-        } else {
-          ibAsk.appendChild(h("p", { class: "coach-ib-notice" }, s("ibNotice")));
-          ibAsk.appendChild(h("label", { class: "coach-check coach-ib-agree", for: "coachIbAgree" }, ibAgree, h("span", {}, s("ibConsent"))));
-        }
+      ibAgree = h("input", { type: "checkbox", id: "coachIbAgree" });
+      var ibAgreedEl = h("span", { class: "coach-ib-agreed" });
+      var ibWithdrawBtn = h("button", { type: "button", class: "coach-link", on: { click: function () { ibWithdraw(); } } }, s("ibWithdraw"));
+      var ibMeta = h("p", { class: "coach-ib-repeat coach-ib-meta" }, ibAgreedEl, " ", ibWithdrawBtn);
+      var ibMsg = h("p", { class: "coach-ib-cmsg", role: "status", "aria-live": "polite" });
+      var ibAsk = h("div", { class: "coach-ib-ask" },
+        h("p", { class: "coach-ib-notice" }, s("ibNotice")),
+        h("label", { class: "coach-check coach-ib-agree", for: "coachIbAgree" }, ibAgree, h("span", {}, s("ibConsent"))),
+        ibMeta, ibMsg);
+      // text/kind: an optional message for the live region; the consent state itself comes from ibConsented.
+      ibPaint = function (text, kind) {
+        ibAgree.checked = ibPending ? ibPending === "grant" : ibConsented; // show the user's click while it is saved
+        ibAgree.disabled = ibConsentBusy;
+        ibMeta.hidden = !ibConsented;
+        var when = ibConsented ? fmtDate(ibConsentedAt) : "";
+        ibAgreedEl.textContent = when ? msg(["ibAgreedOn", { d: when }]) : s("ibAgreed");
+        ibMsg.textContent = text || "";
+        ibMsg.className = "coach-ib-cmsg" + (kind ? " is-" + kind : "");
         ibGate();
       };
-      ibAgree.addEventListener("change", function () { ibConsented = ibAgree.checked; ibGate(); }); // box stays on screen once ticked; the short repeat line shows from the next render
+      ibSync = function () { ibPaint(); };
+      var ibWithdraw = function () {
+        if (!ibConsented || ibConsentBusy) return;
+        if (!authToken()) { ibPaint(s("ibWithdrawErr"), "error"); return; }
+        ibConsentBusy = true; ibPending = "withdraw"; ibPaint();
+        consentCall("DELETE", "/" + IB_CONSENT_TYPE).then(function (res) {
+          if (!res.ok) throw new Error("withdraw");
+          ibConsentBusy = false; ibPending = ""; ibConsented = false; ibConsentedAt = "";
+          ibPaint(s("ibWithdrawn"), "ok"); ibAnnounce();
+        }).catch(function () { ibConsentBusy = false; ibPending = ""; ibPaint(s("ibWithdrawErr"), "error"); });
+      };
+      var ibGrant = function () {
+        if (!authToken()) { ibConsented = false; ibPaint(); if (window.GymUI) GymUI.promptSignIn(); return; }
+        ibConsentBusy = true; ibPending = "grant"; ibPaint(s("ibSaving"), "busy");
+        consentCall("POST", "", { type: IB_CONSENT_TYPE, textVersion: IB_CONSENT_VERSION, lang: lang() === "ar" ? "ar" : "en" })
+          .then(function (res) {
+            if (!res.ok) throw new Error("grant");
+            return res.json().catch(function () { return null; });
+          }).then(function (rec) {
+            ibConsentBusy = false; ibPending = ""; ibConsented = true;
+            ibConsentedAt = (rec && rec.grantedAt) || new Date().toISOString();
+            ibPaint(); ibAnnounce();
+          }).catch(function () { ibConsentBusy = false; ibPending = ""; ibConsented = false; ibPaint(s("ibConsentErr"), "error"); });
+      };
+      ibAgree.addEventListener("change", function () { if (ibAgree.checked) ibGrant(); else ibWithdraw(); });
+      // On opening the form: is there an active record for this wording?
+      if (authToken()) {
+        ibConsentBusy = true;
+        consentCall("GET", "").then(function (res) {
+          if (!res.ok) throw new Error("get");
+          return res.json();
+        }).then(function (d) {
+          var rec = activeInbodyConsent(d && d.consents);
+          ibConsented = !!rec; ibConsentedAt = rec ? rec.grantedAt : "";
+        }).catch(function () { ibConsented = false; ibConsentedAt = ""; })
+          .then(function () { ibConsentBusy = false; ibPaint(); });
+      } else { ibConsented = false; }
       ibUpload = h("div", { class: "coach-ib-upload" },
         h("h4", { class: "coach-ib-h" }, s("ibTitle")),
         ibAsk,

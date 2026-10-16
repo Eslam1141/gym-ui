@@ -39,6 +39,11 @@
     errNet: ["No connection. Check your internet and try again.", "لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى."],
     errSession: ["Your session has expired. Sign in again, then retry.", "انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد المحاولة."],
     errGeneric: ["Something went wrong. Try again.", "حدث خطأ ما. حاول مرة أخرى."],
+    ibTitle: ["Withdraw InBody photo consent", "سحب موافقة صورة InBody"],
+    ibDesc: ["Stop letting us send your InBody photos to Anthropic, our AI provider in the US. Photo upload stays off until you agree again.", "أوقف إرسال صور InBody الخاصة بك إلى Anthropic، مزوّد الذكاء الاصطناعي لدينا في الولايات المتحدة. يبقى رفع الصور متوقفاً حتى توافق مرة أخرى."],
+    ibBtn: ["Withdraw consent", "سحب الموافقة"],
+    ibOk: ["Consent withdrawn. Photo upload is off until you agree again.", "تم سحب الموافقة. رفع الصور متوقف حتى توافق مرة أخرى."],
+    ibErr: ["Couldn't withdraw your consent. It's still active. Check your connection and try again.", "تعذّر سحب موافقتك وما زالت سارية. تحقق من اتصالك وحاول مرة أخرى."],
     delTitle: ["Delete my account", "حذف حسابي"],
     delDesc: ["Permanently remove your account and everything in it.", "احذف حسابك وكل ما فيه نهائيًا."],
     delBtn: ["Delete my account", "حذف حسابي"],
@@ -268,6 +273,11 @@
           '<button type="button" class="pv-btn" id="pvDownload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg><span data-pk="dlBtn"></span></button>' +
           '<p class="pv-status" id="pvStatus" role="status" aria-live="polite"></p>' +
         '</div>' +
+        '<div class="pv-row" id="pvIbRow" hidden>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="ibTitle"></div><p class="pv-desc" data-pk="ibDesc"></p></div>' +
+          '<button type="button" class="pv-btn" id="pvIbBtn"><span data-pk="ibBtn"></span></button>' +
+          '<p class="pv-status" id="pvIbStatus" role="status" aria-live="polite"></p>' +
+        '</div>' +
         '<div class="pv-row pv-row-danger">' +
           '<div class="pv-text"><div class="pv-title" data-pk="delTitle"></div><p class="pv-desc" data-pk="delDesc"></p></div>' +
           '<button type="button" class="pv-btn pv-btn-danger" id="pvDelete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1 11a2 2 0 0 1-2 1.8H9A2 2 0 0 1 7 20L6 9z"/></svg><span data-pk="delBtn"></span></button>' +
@@ -276,7 +286,45 @@
     section = host;
     el("pvDownload").addEventListener("click", doExport);
     el("pvDelete").addEventListener("click", openSheet);
+    el("pvIbBtn").addEventListener("click", withdrawInbody);
     paint();
+  }
+
+  // ---------------- InBody photo consent (shown only for testers or an active consent) ----------------
+  // coach.js owns granting; this row only withdraws. The wording version is checked there, so here any
+  // active inbody_ai record counts: withdrawing it is always right.
+  var ibActive = false, ibDone = false, ibBusy = false;
+  function ibFlag() { try { return localStorage.getItem("etq_ff_inbody") === "1"; } catch (e) { return false; } }
+  function paintInbody() {
+    var row = el("pvIbRow");
+    if (!row) return;
+    row.hidden = !(signedIn() && (ibActive || ibDone || ibFlag()));
+    el("pvIbBtn").disabled = ibBusy || !ibActive;
+  }
+  function loadInbody() {
+    if (!signedIn()) { ibActive = false; paintInbody(); return; }
+    call("/me/consents").then(function (r) {
+      if (!r.res) return;
+      return r.res.json().then(function (d) {
+        var list = (d && d.consents) || [];
+        ibActive = list.some(function (c) { return c && c.type === "inbody_ai" && !c.withdrawnAt; });
+        if (ibActive) ibDone = false;
+        paintInbody();
+      }, function () {});
+    });
+  }
+  function withdrawInbody() {
+    if (ibBusy || !ibActive) return;
+    ibBusy = true; paintInbody();
+    call("/me/consents/inbody_ai", { method: "DELETE" }).then(function (r) {
+      ibBusy = false;
+      if (r.status >= 200 && r.status < 300) {
+        ibActive = false; ibDone = true;
+        setStatus(el("pvIbStatus"), "ok", "ibOk");
+        document.dispatchEvent(new CustomEvent("etq:inbody-consent-withdrawn"));
+      } else setStatus(el("pvIbStatus"), "err", "ibErr");
+      paintInbody();
+    });
   }
 
   // build: fn returning an already-built message (waits with a number). It is
@@ -300,7 +348,7 @@
   }
 
   function paint() {
-    if (section) { section.hidden = !signedIn(); paintNode(section); }
+    if (section) { section.hidden = !signedIn(); paintNode(section); paintInbody(); }
     if (sheet) paintNode(sheet);
     if (doneEl) paintNode(doneEl);
   }
@@ -532,12 +580,18 @@
   // ---------------- boot ----------------
   function init() {
     buildSection();
-    document.addEventListener("gym:authchange", paint);
+    document.addEventListener("gym:authchange", function () { paint(); loadInbody(); });
+    document.addEventListener("etq:inbody-consent-changed", function (e) {
+      ibActive = !!(e.detail && e.detail.granted);
+      if (ibActive) { ibDone = false; var n = el("pvIbStatus"); n._pvText = null; delete n.dataset.pk; n.textContent = ""; n.className = "pv-status"; }
+      paintInbody();
+    });
     document.addEventListener("gym:tokenaccepted", onTokenAccepted);
     try {
       new MutationObserver(paint).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     } catch (e) {}
     paint();
+    loadInbody();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

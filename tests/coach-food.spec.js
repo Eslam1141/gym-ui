@@ -249,7 +249,27 @@ test("proposed meals: model text is inert (textContent only)", async ({ browser 
 });
 
 // ---------------- S3: InBody upload ----------------
-async function openForm({ browser, lang, theme, motion, flag = true, consent = true }) {
+const CONSENT_V = "2026-10-16";
+const rec = (over) => Object.assign({ type: "inbody_ai", textVersion: CONSENT_V, lang: "en", grantedAt: "2026-10-10T09:00:00Z" }, over || {});
+// In-memory stand-in for GET/POST/DELETE /me/consents.
+async function mockConsents(page, cs) {
+  await page.route((u) => u.pathname.endsWith("/api/v1/me/consents") || u.pathname.includes("/api/v1/me/consents/"), (route) => {
+    const req = route.request();
+    const entry = { method: req.method(), path: new URL(req.url()).pathname.replace(/^.*\/api\/v1/, ""), body: req.postData() ? JSON.parse(req.postData()) : null, auth: req.headers().authorization };
+    cs.reqs.push(entry);
+    if (req.method() === "GET") return json(route, cs.getStatus || 200, { consents: cs.list });
+    if (req.method() === "POST") {
+      if (cs.postStatus !== 200) return json(route, cs.postStatus, { error: { code: "x", message: "x" } });
+      const r = rec({ textVersion: entry.body.textVersion, lang: entry.body.lang, grantedAt: "2026-10-16T12:00:00Z" });
+      cs.list = [r];
+      return json(route, 200, r);
+    }
+    if (cs.deleteStatus !== 204) return json(route, cs.deleteStatus, { error: { code: "x", message: "x" } });
+    cs.list = cs.list.map((c) => ({ ...c, withdrawnAt: "2026-10-16T13:00:00Z" }));
+    return route.fulfill({ status: 204 });
+  });
+}
+async function openForm({ browser, lang, theme, motion, flag = true, consent = true, consents }) {
   const o = await openApp(browser, { signedIn: true, lang, theme });
   if (motion) await o.page.emulateMedia({ reducedMotion: motion });
   await o.page.addInitScript((on) => { if (on) localStorage.setItem("etq_ff_inbody", "1"); }, flag);
@@ -263,9 +283,11 @@ async function openForm({ browser, lang, theme, motion, flag = true, consent = t
   });
   await o.page.reload();
   await o.page.waitForFunction(() => window.GymRest && window.GymDate);
+  const cs = { list: consents || (consent ? [rec()] : []), reqs: [], postStatus: 200, deleteStatus: 204 };
+  await mockConsents(o.page, cs);
   await o.page.click('#appNav button[data-tab="coach"]');
   await o.page.click(".coach-ib-toggle");
-  if (flag && consent) await o.page.check("#coachIbAgree");
+  if (flag && consent) await expect(o.page.locator("#coachIbFile")).toBeEnabled(); // the stored agreement was found
   const state = { status: 200, body: null, reqs: [] };
   await o.page.route((u) => u.pathname.endsWith("/api/v1/assistant/inbody/extract"), (route) => {
     const req = route.request();
@@ -273,7 +295,7 @@ async function openForm({ browser, lang, theme, motion, flag = true, consent = t
     if (state.status !== 200) return json(route, state.status, { error: { code: "x", message: "x" } });
     return json(route, 200, state.body);
   });
-  return { ...o, state };
+  return { ...o, state, cs };
 }
 async function bigPng(page) {
   const b64 = await page.evaluate(() => {
@@ -387,8 +409,8 @@ test("InBody: upload is hidden without the etq_ff_inbody flag, manual fields sta
   await context.close();
 });
 
-test("InBody: choose-photo is disabled until the unticked consent box is ticked; repeat line after", async ({ browser }) => {
-  const { context, page, state } = await openForm({ browser, consent: false, motion: "reduce" });
+test("InBody consent: ticking POSTs type, version and language, then enables upload; reopening shows the date", async ({ browser }) => {
+  const { context, page, state, cs } = await openForm({ browser, consent: false, motion: "reduce" });
   state.body = FULL;
   const agree = page.locator("#coachIbAgree");
   await expect(agree).not.toBeChecked();
@@ -397,17 +419,115 @@ test("InBody: choose-photo is disabled until the unticked consent box is ticked;
   await expect(page.locator(".coach-ib-agree")).toContainText("Anthropic in the United States");
   await agree.check();
   await expect(page.locator("#coachIbFile")).toBeEnabled();
-  await page.click('#appNav button[data-tab="food"]'); // leave and come back: the form re-renders in the same session
+  const post = cs.reqs.find((r) => r.method === "POST");
+  expect(post.path).toBe("/me/consents");
+  expect(post.body).toEqual({ type: "inbody_ai", textVersion: "2026-10-16", lang: "en" });
+  expect(post.auth).toMatch(/^Bearer /);
+  await expect(page.locator(".coach-ib-meta")).toContainText("You agreed on");
+  await page.click('#appNav button[data-tab="food"]'); // leave and come back: the form re-renders and re-reads the server
   await page.click('#appNav button[data-tab="coach"]');
-  await expect(page.locator("#coachIbAgree")).toHaveCount(0);
-  await expect(page.locator(".coach-ib-repeat")).toContainText("Sent to Anthropic (US)");
+  await expect(page.locator("#coachIbAgree")).toBeChecked();
+  await expect(page.locator(".coach-ib-meta")).toContainText("You agreed on Oct 16, 2026");
   await expect(page.locator("#coachIbFile")).toBeEnabled();
-  await page.click(".coach-ib-repeat .coach-link"); // Change: asks again
-  await expect(page.locator("#coachIbAgree")).not.toBeChecked();
-  await expect(page.locator("#coachIbFile")).toBeDisabled();
   await page.click(".coach-ib-type");
   await expect(page.locator(".coach-ib-upload")).toBeHidden();
   await context.close();
+});
+
+test("InBody consent: an active record for the current wording shows the box ticked with its date and no POST", async ({ browser }) => {
+  const { context, page, cs } = await openForm({ browser, consents: [rec()], motion: "reduce" });
+  await expect(page.locator("#coachIbAgree")).toBeChecked();
+  await expect(page.locator(".coach-ib-meta")).toContainText("You agreed on Oct 10, 2026");
+  await expect(page.locator("#coachIbFile")).toBeEnabled();
+  expect(cs.reqs.filter((r) => r.method === "POST")).toHaveLength(0);
+  await context.close();
+});
+
+test("InBody consent: Arabic language is sent, and an old wording version or a withdrawn record needs a fresh agreement", async ({ browser }) => {
+  for (const list of [[rec({ textVersion: "2026-01-01" })], [rec({ withdrawnAt: "2026-10-12T00:00:00Z" })]]) {
+    const { context, page, cs } = await openForm({ browser, lang: "ar", consents: list, consent: false, motion: "reduce" });
+    await expect(page.locator("#coachIbAgree")).not.toBeChecked();
+    await expect(page.locator("#coachIbFile")).toBeDisabled();
+    await expect(page.locator(".coach-ib-meta")).toBeHidden();
+    await page.check("#coachIbAgree");
+    await expect(page.locator("#coachIbFile")).toBeEnabled();
+    expect(cs.reqs.find((r) => r.method === "POST").body).toEqual({ type: "inbody_ai", textVersion: "2026-10-16", lang: "ar" });
+    await expect(page.locator(".coach-ib-meta")).toContainText("وافقت بتاريخ");
+    await context.close();
+  }
+});
+
+test("InBody consent: a failed POST unticks the box, shows an inline error and keeps upload disabled", async ({ browser }) => {
+  const { context, page, cs } = await openForm({ browser, consent: false, motion: "reduce" });
+  cs.postStatus = 500;
+  await page.check("#coachIbAgree", { noWaitAfter: true }).catch(() => {});
+  await expect(page.locator(".coach-ib-cmsg")).toContainText("Couldn't save your agreement");
+  await expect(page.locator("#coachIbAgree")).not.toBeChecked();
+  await expect(page.locator("#coachIbFile")).toBeDisabled();
+  cs.postStatus = 200; // retry works
+  await page.check("#coachIbAgree");
+  await expect(page.locator("#coachIbFile")).toBeEnabled();
+  await expect(page.locator(".coach-ib-cmsg")).toHaveText("");
+  await context.close();
+});
+
+test("InBody consent: unticking or the Withdraw link sends DELETE, disables upload and confirms; a failed DELETE keeps it on", async ({ browser }) => {
+  const { context, page, cs } = await openForm({ browser, motion: "reduce" });
+  cs.deleteStatus = 500;
+  await page.click(".coach-ib-meta .coach-link");
+  await expect(page.locator(".coach-ib-cmsg")).toContainText("Couldn't withdraw");
+  await expect(page.locator("#coachIbAgree")).toBeChecked();
+  await expect(page.locator("#coachIbFile")).toBeEnabled();
+  cs.deleteStatus = 204;
+  await page.click(".coach-ib-meta .coach-link");
+  await expect(page.locator(".coach-ib-cmsg")).toContainText("Consent withdrawn");
+  await expect(page.locator("#coachIbAgree")).not.toBeChecked();
+  await expect(page.locator("#coachIbFile")).toBeDisabled();
+  expect(cs.reqs.filter((r) => r.method === "DELETE").pop().path).toBe("/me/consents/inbody_ai");
+  await page.check("#coachIbAgree"); // grant again, then untick the box itself
+  await expect(page.locator("#coachIbFile")).toBeEnabled();
+  await page.uncheck("#coachIbAgree");
+  await expect(page.locator("#coachIbFile")).toBeDisabled();
+  await expect(page.locator(".coach-ib-cmsg")).toContainText("Consent withdrawn");
+  await context.close();
+});
+
+test("InBody consent: a 403 from extract shows the consent box again with its own message, not the generic error", async ({ browser }) => {
+  const { context, page, state } = await openForm({ browser, motion: "reduce" });
+  state.status = 403;
+  await page.setInputFiles("#coachIbFile", { name: "inbody.png", mimeType: "image/png", buffer: await bigPng(page) });
+  await expect(page.locator(".coach-ib-cmsg")).toContainText("We need your agreement before we can read photos");
+  await expect(page.locator(".coach-ib-cmsg.is-error")).toBeVisible();
+  await expect(page.locator(".coach-ib-upload > .coach-ib-status")).toHaveText("");
+  await expect(page.locator("#coachIbAgree")).not.toBeChecked();
+  await expect(page.locator("#coachIbAgree")).toBeFocused();
+  await expect(page.locator("#coachIbFile")).toBeDisabled();
+  await context.close();
+});
+
+test("Privacy: the withdraw entry is hidden without the flag or a consent, and withdraws an active one", async ({ browser }) => {
+  // flag off, no consent: hidden
+  let o = await openForm({ browser, flag: false, consent: false });
+  await o.page.click('#appNav button[data-tab="more"]');
+  await expect(o.page.locator("#pvIbRow")).toBeHidden();
+  await o.context.close();
+  // flag off but an active consent: shown; withdraw
+  o = await openForm({ browser, flag: false, consent: true });
+  await o.page.evaluate(() => document.dispatchEvent(new CustomEvent("gym:authchange")));
+  await o.page.click('#appNav button[data-tab="more"]');
+  await expect(o.page.locator("#pvIbRow")).toBeVisible();
+  await expect(o.page.locator("#pvIbRow .pv-title")).toHaveText("Withdraw InBody photo consent");
+  await o.page.click("#pvIbBtn");
+  await expect(o.page.locator("#pvIbStatus")).toContainText("Consent withdrawn");
+  expect(o.cs.reqs.filter((r) => r.method === "DELETE")).toHaveLength(1);
+  await expect(o.page.locator("#pvIbBtn")).toBeDisabled();
+  await o.context.close();
+  // flag on, no consent: shown but nothing to withdraw
+  o = await openForm({ browser, flag: true, consent: false });
+  await o.page.click('#appNav button[data-tab="more"]');
+  await expect(o.page.locator("#pvIbRow")).toBeVisible();
+  await expect(o.page.locator("#pvIbBtn")).toBeDisabled();
+  await o.context.close();
 });
 
 test("InBody: consent, crop and review text exist in Arabic", async ({ browser }) => {
@@ -448,6 +568,16 @@ if (SHOTS) {
         await expect(page.locator(".coach-field.is-prefilled")).toHaveCount(5);
         await page.locator(".coach-ib-upload").scrollIntoViewIfNeeded();
         await shot(page, "inbody", o);
+        await context.close();
+      });
+      test(`screenshot inbody consent ${lang} ${theme}`, async ({ browser }) => {
+        const { context, page, state } = await openForm({ browser, lang, theme, motion: "reduce" });
+        await page.locator(".coach-ib-upload").scrollIntoViewIfNeeded();
+        await shot(page, "consent-granted", o, page.locator(".coach-ib-upload"));
+        state.status = 403;
+        await page.setInputFiles("#coachIbFile", { name: "i.png", mimeType: "image/png", buffer: await bigPng(page) });
+        await expect(page.locator(".coach-ib-cmsg.is-error")).toBeVisible();
+        await shot(page, "consent-needed", o, page.locator(".coach-ib-upload"));
         await context.close();
       });
     }
