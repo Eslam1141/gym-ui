@@ -9,18 +9,37 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 #admMain{padding:16px;max-width:1100px;margin:0 auto}
 .adm-msg{padding:32px 16px;text-align:center;color:var(--paper-dim)}
 .adm-msg a{color:var(--accent-tint)}
-.adm-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-block-end:20px}
-.adm-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
-.adm-card b{display:block;font-size:var(--text-2xl);font-weight:var(--fw-black)}
-.adm-card span{color:var(--paper-dim);font-size:var(--text-sm)}
+.adm-grid{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:dense;gap:12px}
+.adm-tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;min-width:0;box-sizing:border-box}
+.adm-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.adm-card b{display:block;font-size:var(--text-2xl);font-weight:var(--fw-black);line-height:1.1;font-variant-numeric:tabular-nums;margin-block-start:10px}
+.adm-card .adm-lbl{color:var(--paper-dim);font-size:var(--text-sm)}
+.adm-ico{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--primary-soft);color:var(--accent-tint)}
+.adm-t-warn .adm-ico{background:var(--panel2);color:var(--danger)}
+.adm-delta{font-style:normal;font-size:var(--text-xs);font-weight:700;color:var(--paper-dim);margin-block-start:8px;padding:2px 8px;border-radius:999px;background:var(--panel2)}
+.adm-delta.up{color:var(--success-text)}
+.adm-delta.down{color:var(--danger)}
+.adm-t-wide b{font-size:clamp(2.25rem,8vw,3.25rem)}
+@media (min-width:560px){
+  .adm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .adm-t-wide,.adm-t-chart,.adm-t-prov{grid-column:span 2}
+}
+@media (min-width:960px){
+  .adm-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 .adm-section{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-block-end:16px}
+.adm-grid .adm-section{margin:0;padding:16px}
 .adm-section h2{font-size:var(--text-md);margin:0 0 10px}
 .adm-chart{width:100%;height:auto;display:block}
 .adm-chart rect.bar{fill:var(--accent-tint)}
 .adm-chart text{fill:var(--paper-dim);font-size:10px}
-.adm-bars{display:grid;gap:8px}
-.adm-bars div{display:grid;grid-template-columns:90px 1fr 48px;align-items:center;gap:8px}
-.adm-bars i{display:block;height:10px;border-radius:5px;background:var(--accent-tint)}
+.adm-bars{display:grid;gap:14px}
+.adm-bars div{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l n" "t t";align-items:baseline;gap:6px 8px;font-size:var(--text-sm)}
+.adm-bars div>span:first-child{grid-area:l;color:var(--paper-dim)}
+.adm-bars div>span:last-child{grid-area:n;font-weight:700;font-variant-numeric:tabular-nums}
+.adm-track{grid-area:t;display:block;height:10px;border-radius:5px;background:var(--panel2);overflow:hidden}
+.adm-bars i{display:block;height:100%;border-radius:5px;background:var(--accent-tint)}
+.adm-bars div:nth-child(1) i{background:var(--paper-dim)}
 .adm-tools{display:flex;flex-wrap:wrap;gap:8px;margin-block-end:12px}
 .adm-tools input,.adm-tools select,.adm-form input{background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:10px;padding:10px 12px;font:inherit;min-height:44px;box-sizing:border-box}
 .adm-section textarea{display:block;width:100%;margin-block:8px;background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:10px;padding:10px 12px;font:inherit;box-sizing:border-box;resize:vertical}
@@ -64,11 +83,11 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 .adm-tabs button{transition:background-color .2s ease,color .2s ease}
 .adm-row{transition:border-color .2s ease,translate .2s ease}
 @media (prefers-reduced-motion:no-preference){
-  #admMain > *{animation:adm-rise .45s cubic-bezier(.2,.7,.2,1) both}
+  #admMain > *:not(.adm-grid){animation:adm-rise .45s cubic-bezier(.2,.7,.2,1) both}
   #admMain > :nth-child(2){animation-delay:.08s}
   #admMain > :nth-child(3){animation-delay:.16s}
   #admMain > :nth-child(4){animation-delay:.24s}
-  .adm-card{animation:adm-rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 50ms)}
+  .adm-tile{animation:adm-rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 50ms)}
   .adm-card:hover{translate:0 -2px;transition:translate .2s ease}
   .adm-chart rect.bar{transform-box:fill-box;transform-origin:50% 100%;animation:adm-grow .6s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(.2s + var(--i,0) * 12ms)}
   .adm-bars i{transform-origin:left center;animation:adm-fill .8s .3s cubic-bezier(.2,.7,.2,1) both}

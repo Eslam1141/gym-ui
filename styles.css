@@ -2002,11 +2002,19 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 [dir="rtl"] .food-date-btn svg{ transform:scaleX(-1); }
 .food-date-label{ flex:1; text-align:center; font-weight:700; font-size:var(--text-base); color:var(--paper); }
 .food-totals{ padding:14px; border-radius:var(--radius); background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
-.food-progress{ display:flex; flex-direction:column; gap:5px; }
-.food-progress-label{ font-size:var(--text-xs); color:var(--paper-dim); font-variant-numeric:tabular-nums; }
-.food-progress-track{ height:8px; border-radius:5px; background:var(--panel2); overflow:hidden; }
-.food-progress-fill{ height:100%; width:100%; border-radius:5px; background:var(--accent); transform:scaleX(var(--p,1)); transform-origin:0 50%; animation:m-fill var(--dur-slow) var(--ease-out) backwards; }
+.food-progress{ display:flex; flex-direction:column; gap:6px; --bar:var(--accent); }
+.food-progress[data-state="near"]{ --bar:var(--success); }
+.food-progress[data-state="over"]{ --bar:var(--warn); }
+.food-progress-label{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:var(--text-xs); color:var(--paper-dim); font-variant-numeric:tabular-nums; }
+.food-progress-num{ font-size:var(--text-md); color:var(--paper); font-weight:var(--fw-black,800); }
+.food-progress-over{ font-weight:700; color:var(--warn); }
+.food-progress-track{ height:10px; border-radius:5px; background:var(--panel2); overflow:hidden; }
+.food-progress-fill{ height:100%; width:100%; border-radius:5px; background:var(--bar); transform:scaleX(var(--p,0)); transform-origin:0 50%; transition:transform var(--dur-slow) var(--ease-out), background-color var(--dur-med) var(--ease); }
 [dir="rtl"] .food-progress-fill{ transform-origin:100% 50%; }
+.food-progress-prot{ display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+.food-progress-prot .food-progress-track{ height:5px; }
+.food-progress-prot .food-progress-fill{ background:var(--paper-dim); }
+.food-progress [hidden]{ display:none; }
 .food-approx-note{ font-size:var(--text-xs); color:var(--paper-dim); }
 .food-search{ padding:14px; border-radius:var(--radius); background:var(--panel); border:1px solid var(--line); }
 .food-search-hint{ font-size:var(--text-sm); color:var(--paper-dim); padding:10px 2px; }
@@ -2044,7 +2052,7 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
 .food-del-btn:hover, .food-del-btn:focus-visible{ color:var(--danger); border-color:var(--danger); }
 .food-del-btn:disabled{ opacity:.5; cursor:default; }
 @media (prefers-reduced-motion: reduce){
-  .food-progress-fill{ animation:none; }
+  .food-progress-fill{ transition:none; }
 }
 
 /* ============================================================
