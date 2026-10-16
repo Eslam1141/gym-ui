@@ -54,6 +54,10 @@ sets
 reps
 150s
 rest
+1
+2
+3
+4
 kg
 reps
 Save
@@ -67,6 +71,10 @@ sets
 reps
 120s
 rest
+1
+2
+3
+4
 kg
 reps
 Save
@@ -80,6 +88,9 @@ sets
 reps
 75s
 rest
+1
+2
+3
 kg
 reps
 Save
@@ -93,6 +104,10 @@ sets
 reps
 90s
 rest
+1
+2
+3
+4
 kg
 reps
 Save
@@ -106,6 +121,9 @@ sets
 reps
 30s
 rest
+1
+2
+3
 kg
 reps
 Save
@@ -119,6 +137,9 @@ sets
 reps
 30s
 rest
+1
+2
+3
 kg
 reps
 Save
