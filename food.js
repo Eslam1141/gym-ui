@@ -577,7 +577,7 @@
   function mealRow(m) {
     var meta = Math.round(m.grams) + s("gram") + " · " + Math.round((m.nutrients && m.nutrients.kcal) || 0) + " " + s("kcal");
     if (m.approximate) meta += " · " + s("approxTag");
-    return h("div", { class: "food-meal-row" },
+    return h("div", { class: "food-meal-row", "data-id": m.id },
       h("div", { class: "food-meal-info" },
         h("div", { class: "food-meal-name" }, foodName(m)),
         h("div", { class: "food-meal-meta" }, meta)),
@@ -588,9 +588,68 @@
       }, trashIcon()));
   }
 
+  // Add/remove on an already-painted list: touch only the changed rows so the
+  // rest keep their nodes (no flash) and the new/old row animates. Returns
+  // false when the list needs a full rebuild (first paint, empty/error states).
+  function patchMeals(host) {
+    var wrap = host.firstElementChild;
+    if (host.children.length !== 1 || !wrap || !wrap.classList.contains("food-meal-groups")) return false;
+    if (state.loadingMeals || state.mealsError || state.deleteError || !state.meals.length) return false;
+    var live = {};
+    state.meals.forEach(function (m) { live[m.id] = m; });
+    var rows = {};
+    Array.prototype.forEach.call(wrap.querySelectorAll(".food-meal-row"), function (row) {
+      if (row.classList.contains("m-row-out")) return;
+      var id = row.getAttribute("data-id");
+      if (!live[id]) { removeMealRow(host, row); return; }
+      rows[id] = row;
+      var btn = row.querySelector(".food-del-btn");
+      if (btn) btn.disabled = String(state.deletingId) === id;
+    });
+    MEAL_TYPES.forEach(function (mt) {
+      var entries = state.meals.filter(function (m) { return m.mealType === mt; });
+      var group = null;
+      Array.prototype.forEach.call(wrap.children, function (g) { if (g.getAttribute("data-type") === mt) group = g; });
+      var fresh = entries.filter(function (m) { return !rows[m.id]; });
+      if (!fresh.length) return;
+      if (!group) {
+        group = h("div", { class: "food-meal-group", "data-type": mt },
+          h("div", { class: "food-meal-group-title" }, s(mt)), h("div", { class: "food-meal-list" }));
+        var after = null;
+        MEAL_TYPES.slice(MEAL_TYPES.indexOf(mt) + 1).forEach(function (nt) {
+          Array.prototype.forEach.call(wrap.children, function (g) { if (!after && g.getAttribute("data-type") === nt) after = g; });
+        });
+        wrap.insertBefore(group, after);
+      }
+      var list = group.querySelector(".food-meal-list");
+      fresh.forEach(function (m) {
+        var row = mealRow(m);
+        row.classList.add("m-row-in");
+        row.addEventListener("animationend", function () { row.classList.remove("m-row-in"); }, { once: true });
+        list.appendChild(row);
+      });
+    });
+    return true;
+  }
+  function removeMealRow(host, row) {
+    var group = row.closest(".food-meal-group");
+    function drop() {
+      var focused = row.contains(document.activeElement);
+      row.remove();
+      if (group && !group.querySelector(".food-meal-row")) group.remove();
+      if (focused) host.focus(); // the deleted row's button held focus
+    }
+    if (window.GymMotion && !GymMotion.reduced()) {
+      row.classList.add("m-row-out");
+      var t = setTimeout(drop, 320);
+      row.addEventListener("animationend", function () { clearTimeout(t); drop(); }, { once: true });
+    } else drop();
+  }
+
   function paintMeals() {
     var host = document.getElementById("foodMealsHost");
     if (!host) return;
+    if (patchMeals(host)) return;
     host.innerHTML = "";
     if (state.loadingMeals) {
       var rows = [];
@@ -615,7 +674,7 @@
     MEAL_TYPES.forEach(function (mt) {
       var entries = state.meals.filter(function (m) { return m.mealType === mt; });
       if (!entries.length) return;
-      wrap.appendChild(h("div", { class: "food-meal-group" },
+      wrap.appendChild(h("div", { class: "food-meal-group", "data-type": mt },
         h("div", { class: "food-meal-group-title" }, s(mt)),
         h("div", { class: "food-meal-list" }, entries.map(mealRow))));
     });

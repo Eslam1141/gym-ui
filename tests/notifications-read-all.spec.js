@@ -52,6 +52,7 @@ test("hidden at 0 unread, visible with unread", async ({ browser }) => {
   await openPanel(b.page);
   await expect(b.page.locator("#notifReadAllBtn")).toBeVisible();
   await expect(b.page.locator("#notifReadAllBtn")).toHaveText("Mark all as read");
+  await b.page.evaluate(() => Promise.all(document.querySelector(".notif-panel").getAnimations().map((a) => a.finished))); // panel open animation scales the box
   const box = await b.page.locator("#notifReadAllBtn").boundingBox();
   expect(box.height).toBeGreaterThanOrEqual(44);
   await b.context.close();

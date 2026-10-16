@@ -357,7 +357,7 @@
     var d = focusDate || todayDate();
     viewYear = d.getFullYear();
     viewMonth = d.getMonth();
-    modal.hidden = false;
+    if (window.GymMotion) GymMotion.show(modal); else modal.hidden = false;
     document.body.style.overflow = "hidden";
     renderWeekdayRow();
     if (dayDetail) { dayDetail.hidden = true; dayDetail.innerHTML = ""; }
@@ -369,7 +369,7 @@
   }
   function closeModal() {
     if (!modal) return;
-    modal.hidden = true;
+    if (window.GymMotion) GymMotion.hide(modal); else modal.hidden = true;
     document.body.style.overflow = "";
   }
 

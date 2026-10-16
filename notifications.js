@@ -56,6 +56,8 @@
   // ---------------- state ----------------
   var items = [];
   var unreadCount = 0;
+  var shownCount = null; // last server-backed count painted; null until the first load
+  var countKnown = false; // unreadCount came from the server (not the initial 0)
   var loadErr = false;
   var panelOpen = false;
   var fetchSeq = 0;
@@ -86,10 +88,14 @@
 
   function renderBadge() {
     if (!bellBtn && !build()) return;
+    var rose = shownCount !== null && unreadCount > shownCount;
+    shownCount = countKnown ? unreadCount : null;
     if (unreadCount > 0) {
       badgeEl.hidden = false;
       badgeEl.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
       bellBtn.setAttribute("aria-label", str("notifBellUnread", { n: unreadCount }));
+      // Only a rise gets a cue (never first paint, never a read-down).
+      if (rose && window.GymMotion) { GymMotion.pop(badgeEl); GymMotion.play(bellBtn, "m-swing"); }
     } else {
       badgeEl.hidden = true;
       badgeEl.textContent = "";
@@ -112,7 +118,7 @@
     backdrop.addEventListener("click", close);
 
     panel = document.createElement("div");
-    panel.className = "notif-panel";
+    panel.className = "notif-panel m-menu";
     panel.hidden = true;
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
@@ -299,7 +305,7 @@
   }
 
   function resetInbox() {
-    items = []; unreadCount = 0; loadErr = false; loadedFor = null;
+    items = []; unreadCount = 0; shownCount = null; countKnown = false; loadErr = false; loadedFor = null;
     fetchSeq++; // drop any in-flight response for the previous account
   }
 
@@ -319,6 +325,7 @@
       .then(function (doc) {
         if (seq !== fetchSeq || !isAuthed()) return;
         loadedFor = currentAccount();
+        countKnown = true;
         items = (doc && Array.isArray(doc.items)) ? doc.items : [];
         unreadCount = (doc && typeof doc.unreadCount === "number")
           ? doc.unreadCount
@@ -339,7 +346,7 @@
     if (!isAuthed()) return;
     buildPanel();
     panelOpen = true;
-    panel.hidden = false;
+    if (window.GymMotion) GymMotion.show(panel); else panel.hidden = false;
     backdrop.hidden = false;
     if (bellBtn) bellBtn.setAttribute("aria-expanded", "true");
     renderStrings();
@@ -350,7 +357,7 @@
 
   function close() {
     panelOpen = false;
-    if (panel) panel.hidden = true;
+    if (panel) { if (window.GymMotion) GymMotion.hide(panel); else panel.hidden = true; }
     if (backdrop) backdrop.hidden = true;
     if (bellBtn) { bellBtn.setAttribute("aria-expanded", "false"); bellBtn.focus(); }
   }

@@ -73,6 +73,7 @@
 
   var screen = null;
   var prevTab = "plan";
+  var shownStreak = null; // last streak painted; null until first paint
   var nameDirty = false, weightDirty = false, heightDirty = false;
   var saving = false;
 
@@ -228,6 +229,8 @@
     var streak = (me && +me.currentStreak) || 0;
     var streakNum = el("profStreakNum");
     streakNum.textContent = streak > 0 ? ("🔥" + streak) : "—";
+    if (shownStreak !== null && streak > shownStreak && window.GymMotion) GymMotion.pop(streakNum);
+    shownStreak = me ? streak : null; // no profile yet: the first load is not an increase
     var pending = streak > 0 && me.todayDone === false && me.todayRested !== true;
     streakNum.classList.toggle("is-pending", pending);
     streakNum.setAttribute("aria-label", streak > 0 ? str(pending ? "hdrStreakPending" : "profStreakDays", { n: streak }) : str("profStreakNone"));

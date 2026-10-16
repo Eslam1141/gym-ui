@@ -45,14 +45,57 @@
   }
 
   // One-shot "pop" (done checkmark, streak bump). Restarts if already running.
-  function pop(el) {
+  function pop(el) { play(el, "m-pop"); }
+
+  // One-shot class animation on `el` (restarts if already running).
+  function play(el, cls) {
     if (!el || reduced()) return;
-    el.classList.remove("m-pop");
+    el.classList.remove(cls);
     void el.offsetWidth;
-    el.classList.add("m-pop");
+    el.classList.add(cls);
   }
 
-  window.GymMotion = { reduced: reduced, enter: enter, pop: pop };
+  // show/hide: an overlay, popover or menu that animates in and out. The
+  // element carries a static style class (.m-ovl or .m-menu, see motion.css)
+  // and these helpers add .m-in / .m-out. hide() waits for the element's own
+  // animationend (timeout fallback) before setting `hidden`, so the exit is
+  // seen; reduced motion shows and hides instantly. `done` runs once hidden.
+  function cancelHide(el) {
+    clearTimeout(el._mHideT);
+    if (el._mHideH) el.removeEventListener("animationend", el._mHideH);
+    el._mHideH = el._mHideT = null;
+  }
+  function show(el) {
+    if (!el) return;
+    cancelHide(el);
+    el.classList.remove("m-out", "m-in");
+    el.hidden = false;
+    if (reduced()) return;
+    void el.offsetWidth;
+    el.classList.add("m-in");
+  }
+  function hide(el, done) {
+    if (!el || el._mHideH) return;
+    if (el.hidden || reduced()) {
+      el.classList.remove("m-in", "m-out");
+      el.hidden = true;
+      if (done) done();
+      return;
+    }
+    function finish() {
+      cancelHide(el);
+      el.classList.remove("m-out");
+      el.hidden = true;
+      if (done) done();
+    }
+    el._mHideH = function (e) { if (e.target === el) finish(); };
+    el.addEventListener("animationend", el._mHideH);
+    el._mHideT = setTimeout(finish, 320);
+    el.classList.remove("m-in");
+    el.classList.add("m-out");
+  }
+
+  window.GymMotion = { reduced: reduced, enter: enter, pop: pop, play: play, show: show, hide: hide };
 
   // ---------------- action guards ----------------
   // once(fn, {cooldown}) wraps a handler so it cannot run again while the
