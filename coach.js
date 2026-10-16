@@ -585,9 +585,9 @@
   }
 
   // ---------------- teaser ----------------
-  function mascot(size, live) {
-    var svg = EtqademMascot.create({ size: size || 96, live: !!live });
-    svg.setAttribute("class", svg.getAttribute("class") + " coach-mascot");
+  function mascot(size, climb) {
+    var svg = EtqademMascot.create({ size: size || 96, climb: !!climb });
+    svg.setAttribute("class", svg.getAttribute("class") + " coach-pacer");
     return svg;
   }
 
@@ -610,7 +610,7 @@
       on: { click: function () { if (window.GymUI) GymUI.promptSignIn(); } }
     }, s("signIn"));
     var card = h("div", { class: "coach-teaser card-fx" },
-      mascot(112, true),
+      mascot(112),
       h("h2", {}, s("teaseTitle")),
       h("p", { class: "coach-tease-body" }, s("teaseBody")),
       bullets, btn);
@@ -1122,7 +1122,7 @@
     var rows = [];
     for (var i = 0; i < 4; i++) rows.push(h("div", { class: "skeleton", style: "height:56px;margin-bottom:10px" }));
     mount(h("div", { class: "coach-loading" },
-      h("div", { class: "coach-spin", "aria-hidden": "true" }),
+      mascot(96, true),
       h("p", { class: "coach-ai-loading", role: "status" }, s("generating"),
         h("span", { class: "coach-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i"))),
       h("div", {}, rows)));
