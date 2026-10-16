@@ -13,6 +13,9 @@
   "use strict";
 
   var ASSIST_BASE = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "") + "/assistant";
+  var API_ROOT = (window.GYM_API_BASE || "/api/v1").replace(/\/+$/, "");
+  var FOODS_URL = API_ROOT + "/foods";
+  var MEALS_URL = API_ROOT + "/meals";
   var CALL_TIMEOUT_MS = 30000;
   var HIST_KEY = "gymcoach_chat_history";
   var OLD_HIST_KEY = "gymchat_history"; // pre-rename key, survived sign-out (audit M4)
@@ -38,10 +41,26 @@
     quotaGeneric: ["You've reached today's chat limit. Try again tomorrow.", "بلغت حد الدردشة اليومي. حاول مجدداً غداً."],
     err: ["Couldn't reach the coach. Try again.", "تعذّر الوصول إلى المدرّب. حاول مرة أخرى."],
     retry: ["Retry", "أعد المحاولة"],
+    pmTitle: ["Add these to today's log?", "إضافة هذه إلى سجل اليوم؟"],
+    pmMatching: ["Finding it in the food catalog…", "جارٍ البحث عنه في قائمة الأطعمة…"],
+    pmNotFound: ["Not found in the catalog. Add it manually in Food.", "غير موجود في القائمة. أضفه يدوياً من تبويب الطعام."],
+    pmAdd: ["Add selected", "أضف المحدد"],
+    pmAdding: ["Adding…", "جارٍ الإضافة…"],
+    pmGrams: ["Grams for {name}", "الجرامات لـ {name}"],
+    pmFailed: ["Couldn't add {n}. Check the amounts and try again.", "تعذّرت إضافة {n}. راجع الكميات وحاول مرة أخرى."],
+    pmDone: ["Added {n} to today's log", "تمت إضافة {n} إلى سجل اليوم"],
+    pmNone: ["Tick at least one item first.", "حدّد عنصراً واحداً على الأقل أولاً."],
+    kcal: ["kcal", "سعرة"],
+    gram: ["g", "جم"],
+    slotbreakfast: ["Breakfast", "فطار"], slotlunch: ["Lunch", "غداء"], slotdinner: ["Dinner", "عشاء"],
+    slotsnack: ["Snack", "سناك"], slotsuhoor: ["Suhoor", "سحور"], slotiftar: ["Iftar", "إفطار"],
     refused: ["Let's keep this to nutrition & training — for anything medical, please see a professional.",
       "لنُبقِ الحديث عن التغذية والتمرين — لأي أمر طبي، يُرجى مراجعة مختص."]
   };
   var s = GymDom.makeT(STR);
+  var MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack", "suhoor", "iftar"]; // gym-be food.MealTypes
+  var PM_MAX = 10;         // server cap on proposedMeals
+  var FOOD_WAIT_MS = 4000; // never hold the chat request longer than this for the food brief
   function fmt(t, params) { return t.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? params[k] : ""; }); }
 
   var TIPS = [
@@ -327,10 +346,15 @@
     if (planSummary) body.planSummary = planSummary;
     if (window.GymCoach && GymCoach.ramadan && GymCoach.ramadan()) body.ramadan = true; // omit when false: backend hash stays unchanged for normal plans
 
-    fetchTimeout(ASSIST_BASE + "/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify(body)
+    var foodP = window.GymFood && GymFood.foodToday ? GymFood.foodToday() : Promise.resolve("");
+    var foodWait = new Promise(function (resolve) { setTimeout(function () { resolve(""); }, FOOD_WAIT_MS); });
+    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
+      if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
+      return fetchTimeout(ASSIST_BASE + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(body)
+      });
     }).then(function (res) {
       var typing = document.getElementById("coachChatTyping");
       if (typing) typing.remove();
@@ -360,6 +384,8 @@
         var replyEl = bubble("assistant", "");
         msgsEl.appendChild(replyEl);
         typeWriterReply(replyEl, r.body.reply);
+        var card = proposedMealsCard(r.body.proposedMeals);
+        if (card) msgsEl.appendChild(card);
         scrollToBottom();
       } else {
         if (window.console) console.warn("[chat] failed", r.status, r.body);
@@ -376,6 +402,154 @@
       scrollToBottom();
       refocusInput(hadFocus);
     });
+  }
+
+  // ---------------- proposed meals (confirm card) ----------------
+  // The coach only PROPOSES; nothing reaches the food log until the user taps
+  // Add. All model text goes in through text nodes (GymDom.h), never innerHTML.
+  function authHeaders(json) {
+    var hd = { "Authorization": "Bearer " + authToken() };
+    if (json) hd["Content-Type"] = "application/json";
+    return hd;
+  }
+  function cleanProposals(list) {
+    if (!Array.isArray(list)) return [];
+    var out = [];
+    list.slice(0, PM_MAX).forEach(function (p) {
+      if (!p || typeof p.text !== "string" || !p.text.trim()) return;
+      var grams = Math.round(Number(p.grams));
+      var kcal = Math.round(Number(p.kcalApprox));
+      out.push({
+        text: p.text.trim().slice(0, 120),
+        grams: grams >= 1 && grams <= 3000 ? grams : 100,
+        kcal: kcal >= 0 ? kcal : 0,
+        slot: MEAL_SLOTS.indexOf(p.slot) >= 0 ? p.slot : "snack"
+      });
+    });
+    return out;
+  }
+  function searchQueries(text) {
+    var plain = text.replace(/[\d.,/()\-+:;"'`~!?*]+/g, " ").replace(/\s+/g, " ").trim();
+    var words = plain.split(" ").filter(Boolean);
+    var qs = [plain.slice(0, 60)];
+    if (words.length > 2) qs.push(words.slice(0, 2).join(" "));
+    return qs.filter(function (q) { return q.length >= 2; });
+  }
+  // top catalog hit for the item text, or null
+  function matchFood(text) {
+    var qs = searchQueries(text);
+    function next(i) {
+      if (i >= qs.length) return Promise.resolve(null);
+      return fetchTimeout(FOODS_URL + "?q=" + encodeURIComponent(qs[i]) + "&limit=1", { headers: authHeaders() })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (b) { return b && Array.isArray(b.foods) && b.foods[0] ? b.foods[0] : next(i + 1); });
+    }
+    return next(0).catch(function () { return null; });
+  }
+  function foodLabel(f) {
+    var en = f.nameEn || "", ar = f.nameAr || "";
+    return lang() === "ar" ? (ar || en) : (en || ar);
+  }
+
+  function proposedMealsCard(raw) {
+    var items = cleanProposals(raw);
+    if (!items.length) return null;
+    var rows = [];
+    var addBtn = h("button", { type: "button", class: "coach-chat-pm-add", disabled: "disabled" }, s("pmAdd"));
+    var status = h("div", { class: "coach-chat-pm-status", role: "status", "aria-live": "polite" });
+    var busy = false;
+
+    function syncAdd() {
+      addBtn.disabled = busy || !rows.some(function (r) { return r.food && r.check.checked; });
+    }
+
+    items.forEach(function (it, idx) {
+      var row = { it: it, food: null, done: false };
+      row.check = h("input", { type: "checkbox", disabled: "disabled", id: "pm-c-" + idx });
+      row.grams = h("input", {
+        type: "number", inputmode: "numeric", min: "1", max: "3000", step: "1", value: String(it.grams),
+        class: "coach-chat-pm-grams", disabled: "disabled", "aria-label": fmt(s("pmGrams"), { name: it.text })
+      });
+      row.kcal = h("span", { class: "coach-chat-pm-kcal" });
+      row.note = h("span", { class: "coach-chat-pm-note" }, s("pmMatching"));
+      row.el = h("li", { class: "coach-chat-pm-item is-pending" },
+        row.check,
+        h("label", { class: "coach-chat-pm-main", for: "pm-c-" + idx },
+          h("span", { class: "coach-chat-pm-text" }, it.text),
+          h("span", { class: "coach-chat-pm-meta" }, s("slot" + it.slot) + "  ·  ", row.kcal),
+          row.note),
+        h("span", { class: "coach-chat-pm-gwrap" }, row.grams, h("span", { "aria-hidden": "true" }, s("gram"))));
+      function paintKcal() {
+        var g = Number(row.grams.value);
+        var k = g > 0 ? Math.round(it.kcal * g / it.grams) : it.kcal;
+        row.kcal.textContent = k + " " + s("kcal");
+      }
+      paintKcal();
+      row.grams.addEventListener("input", paintKcal);
+      row.check.addEventListener("change", syncAdd);
+      rows.push(row);
+    });
+
+    var card = h("div", { class: "coach-chat-pm", role: "group", "aria-label": s("pmTitle") },
+      h("div", { class: "coach-chat-pm-title" }, s("pmTitle")),
+      h.apply(null, ["ul", { class: "coach-chat-pm-list" }].concat(rows.map(function (r) { return r.el; }))),
+      status, addBtn);
+
+    rows.forEach(function (row) {
+      matchFood(row.it.text).then(function (food) {
+        row.el.classList.remove("is-pending");
+        if (!food) {
+          row.el.classList.add("is-missing");
+          row.note.textContent = s("pmNotFound");
+          return;
+        }
+        row.food = food;
+        row.note.textContent = foodLabel(food);
+        row.check.disabled = false; row.check.checked = true;
+        row.grams.disabled = false;
+        syncAdd();
+      });
+    });
+
+    function addSelected() {
+      if (busy) return;
+      var picked = rows.filter(function (r) { return r.food && r.check.checked && !r.done; });
+      if (!picked.length) { status.textContent = s("pmNone"); return; }
+      for (var i = 0; i < picked.length; i++) {
+        var g = Number(picked[i].grams.value);
+        if (!(g >= 1 && g <= 3000)) { picked[i].grams.focus(); status.textContent = fmt(s("pmFailed"), { n: picked[i].it.text }); return; }
+      }
+      busy = true; syncAdd();
+      addBtn.textContent = s("pmAdding");
+      status.textContent = "";
+      var date = window.GymDate ? GymDate.key(0) : new Date().toISOString().slice(0, 10);
+      var ok = 0, failed = [];
+      picked.reduce(function (chain, row) {
+        return chain.then(function () {
+          return fetchTimeout(MEALS_URL, {
+            method: "POST", headers: authHeaders(true),
+            body: JSON.stringify({ date: date, mealType: row.it.slot, foodId: row.food.id, grams: Number(row.grams.value) })
+          }).then(function (res) {
+            if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); throw new Error("401"); }
+            if (!res.ok) throw new Error("meals " + res.status);
+            ok++; row.done = true;
+            row.check.checked = false; row.check.disabled = true; row.grams.disabled = true;
+            row.el.classList.add("is-done");
+          }).catch(function (e) { if (!(e && e.message === "401")) failed.push(row.it.text); });
+        });
+      }, Promise.resolve()).then(function () {
+        busy = false;
+        addBtn.textContent = s("pmAdd");
+        syncAdd();
+        if (ok) {
+          if (window.GymFood && GymFood.reload) GymFood.reload();
+          if (window.GymToast) GymToast.show({ message: fmt(s("pmDone"), { n: ok }) });
+        }
+        status.textContent = failed.length ? fmt(s("pmFailed"), { n: failed.join(", ") }) : "";
+      });
+    }
+    addBtn.addEventListener("click", addSelected);
+    return card;
   }
 
   function wire() {

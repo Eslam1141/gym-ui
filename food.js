@@ -781,5 +781,46 @@
     if (state.mealsError && !state.loadingMeals && authToken()) loadMeals();
   }
 
-  window.GymFood = { refresh: refresh, retryFailed: retryFailed };
+  // Re-fetch the meals for the date on screen (the coach chat just logged some).
+  function reload() {
+    if (!document.getElementById("foodBody") || !(window.GymUI && GymUI.isAuthed && GymUI.isAuthed())) return;
+    lastLoadedDate = null;
+    refresh();
+  }
+
+  // Compact plain-text brief of TODAY's log and target for the coach chat's
+  // `foodToday` field (server cap 2000 chars). Fetched fresh rather than read
+  // from state, which follows whichever date the Food tab is showing.
+  var FOOD_TODAY_MAX = 2000;
+  function foodTodayText(meals) {
+    var r = function (v) { return Math.round(v || 0); };
+    var tg = targetInfo();
+    var tot = sumTotals(meals);
+    var head = "Date " + todayStr(0) + ". ";
+    if (tg) head += "Target " + r(tg.targetKcal) + " kcal, protein " + r(tg.proteinG) + "g, carbs " + r(tg.carbG) + "g, fat " + r(tg.fatG) + "g. ";
+    head += "Eaten " + r(tot.kcal) + " kcal, protein " + r(tot.protein) + "g, carbs " + r(tot.carbs) + "g, fat " + r(tot.fat) + "g.";
+    if (!meals.length) return head + " Nothing logged yet today.";
+    var out = head + " Logged:";
+    for (var i = 0; i < meals.length; i++) {
+      var m = meals[i], n = m.nutrients || {};
+      var line = " " + (m.mealType || "meal") + ": " + String(m.nameEn || m.nameAr || m.foodName || "?").slice(0, 60) +
+        " " + r(m.grams) + "g " + r(n.kcal) + "kcal;";
+      if ((out + line).length > FOOD_TODAY_MAX) break;
+      out += line;
+    }
+    return out.slice(0, FOOD_TODAY_MAX);
+  }
+  function foodToday() {
+    var token = authToken();
+    if (!token) return Promise.resolve("");
+    return fetchTimeout(MEALS_URL + "?date=" + encodeURIComponent(todayStr(0)), {
+      headers: { "Authorization": "Bearer " + token }
+    }).then(function (res) {
+      return res.ok ? res.json() : null;
+    }).then(function (body) {
+      return foodTodayText(body && Array.isArray(body.meals) ? body.meals : []);
+    }).catch(function () { return ""; });
+  }
+
+  window.GymFood = { refresh: refresh, retryFailed: retryFailed, reload: reload, foodToday: foodToday };
 })();
