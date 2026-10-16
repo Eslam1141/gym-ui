@@ -214,7 +214,9 @@
   // used by the Android hardware Back). leave() is for their own Back buttons.
   function sub(fn) { if (window.GymUI && GymUI.pushSub) GymUI.pushSub(fn); }
   function leave() { if (window.GymUI && GymUI.dropSub) GymUI.dropSub(); refresh(); }
-  function openSub(prev, show) { return function () { sub(prev); show.apply(null, arguments); }; }
+  // show() gets no arguments: as a click handler the first one would be the
+  // MouseEvent (renderForm took it as saved form state and the button did nothing).
+  function openSub(prev, show) { return function () { sub(prev); show(); }; }
 
   function loadJSON(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch (e) { return fb; } }
   function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
