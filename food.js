@@ -49,6 +49,7 @@
     yesterday: ["Yesterday", "أمس"],
     tomorrow: ["Tomorrow", "غداً"],
     kcal: ["kcal", "سعرة"],
+    calories: ["Calories", "السعرات"],
     gram: ["g", "جم"],
     protein: ["Protein", "بروتين"],
     carbs: ["Carbs", "كارب"],
@@ -546,7 +547,7 @@
     var target = targetInfo();
     var kids = [
       h("div", { class: "coach-stats" },
-        statTile(s("kcal"), totals.kcal, s("kcal")),
+        statTile(s("calories"), totals.kcal, ""),
         statTile(s("protein"), totals.protein, s("gram")),
         statTile(s("carbs"), totals.carbs, s("gram")),
         statTile(s("fat"), totals.fat, s("gram")))

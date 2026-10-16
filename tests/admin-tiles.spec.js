@@ -95,6 +95,34 @@ test("English deltas: weekly trend and share of users", async ({ browser }) => {
   await context.close();
 });
 
+test("grid lines up with the header and tabs; back link stays on one line on a phone", async ({ browser }) => {
+  const d = await openAdmin(browser, { width: 1440 });
+  const x = await d.page.evaluate(() => ["#admBack", "#tabOverview", ".adm-grid"].map((q) => Math.round(document.querySelector(q).getBoundingClientRect().left)));
+  expect(await d.page.evaluate(() => getComputedStyle(document.body).paddingLeft)).toBe("0px"); // the app's side-rail padding must not leak in
+  expect(x[2] - x[0]).toBeLessThanOrEqual(20); // grid edge sits at the header's padded edge (tab has own 14px padding)
+  await d.context.close();
+  const m = await openAdmin(browser, { width: 360 });
+  const h = await m.page.locator("#admBack").evaluate((a) => a.getBoundingClientRect().height);
+  expect(h).toBeGreaterThanOrEqual(44);
+  expect(h).toBeLessThan(60);
+  expect(await m.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await m.context.close();
+});
+
+if (SHOTS) {
+  for (const theme of ["dark", "light"]) {
+    for (const [vp, width, height] of [["desktop", 1280, 900], ["mobile", 390, 844]]) {
+      test(`screenshot ar ${vp} ${theme}`, async ({ browser }) => {
+        const { context, page } = await openAdmin(browser, { width, height, theme, lang: "ar" });
+        expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
+        fs.mkdirSync(SHOTS, { recursive: true });
+        await page.screenshot({ path: path.join(SHOTS, `admin-overview-ar-${vp}-${theme}.png`), fullPage: true });
+        await context.close();
+      });
+    }
+  }
+}
+
 if (SHOTS) {
   for (const theme of ["dark", "light"]) {
     for (const [vp, width, height] of [["desktop", 1280, 900], ["mobile", 390, 844]]) {

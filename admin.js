@@ -10,7 +10,8 @@
 
   var STR = {
     title: ["Admin dashboard", "لوحة الإدارة"],
-    back: ["← Back to app", "→ العودة إلى التطبيق"],
+    back: ["App", "التطبيق"],
+    backAria: ["Back to app", "العودة إلى التطبيق"],
     tabOverview: ["Overview", "نظرة عامة"],
     tabUsers: ["Users", "المستخدمون"],
     tabRemoved: ["Removed users", "المستخدمون المحذوفون"],
@@ -1233,7 +1234,13 @@
     document.documentElement.dir = AR ? "rtl" : "ltr";
     main = document.getElementById("admMain");
     document.getElementById("admTitle").textContent = s("title");
-    document.getElementById("admBack").textContent = s("back");
+    var back = document.getElementById("admBack");
+    back.textContent = "";
+    var bi = el("span", { class: "adm-back-ico", "aria-hidden": "true" });
+    bi.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+    back.appendChild(bi);
+    back.appendChild(el("span", { text: s("back") }));
+    back.setAttribute("aria-label", s("backAria"));
     document.getElementById("tabOverview").textContent = s("tabOverview");
     document.getElementById("tabUsers").textContent = s("tabUsers");
     document.getElementById("tabRemoved").textContent = s("tabRemoved");
