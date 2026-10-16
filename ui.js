@@ -33,6 +33,31 @@
 
   function screenEl(tab) { return el("screen-" + tab); }
 
+  // In-app Back stack (read by native-shell.js for the Android hardware Back).
+  // Entries are { tab } (a tab to return to) or { tab, fn } (a sub-screen's
+  // restore closure, valid only while that tab is showing). Capped.
+  var NAV_MAX = 20;
+  var navStack = [];
+  function pushSub(fn) {
+    if (typeof fn !== "function") return;
+    navStack.push({ tab: curTab, fn: fn });
+    if (navStack.length > NAV_MAX) navStack.shift();
+  }
+  // A sub-screen's own on-screen Back button calls this so the entry it
+  // pushed is not left behind for the hardware Back.
+  function dropSub() {
+    var top = navStack[navStack.length - 1];
+    if (top && top.fn && top.tab === curTab) navStack.pop();
+  }
+  // Returns true if it went back to a previous screen/tab.
+  function back() {
+    var top = navStack.pop();
+    if (!top) return false;
+    if (top.fn) { try { top.fn(); } catch (e) { if (window.console) console.warn("back failed", e); } return true; }
+    navigate(top.tab, { noPush: true });
+    return true;
+  }
+
   // Sets aria-current="page" on the #appNav button matching `tab` and clears
   // it on the others. Shared by navigate()'s swap() (real tab-switch clicks)
   // and boot()'s skip-branch (when the inline pre-paint script already put
@@ -116,6 +141,16 @@
     }
     // Slide direction follows the tab order (and flips in RTL via --m-dir).
     document.documentElement.style.setProperty("--nav-sign", TABS.indexOf(tab) >= TABS.indexOf(curTab) ? 1 : -1);
+    if (!opts.noPush && !opts.force && tab !== curTab) {
+      // Sub-screen entries of the tab being left are dropped: coming back
+      // to it re-renders its home view anyway.
+      navStack = navStack.filter(function (e) { return !(e.fn && e.tab === curTab); });
+      var top = navStack[navStack.length - 1];
+      // Going back to where we just were (e.g. Profile's own Back) pops
+      // instead of stacking A > B > A.
+      if (top && !top.fn && top.tab === tab) navStack.pop();
+      else { navStack.push({ tab: curTab }); if (navStack.length > NAV_MAX) navStack.shift(); }
+    }
     curTab = tab;
     set("gym_tab", tab);
     cancelPendingFallback();
@@ -332,6 +367,9 @@
     showResolvingSession: showResolvingSession,
     showObStep: showObStep,
     navigate: navigate,
+    pushSub: pushSub,
+    dropSub: dropSub,
+    back: back,
     currentTab: function () { return curTab; }
   };
 

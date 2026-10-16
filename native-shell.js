@@ -7,7 +7,9 @@
  *    (@capacitor/app getInfo), read by feedback.js for context.appVersion.
  *    Unset on the web: there is no build-time version there.
  *  - Hardware Back: closes the top open sheet/dialog (.syd) or the ringing
- *    timer banner first, then goes back in history, then exits the app.
+ *    timer banner first, then the in-app Back stack (GymUI.back: previous
+ *    tab / sub-screen), then history, then Plan, then (Back twice within 2 s
+ *    on Plan, with a toast) exits the app.
  *  - Session store: window.GymSessionStore {get,set,clear} (read by sync.js)
  *    keeps the app-session refresh record in Android Keystore-backed storage
  *    (native SessionVault plugin). get() is synchronous: the value is read once
@@ -118,11 +120,32 @@
     return true; // something was open: swallow this Back press either way
   }
 
+  // Press-twice-to-exit on the home tab.
+  var EXIT_WINDOW_MS = 2000;
+  var exitArmedAt = 0;
+  function exitHint() {
+    return document.documentElement.lang === "ar" ? "اضغط رجوع مرة أخرى للخروج" : "Press back again to exit";
+  }
+
   function handleBack(canGoBack) {
     if (closeTopLayer()) return;
+    var ui = window.GymUI;
+    if (ui && typeof ui.back === "function" && ui.back()) { exitArmedAt = 0; return; }
     if (canGoBack) { window.history.back(); return; }
-    var c = cap(), app = c && plugin(c, "App");
-    if (app && typeof app.exitApp === "function") app.exitApp();
+    if (ui && typeof ui.currentTab === "function" && ui.currentTab() !== "plan") {
+      exitArmedAt = 0;
+      ui.navigate("plan", { noPush: true });
+      return;
+    }
+    var now = Date.now();
+    if (exitArmedAt && now - exitArmedAt <= EXIT_WINDOW_MS) {
+      exitArmedAt = 0;
+      var c = cap(), app = c && plugin(c, "App");
+      if (app && typeof app.exitApp === "function") app.exitApp();
+      return;
+    }
+    exitArmedAt = now;
+    if (window.GymToast) GymToast.show({ message: exitHint(), duration: EXIT_WINDOW_MS });
   }
 
   function init() {

@@ -160,6 +160,12 @@
     try { window.scrollTo(0, 0); } catch (e) {}
   }
 
+  // Sub-screens register where Back returns to (GymUI's in-app Back stack,
+  // used by the Android hardware Back). leave() is for their own Back buttons.
+  function sub(fn) { if (window.GymUI && GymUI.pushSub) GymUI.pushSub(fn); }
+  function leave() { if (window.GymUI && GymUI.dropSub) GymUI.dropSub(); refresh(); }
+  function openSub(prev, show) { return function () { sub(prev); show.apply(null, arguments); }; }
+
   function loadJSON(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch (e) { return fb; } }
   function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   // write + tell the sync layer (so gym_ keys reach the account)
@@ -982,7 +988,7 @@
     }, saved ? s("savedTick") : full ? s("savedFull").replace(/\{n\}/g, SAVED_MAX) : s("saveAcct"));
 
     var actions = h("div", { class: "coach-actions" },
-      h("button", { type: "button", class: "coach-secondary", on: { click: function () { renderForm(); } } }, s("btnNew")),
+      h("button", { type: "button", class: "coach-secondary", on: { click: openSub(refresh, renderForm) } }, s("btnNew")),
       r._reqStrong ? null : h("button", {
         type: "button", class: "coach-secondary",
         on: { click: function () { runAssessment(buildRequest(loadState()), true); } }
@@ -1006,7 +1012,7 @@
         title: s("myPlansN").replace(/\{n\}/g, loadSaved().length),
         on: { click: renderMyPlans }
       }, [plansIcon(22)]) : null,
-      h("button", { type: "button", class: "coach-link", on: { click: renderHistory } }, s("btnHistory")),
+      h("button", { type: "button", class: "coach-link", on: { click: openSub(refresh, renderHistory) } }, s("btnHistory")),
       (window.GymChat && GymChat.open) ? h("button", {
         type: "button", class: "coach-link", on: { click: function () { GymChat.open(); } }
       }, s("askCoach")) : null);
@@ -1050,7 +1056,7 @@
   function renderMyPlans() {
     var arr = loadSaved();
     var head = h("div", { class: "coach-myplans-head" },
-      h("button", { type: "button", class: "coach-secondary", on: { click: function () { refresh(); } } }, s("back")),
+      h("button", { type: "button", class: "coach-secondary", on: { click: leave } }, s("back")),
       h("h2", {}, s("myPlans")));
     var body;
     if (!arr.length) {
@@ -1061,7 +1067,7 @@
         var res = p.result || {};
         body.appendChild(planCard({
           date: fmtDate(p.savedAt), want: res.want, model: res.model, preview: planPreview(res),
-          onOpen: function () { renderResult(res); },
+          onOpen: function () { sub(renderMyPlans); renderResult(res); },
           onDelete: function () {
             if (window.confirm(s("delConfirm"))) { removeSaved(i); renderMyPlans(); }
           }
@@ -1186,11 +1192,11 @@
           ? h.apply(null, ["div", { class: "coach-plan-list" }].concat(items.map(function (it) {
               var when = it.createdAt;
               try { when = new Date(it.createdAt).toLocaleDateString(lang() === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" }); } catch (e) {}
-              return planCard({ date: when, want: it.want, model: it.model, onOpen: function () { openHistory(it.id); } });
+              return planCard({ date: when, want: it.want, model: it.model, onOpen: function () { sub(renderHistory); openHistory(it.id); } });
             })))
           : h("div", { class: "coach-state card-fx" }, h("p", {}, s("histEmpty")));
         mount(h("div", { class: "coach-hist" },
-          h("button", { type: "button", class: "coach-secondary", on: { click: function () { refresh(); } } }, s("back")),
+          h("button", { type: "button", class: "coach-secondary", on: { click: leave } }, s("back")),
           body));
       }).catch(function () { renderError(null, false, 0); });
   }
@@ -1216,7 +1222,7 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: renderForm, planSummary: planSummary, ramadan: ramadanMode, showResult: renderResult, myPlans: renderMyPlans };
+  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans) };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
