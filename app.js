@@ -328,6 +328,7 @@ window.GymExerciseVideo = function(name){
 };
 const T = {
   appTitle:["Etqadem","اتقدم"],
+  homeLink:["Etqadem home","الصفحة الرئيسية لاتقدم"],
   obTitle:["One step forward, every day.","اتقدم خطوة كل يوم"],
   obSub:["Everything you need to train: a plan that fits you, an AI coach that understands your InBody, form videos, a rest timer, and progress that follows you from phone to laptop.","كل ما تحتاجه للتمرين: خطة تناسبك، مدرب ذكي يفهم نتيجة الـ InBody، فيديوهات للأداء الصحيح، مؤقت راحة، وتقدّمك يتابعك من الموبايل للابتوب."],
   obStart:["Start Changing Yourself","ابدأ بتغيير نفسك"],
