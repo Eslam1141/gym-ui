@@ -148,6 +148,9 @@ html.pending body { opacity: 0; animation: reveal 0s 1.2s forwards; }
   html.motion .calc.in .calc-macros > span:nth-child(1) { transition-delay: .7s; }
   html.motion .calc.in .calc-macros > span:nth-child(2) { transition-delay: .85s; }
   html.motion .calc.in .calc-macros > span:nth-child(3) { transition-delay: 1s; }
+  html.motion .scan-bar i { transform: scaleX(0); transition: transform .8s .4s var(--ease); }
+  html.motion[dir="rtl"] .scan-bar i { transform-origin: right; }
+  html.motion .cell-photo.in .scan-bar i { transform: none; }
   html.motion .weeks span { transform: scaleX(0); transform-origin: left; transition: transform .45s var(--ease); }
   html.motion[dir="rtl"] .weeks span { transform-origin: right; }
   html.motion .weeks b { opacity: 0; scale: .6; transition: opacity .4s var(--ease), scale .4s var(--ease); transition-delay: 1.7s; }
@@ -189,6 +192,25 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .weeks b { margin-inline-start: 6px; padding: 4px 10px; border-radius: var(--r-pill); background: rgb(60 194 184 / .16); color: var(--teal-lit); font-size: .8125rem; font-weight: 700; white-space: nowrap; }
 .cell .soon { color: var(--teal-lit); font-weight: 600; font-size: .9375rem; }
 .cell-streak { background: radial-gradient(90% 90% at 0% 0%, rgb(60 194 184 / .14), transparent 70%), var(--ink-2); }
+
+/* Meal photo: a paper-toned estimate card, the one light object in the grid. */
+.cell-photo { background: radial-gradient(80% 120% at 100% 0%, rgb(60 194 184 / .16), transparent 65%), var(--ink-2); gap: 28px; }
+.cell-photo .cell-text { align-self: center; }
+.new { align-self: flex-start; padding: 4px 12px; border-radius: var(--r-pill); background: rgb(60 194 184 / .16); color: var(--teal-lit); font-size: .8125rem; font-weight: 700; }
+.scan { width: min(100%, 340px); justify-self: center; align-self: center; padding: 18px; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 30px 60px -24px rgb(0 0 0 / .7); display: grid; gap: 8px; }
+.cell .scan p, .scan ul { max-width: none; margin: 0; color: inherit; }
+.scan-head { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.scan-plate { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: radial-gradient(circle at 50% 50%, #e9c46a 0 22%, #c9573b 23% 40%, #6a994e 41% 56%, #fff 57% 100%); box-shadow: 0 0 0 1px rgb(20 22 27 / .18); }
+.scan-items { list-style: none; padding: 0; display: grid; gap: 4px; font-size: .9375rem; }
+.scan-items li { display: flex; justify-content: space-between; gap: 12px; padding-block: 6px; border-block-end: 1px solid rgb(20 22 27 / .1); font-variant-numeric: tabular-nums; }
+.scan-items li > span:last-child { color: #4a5159; }
+.cell .scan .scan-total { color: var(--ink); font-size: 1rem; }
+.scan-total strong { font-variant-numeric: tabular-nums; font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.cell .scan .scan-macros { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .875rem; color: #4a5159; }
+.cell .scan .scan-fit { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: .9375rem; color: var(--teal-deep); }
+.scan-bar { flex: 1; height: 8px; border-radius: var(--r-pill); background: rgb(20 22 27 / .12); overflow: hidden; }
+.scan-bar i { display: block; height: 100%; width: 67%; border-radius: inherit; background: var(--teal); transform-origin: left; }
+.cell .scan .scan-add { margin-top: 4px; min-height: 44px; display: grid; place-items: center; border-radius: var(--r-pill); background: var(--teal-deep); color: #fff; font-weight: 700; }
 
 /* Coach: the focal moment. */
 .coach { background: linear-gradient(180deg, var(--ink) 0%, #0a2a2c 50%, var(--ink) 100%); padding-block: 80px; }
@@ -239,6 +261,8 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 @media (min-width: 700px) {
   .coach-in { grid-template-columns: 1fr 1fr; gap: 64px; }
   .final { padding-block: 80px; }
+  .cell-photo { grid-column: span 12; flex-direction: row; align-items: center; justify-content: space-between; }
+  .cell-photo .cell-text { max-width: 28em; }
   .cell-plan { grid-column: span 7; }
   .cell-log { grid-column: span 5; }
   .cell-food { grid-column: span 5; }
