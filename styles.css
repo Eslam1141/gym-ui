@@ -147,6 +147,15 @@ body{
 header.hero{ padding:18px 36px 16px; position:relative; text-align:center; }
 header.hero h1{ font-size:var(--text-xl); font-weight:var(--fw-black); margin:0 0 3px; line-height:1.3; }
 header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
+/* Logo = link back to the landing page (web only; native-shell.js unwraps it
+   in the Android app, which has no landing). Look is unchanged; hover/press nudge
+   the logo, focus uses the global ring. */
+.home-link{ display:block; width:max-content; margin:0 auto; border-radius:12px; touch-action:manipulation; }
+.home-link-ob{ border-radius:22px; }
+.home-link img{ transition:transform var(--dur-fast) var(--ease); }
+@media (hover:hover){ .home-link:hover img{ transform:scale(1.05); } }
+.home-link:active img{ transform:scale(.94); }
+@media (prefers-reduced-motion:reduce){ .home-link img{ transition:none; } .home-link:hover img, .home-link:active img{ transform:none; } }
 .hero-logo{
   display:block; width:46px; height:46px; margin:0 auto 8px;
   border-radius:12px; box-shadow:var(--elev-1);

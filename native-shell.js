@@ -165,12 +165,22 @@
     new MutationObserver(syncSystemBars).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
+  // The logo links back to the web landing page; the Android app has none.
+  function unwrapHomeLinks() {
+    function run() {
+      document.querySelectorAll("a.home-link").forEach(function (a) { a.replaceWith.apply(a, a.childNodes); });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+    else run();
+  }
+
   function init() {
     if (started) return;
     var c = cap();
     if (!c) return;
     started = true;
     installSessionStore();
+    unwrapHomeLinks();
     watchSystemBars();
 
     var app = plugin(c, "App");
