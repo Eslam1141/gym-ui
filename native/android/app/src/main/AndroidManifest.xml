@@ -33,6 +33,17 @@
         </provider>
     </application>
 
+    <!-- Meal-photo / InBody file inputs. Do NOT declare CAMERA: with it undeclared,
+         Capacitor's file chooser hands <input capture> to the system camera app
+         (ACTION_IMAGE_CAPTURE, no permission needed, returns via the FileProvider
+         above). Declaring it would force a runtime prompt and a denial returns
+         nothing instead of falling back to the picker. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
