@@ -22,6 +22,7 @@ const ASSETS = [
   "./app.js",
   "./ui.js",
   "./mascot.js",
+  "./coach-consent.js",
   "./coach.js",
   "./checkin.js",
   "./chat.js",
