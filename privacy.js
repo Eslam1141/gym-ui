@@ -43,6 +43,12 @@
     ibDesc: ["Stop letting us send your InBody photos to Anthropic, our AI provider in the US. Photo upload stays off until you agree again.", "أوقف إرسال صور InBody الخاصة بك إلى Anthropic، مزوّد الذكاء الاصطناعي لدينا في الولايات المتحدة. يبقى رفع الصور متوقفاً حتى توافق مرة أخرى."],
     ibBtn: ["Withdraw consent", "سحب الموافقة"],
     ibOk: ["Consent withdrawn. Photo upload is off until you agree again.", "تم سحب الموافقة. رفع الصور متوقف حتى توافق مرة أخرى."],
+    caTitle: ["AI coach (Anthropic, US)", "المدرّب الذكي (Anthropic، الولايات المتحدة)"],
+    caDesc: ["Stop sending your data to Anthropic for plans, chat and meal photos. The AI coach stays off until you turn it on again. Plans you already have stay until you delete them.",
+      "أوقف إرسال بياناتك إلى Anthropic للخطط والدردشة وصور الوجبات. يبقى المدرّب الذكي متوقفًا حتى تفعّله مرة أخرى. وتبقى خططك الحالية إلى أن تحذفها."],
+    caBtn: ["Turn off AI coach", "إيقاف المدرّب الذكي"],
+    caOk: ["AI coach turned off. Nothing more will be sent to Anthropic.", "تم إيقاف المدرّب الذكي، ولن يُرسل أي شيء آخر إلى Anthropic."],
+    caErr: ["Couldn't turn off the AI coach. It's still on. Check your connection and try again.", "تعذّر إيقاف المدرّب الذكي وما زال يعمل. تحقق من اتصالك وحاول مرة أخرى."],
     ibErr: ["Couldn't withdraw your consent. It's still active. Check your connection and try again.", "تعذّر سحب موافقتك وما زالت سارية. تحقق من اتصالك وحاول مرة أخرى."],
     delTitle: ["Delete my account", "حذف حسابي"],
     delDesc: ["Permanently remove your account and everything in it.", "احذف حسابك وكل ما فيه نهائيًا."],
@@ -273,6 +279,11 @@
           '<button type="button" class="pv-btn" id="pvDownload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg><span data-pk="dlBtn"></span></button>' +
           '<p class="pv-status" id="pvStatus" role="status" aria-live="polite"></p>' +
         '</div>' +
+        '<div class="pv-row" id="pvCaRow" hidden>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="caTitle"></div><p class="pv-desc" data-pk="caDesc"></p></div>' +
+          '<button type="button" class="pv-btn" id="pvCaBtn"><span data-pk="caBtn"></span></button>' +
+          '<p class="pv-status" id="pvCaStatus" role="status" aria-live="polite"></p>' +
+        '</div>' +
         '<div class="pv-row" id="pvIbRow" hidden>' +
           '<div class="pv-text"><div class="pv-title" data-pk="ibTitle"></div><p class="pv-desc" data-pk="ibDesc"></p></div>' +
           '<button type="button" class="pv-btn" id="pvIbBtn"><span data-pk="ibBtn"></span></button>' +
@@ -287,6 +298,7 @@
     el("pvDownload").addEventListener("click", doExport);
     el("pvDelete").addEventListener("click", openSheet);
     el("pvIbBtn").addEventListener("click", withdrawInbody);
+    el("pvCaBtn").addEventListener("click", withdrawCoach);
     paint();
   }
 
@@ -327,6 +339,40 @@
     });
   }
 
+  // ---------------- AI coach consent (coach_ai; granted by coach-consent.js) ----------------
+  var caActive = false, caDone = false, caBusy = false;
+  function paintCoach() {
+    var row = el("pvCaRow");
+    if (!row) return;
+    row.hidden = !(signedIn() && (caActive || caDone));
+    el("pvCaBtn").disabled = caBusy || !caActive;
+  }
+  function loadCoach() {
+    if (!signedIn()) { caActive = false; caDone = false; paintCoach(); return; }
+    call("/me/consents").then(function (r) {
+      if (!r.res) return;
+      return r.res.json().then(function (d) {
+        var list = (d && d.consents) || [];
+        caActive = list.some(function (c) { return c && c.type === "coach_ai" && !c.withdrawnAt; });
+        if (caActive) caDone = false;
+        paintCoach();
+      }, function () {});
+    });
+  }
+  function withdrawCoach() {
+    if (caBusy || !caActive) return;
+    caBusy = true; paintCoach();
+    call("/me/consents/coach_ai", { method: "DELETE" }).then(function (r) {
+      caBusy = false;
+      if (r.status >= 200 && r.status < 300) {
+        caActive = false; caDone = true;
+        setStatus(el("pvCaStatus"), "ok", "caOk");
+        document.dispatchEvent(new CustomEvent("etq:coach-consent-withdrawn"));
+      } else setStatus(el("pvCaStatus"), "err", "caErr");
+      paintCoach();
+    });
+  }
+
   // build: fn returning an already-built message (waits with a number). It is
   // stored on the node and re-run by paintNode so a language switch re-translates it.
   function setStatus(node, kind, key, build) {
@@ -348,7 +394,7 @@
   }
 
   function paint() {
-    if (section) { section.hidden = !signedIn(); paintNode(section); paintInbody(); }
+    if (section) { section.hidden = !signedIn(); paintNode(section); paintInbody(); paintCoach(); }
     if (sheet) paintNode(sheet);
     if (doneEl) paintNode(doneEl);
   }
@@ -580,7 +626,12 @@
   // ---------------- boot ----------------
   function init() {
     buildSection();
-    document.addEventListener("gym:authchange", function () { paint(); loadInbody(); });
+    document.addEventListener("gym:authchange", function () { paint(); loadInbody(); loadCoach(); });
+    document.addEventListener("etq:coach-consent-changed", function (e) {
+      caActive = !!(e.detail && e.detail.granted);
+      if (caActive) { caDone = false; var n = el("pvCaStatus"); n._pvText = null; delete n.dataset.pk; n.textContent = ""; n.className = "pv-status"; }
+      paintCoach();
+    });
     document.addEventListener("etq:inbody-consent-changed", function (e) {
       ibActive = !!(e.detail && e.detail.granted);
       if (ibActive) { ibDone = false; var n = el("pvIbStatus"); n._pvText = null; delete n.dataset.pk; n.textContent = ""; n.className = "pv-status"; }
@@ -592,6 +643,7 @@
     } catch (e) {}
     paint();
     loadInbody();
+    loadCoach();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

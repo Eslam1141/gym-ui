@@ -339,56 +339,71 @@
   function submitCheckInRaw(reqBody) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
-    renderLoading();
-    return fetchTimeout(CHECKIN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify(reqBody)
-    }, CALL_TIMEOUT_MS).then(function (res) {
-      if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); return null; }
-      var resetIso = res.headers.get("X-RateLimit-Reset");
-      return res.json().catch(function () { return null; }).then(function (body) {
-        return { status: res.status, body: body, reset: resetIso };
-      });
-    }).then(function (r) {
-      if (!r) return;
-      if (r.status === 200 && r.body) {
-        try { localStorage.setItem(LAST_KEY, JSON.stringify(r.body)); } catch (e) {}
-        setCachedStatus({
-          submitted: true,
-          latest: {
-            weightKg: reqBody.weightKg, adherencePct: reqBody.adherencePct,
-            energy: reqBody.energy, soreness: reqBody.soreness, notes: reqBody.notes || "",
-            createdAt: new Date().toISOString(), resultId: r.body.id
-          }
+    function post() {
+      return fetchTimeout(CHECKIN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(reqBody)
+      }, CALL_TIMEOUT_MS).then(function (res) {
+        if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); return null; }
+        var resetIso = res.headers.get("X-RateLimit-Reset");
+        return res.json().catch(function () { return null; }).then(function (body) {
+          return { status: res.status, body: body, reset: resetIso };
         });
-        if (window.GymCoach && window.GymCoach.showResult) GymCoach.showResult(r.body);
-        else stateScreen("cardTitle", s("doneBody"), [backBtn()]);
-        return;
-      }
-      var code = r.body && r.body.error && r.body.error.code;
-      if (r.status === 400 && code === "no_baseline") {
-        stateScreen("needsBaselineTitle", s("needsBaselineBody"), [
-          h("button", { type: "button", class: "coach-primary", on: { click: function () { if (window.GymCoach) GymCoach.newAssessment(); } } }, s("needsBaselineBtn")),
-          backBtn()
-        ]);
-      } else if (r.status === 409) {
-        setCachedStatus({ submitted: true });
-        stateScreen("alreadyTitle", resetBody("alreadyBody", "alreadyBodyGeneric", r.reset), [backBtn()]);
-      } else if (r.status === 422) {
-        stateScreen("refusedTitle", (r.body && r.body.error && r.body.error.message) || s("errBody"), [backBtn()]);
-      } else if (r.status === 429) {
-        stateScreen("quotaTitle", resetBody("quotaBody", "quotaBodyGeneric", r.reset), [backBtn()]);
-      } else if (r.status === 502) {
-        renderRetry("err502", reqBody);
-      } else {
-        if (window.console) console.warn("[checkin] submit failed", r.status, r.body);
+      });
+    }
+    // The AI Coach consent comes first; "Not now" leaves the check-in form as it was.
+    return GymCoachConsent.ensure().then(function (ok) {
+      if (!ok) return;
+      renderLoading();
+      return GymCoachConsent.run(post).then(function (r) {
+        if (r) handleCheckIn(r, reqBody);
+        else if (window.GymCoach && GymCoach.refresh) GymCoach.refresh();
+      }).catch(function (err) {
+        if (window.console) console.warn("[checkin] submit error", err && err.message);
         renderRetry("errBody", reqBody);
-      }
-    }).catch(function (err) {
-      if (window.console) console.warn("[checkin] submit error", err && err.message);
-      renderRetry("errBody", reqBody);
+      });
     });
+  }
+  function handleCheckIn(r, reqBody) {
+    if (r.status === 200 && r.body) {
+      try { localStorage.setItem(LAST_KEY, JSON.stringify(r.body)); } catch (e) {}
+      setCachedStatus({
+        submitted: true,
+        latest: {
+          weightKg: reqBody.weightKg, adherencePct: reqBody.adherencePct,
+          energy: reqBody.energy, soreness: reqBody.soreness, notes: reqBody.notes || "",
+          createdAt: new Date().toISOString(), resultId: r.body.id
+        }
+      });
+      if (window.GymCoach && window.GymCoach.showResult) GymCoach.showResult(r.body);
+      else stateScreen("cardTitle", s("doneBody"), [backBtn()]);
+      return;
+    }
+    var code = r.body && r.body.error && r.body.error.code;
+    if (r.status === 400 && code === "no_baseline") {
+      stateScreen("needsBaselineTitle", s("needsBaselineBody"), [
+        h("button", { type: "button", class: "coach-primary", on: { click: function () { if (window.GymCoach) GymCoach.newAssessment(); } } }, s("needsBaselineBtn")),
+        backBtn()
+      ]);
+    } else if (r.status === 409) {
+      setCachedStatus({ submitted: true });
+      stateScreen("alreadyTitle", resetBody("alreadyBody", "alreadyBodyGeneric", r.reset), [backBtn()]);
+    } else if (r.status === 422) {
+      stateScreen("refusedTitle", (r.body && r.body.error && r.body.error.message) || s("errBody"), [backBtn()]);
+    } else if (r.status === 429) {
+      stateScreen("quotaTitle", resetBody("quotaBody", "quotaBodyGeneric", r.reset), [backBtn()]);
+    } else if (GymCoachConsent.isUnavailable(r)) {
+      stateScreen("errTitle", GymCoachConsent.unavailableText(), [
+        h("button", { type: "button", class: "coach-primary", on: { click: function () { submitCheckIn(reqBody); } } }, s("retry")),
+        backBtn()
+      ]);
+    } else if (r.status === 502) {
+      renderRetry("err502", reqBody);
+    } else {
+      if (window.console) console.warn("[checkin] submit failed", r.status, r.body);
+      renderRetry("errBody", reqBody);
+    }
   }
 
   window.GymCheckin = { renderCard: renderCard };

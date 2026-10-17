@@ -257,13 +257,92 @@ test("the chip carries the food-only tip, in English and Arabic", async ({ brows
   }
 });
 
-test("a 403 consent_required without the shared consent sheet on this build explains what to do, and is not retried", async ({ browser }) => {
-  const { context, page, calls } = await openChat({ browser, acked: true, status: 403, body: { error: { code: "consent_required", message: "x" } } });
+// In-memory /me/consents for the combined flow with the real GymCoachConsent sheet.
+async function mockConsents(page, cs) {
+  await page.route((u) => u.pathname.includes("/api/v1/me/consents"), (route) => {
+    const req = route.request();
+    const body = req.postData() ? JSON.parse(req.postData()) : null;
+    cs.reqs.push({ method: req.method(), body });
+    if (req.method() === "GET") return json(route, 200, { consents: cs.list });
+    cs.list = [{ type: body.type, textVersion: body.textVersion, lang: body.lang, grantedAt: "2026-10-17T09:00:00Z" }];
+    return json(route, 200, cs.list[0]);
+  });
+}
+const REC = [{ type: "coach_ai", textVersion: "coach_ai.v1", lang: "en", grantedAt: "2026-10-17T09:00:00Z" }];
+const sheet = (page) => page.locator("dialog.cc-sheet[open]");
+
+test("missing consent at send shows the real consent sheet first, then sends the photo once and renders the result", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true });
+  const cs = { list: REC, reqs: [] };
+  await mockConsents(page, cs);
+  await page.evaluate(() => GymCoachConsent.reset());
   await choose(page);
+  cs.list = []; // withdrawn on another device after the chat opened
+  let n = 0;
+  await page.route((u) => u.pathname.endsWith("/api/v1/assistant/meal-photo"), (route) => { n++; return json(route, 200, OK); });
   await page.press("#coachChatInput", "Enter");
-  await expect(page.locator(".coach-chat-msg.system")).toContainText("Turn on the AI coach");
-  expect(calls.photo).toHaveLength(1);
+  await expect(sheet(page)).toBeVisible();
+  expect(n).toBe(0); // the pre-check found no consent, so nothing was sent yet
+  await sheet(page).locator("label.cc-agree").click();
+  await sheet(page).locator(".pv-btn-fill").click();
+  await expect(page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(n).toBe(1);
+  expect(cs.reqs.filter((r) => r.method === "POST").map((r) => r.body.type)).toEqual(["coach_ai"]);
   await context.close();
+});
+
+test("a stale-cache 403 from the server clears the cache, asks, and retries exactly once", async ({ browser }) => {
+  const { context, page } = await openChat({ browser, acked: true });
+  const cs = { list: REC, reqs: [] };
+  await mockConsents(page, cs);
+  await page.evaluate(() => GymCoachConsent.reset());
+  await choose(page);
+  await page.evaluate(() => GymCoachConsent.ensure()); // cache now says granted
+  cs.list = [];
+  let n = 0;
+  await page.route((u) => u.pathname.endsWith("/api/v1/assistant/meal-photo"), (route) => {
+    n++;
+    return n === 1 ? json(route, 403, { error: { code: "consent_required", message: "x" } }) : json(route, 200, OK);
+  });
+  await page.press("#coachChatInput", "Enter");
+  await expect(sheet(page)).toBeVisible();
+  expect(n).toBe(1);
+  await sheet(page).locator("label.cc-agree").click();
+  await sheet(page).locator(".pv-btn-fill").click();
+  await expect(page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(n).toBe(2);
+  await context.close();
+});
+
+test("Not now on the consent sheet sends nothing and keeps the photo ready", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true });
+  const cs = { list: REC, reqs: [] };
+  await mockConsents(page, cs);
+  await page.evaluate(() => GymCoachConsent.reset());
+  await choose(page);
+  cs.list = [];
+  await page.evaluate(() => GymCoachConsent.reset());
+  await page.press("#coachChatInput", "Enter");
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).locator(".pv-actions .pv-btn").first().click();
+  await expect(sheet(page)).toHaveCount(0);
+  await expect(page.locator("#coachPhotoChip")).toBeVisible();
+  expect(calls.photo).toHaveLength(0);
+  await context.close();
+});
+
+test("the result carries the estimate footer and the note placeholder steers away from health detail, in English and Arabic", async ({ browser }) => {
+  for (const [lang, foot, ph] of [
+    ["en", "Estimate from a photo. Check it before adding it to your log.", "Optional: portion size, cooking method or ingredients"],
+    ["ar", "تقدير من صورة؛ راجعه قبل إضافته إلى سجلك.", "اختياري: حجم الحصة أو طريقة الطهي أو المكوّنات"]
+  ]) {
+    const { context, page } = await openChat({ browser, lang, acked: true });
+    await choose(page);
+    await expect(page.locator("#coachChatInput")).toHaveAttribute("placeholder", ph);
+    await page.press("#coachChatInput", "Enter");
+    await expect(page.locator(".coach-mp-foot")).toHaveText(foot);
+    await context.close();
+  }
 });
 
 test("errors use the {error:{code}} envelope: not_food and rate_limited become friendly bubbles", async ({ browser }) => {

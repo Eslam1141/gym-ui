@@ -251,7 +251,8 @@ test("proposed meals: model text is inert (textContent only)", async ({ browser 
 // ---------------- S3: InBody upload ----------------
 const CONSENT_V = "2026-10-16";
 const rec = (over) => Object.assign({ type: "inbody_ai", textVersion: CONSENT_V, lang: "en", grantedAt: "2026-10-10T09:00:00Z" }, over || {});
-// In-memory stand-in for GET/POST/DELETE /me/consents.
+const coachRec = (over) => rec(Object.assign({ type: "coach_ai", textVersion: "coach_ai.v1" }, over || {}));
+// In-memory stand-in for GET/POST/DELETE /me/consents (one record per type).
 async function mockConsents(page, cs) {
   await page.route((u) => u.pathname.endsWith("/api/v1/me/consents") || u.pathname.includes("/api/v1/me/consents/"), (route) => {
     const req = route.request();
@@ -260,16 +261,17 @@ async function mockConsents(page, cs) {
     if (req.method() === "GET") return json(route, cs.getStatus || 200, { consents: cs.list });
     if (req.method() === "POST") {
       if (cs.postStatus !== 200) return json(route, cs.postStatus, { error: { code: "x", message: "x" } });
-      const r = rec({ textVersion: entry.body.textVersion, lang: entry.body.lang, grantedAt: "2026-10-16T12:00:00Z" });
-      cs.list = [r];
+      const r = rec({ type: entry.body.type, textVersion: entry.body.textVersion, lang: entry.body.lang, grantedAt: "2026-10-16T12:00:00Z" });
+      cs.list = cs.list.filter((c) => c.type !== r.type).concat(r);
       return json(route, 200, r);
     }
     if (cs.deleteStatus !== 204) return json(route, cs.deleteStatus, { error: { code: "x", message: "x" } });
-    cs.list = cs.list.map((c) => ({ ...c, withdrawnAt: "2026-10-16T13:00:00Z" }));
+    const gone = entry.path.split("/").pop();
+    cs.list = cs.list.map((c) => (c.type === gone ? { ...c, withdrawnAt: "2026-10-16T13:00:00Z" } : c));
     return route.fulfill({ status: 204 });
   });
 }
-async function openForm({ browser, lang, theme, motion, flag = true, consent = true, consents }) {
+async function openForm({ browser, lang, theme, motion, flag = true, consent = true, consents, coach = true }) {
   const o = await openApp(browser, { signedIn: true, lang, theme });
   if (motion) await o.page.emulateMedia({ reducedMotion: motion });
   await o.page.addInitScript((on) => { if (on) localStorage.setItem("etq_ff_inbody", "1"); }, flag);
@@ -283,7 +285,8 @@ async function openForm({ browser, lang, theme, motion, flag = true, consent = t
   });
   await o.page.reload();
   await o.page.waitForFunction(() => window.GymRest && window.GymDate);
-  const cs = { list: consents || (consent ? [rec()] : []), reqs: [], postStatus: 200, deleteStatus: 204 };
+  // The AI Coach consent (coach_ai) gates the whole coach, so every InBody fixture also carries it.
+  const cs = { list: (consents || (consent ? [rec()] : [])).concat(coach ? [coachRec()] : []), reqs: [], postStatus: 200, deleteStatus: 204 };
   await mockConsents(o.page, cs);
   await o.page.click('#appNav button[data-tab="coach"]');
   await o.page.click(".coach-ib-toggle");
@@ -502,6 +505,21 @@ test("InBody consent: a 403 from extract shows the consent box again with its ow
   await expect(page.locator("#coachIbAgree")).not.toBeChecked();
   await expect(page.locator("#coachIbAgree")).toBeFocused();
   await expect(page.locator("#coachIbFile")).toBeDisabled();
+  await context.close();
+});
+
+test("InBody upload also needs the AI coach consent: the sheet comes first, then the photo is sent once", async ({ browser }) => {
+  const { context, page, state, cs } = await openForm({ browser, coach: false });
+  state.body = { bodyFatPct: 20 };
+  await page.setInputFiles("#coachIbFile", { name: "inbody.png", mimeType: "image/png", buffer: await bigPng(page) });
+  const dlg = page.locator("dialog.cc-sheet[open]");
+  await expect(dlg).toBeVisible();
+  expect(state.reqs).toHaveLength(0);
+  await dlg.locator("label.cc-agree").click();
+  await dlg.locator(".pv-btn-fill").click();
+  await expect(page.locator('[name="bodyFatPct"]')).toHaveValue("20");
+  expect(state.reqs).toHaveLength(1);
+  expect(cs.reqs.filter((r) => r.method === "POST").map((r) => r.body.type)).toEqual(["coach_ai"]);
   await context.close();
 });
 

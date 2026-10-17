@@ -884,18 +884,28 @@
       if (IB_TYPES.indexOf(file.type) === -1) { ibFail(415); return; }
       if (file.size > IB_IN_MAX) { ibFail(413); return; }
       ibBusy = true; ibGate();
-      ibSay(s("ibReading"), "busy");
-      downscaleImage(file).then(function (blob) {
-        var fd = new FormData();
-        fd.append("image", blob, "inbody.jpg");
-        return fetchTimeout(ASSIST_BASE + "/inbody/extract", {
-          method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd
+      // The photo reader needs the AI Coach consent as well as its own.
+      GymCoachConsent.ensure().then(function (ok) {
+        if (!ok) { ibSay("", ""); return; }
+        ibSay(s("ibReading"), "busy");
+        return downscaleImage(file).then(function (blob) {
+          return GymCoachConsent.run(function () {
+            var fd = new FormData();
+            fd.append("image", blob, "inbody.jpg");
+            return fetchTimeout(ASSIST_BASE + "/inbody/extract", {
+              method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd
+            }).then(function (res) {
+              return res.json().catch(function () { return null; }).then(function (body) { return { status: res.status, body: body }; });
+            });
+          }, true);
+        }).then(function (r) {
+          if (!r) { ibSay("", ""); return; }
+          if (r.status === 401) { ibSay("", ""); if (window.GymUI) GymUI.promptSignIn(); return; }
+          if (r.status === 403) { ibSay("", ""); ibConsented = false; ibConsentedAt = ""; ibPaint(s("ibNeedConsent"), "error"); ibAgree.focus(); return; }
+          if (GymCoachConsent.isUnavailable(r)) { ibSay(GymCoachConsent.unavailableText(), "error"); return; }
+          if (r.status < 200 || r.status > 299 || !r.body) { ibFail(r.status === 200 ? 0 : r.status); return; }
+          ibApply(r.body);
         });
-      }).then(function (res) {
-        if (res.status === 401) { ibSay("", ""); if (window.GymUI) GymUI.promptSignIn(); return; }
-        if (res.status === 403) { ibSay("", ""); ibConsented = false; ibConsentedAt = ""; ibPaint(s("ibNeedConsent"), "error"); ibAgree.focus(); return; }
-        if (!res.ok) { ibFail(res.status); return; }
-        return res.json().then(ibApply, function () { ibFail(0); });
       }).catch(function (err) {
         ibSay(s(err && err.message === "decode" ? "ibBadImg" : err && err.message === "toobig" ? "ibTooBig" : "ibErrGen"), "error");
       }).then(function () { ibBusy = false; ibGate(); });
@@ -1180,40 +1190,50 @@
   function runAssessmentRaw(reqBody, strong) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
-    renderLoading();
-    setWorking(true);
     var url = ASSIST_BASE + "/assessment" + (strong ? "?model=strong" : "");
-    return fetchTimeout(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify(reqBody)
-    }).then(function (res) {
-      if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); return null; }
-      if (res.status === 429) { var reset = res.headers.get("X-RateLimit-Reset"); present(function () { renderQuota(reset); }, false); return null; }
-      return res.json().then(function (body) { return { status: res.status, body: body }; })
-        .catch(function () { return { status: res.status, body: null }; });
-    }).then(function (r) {
-      if (!r) return;
-      var code = r.status === 403 && r.body && r.body.error && (r.body.error.code || r.body.error);
-      if ((code === "account_blocked" || code === "account_removed") && window.GymHeader && GymHeader.onBlocked) GymHeader.onBlocked(code === "account_removed");
-      if (r.status === 200 && r.body) {
-        r.body._reqStrong = strong;
-        saveJSON(LAST_KEY, r.body);
-        present(function () { renderResult(r.body); }, true);
-      } else if (r.status === 422) {
-        present(function () { renderRefusal((r.body && r.body.error && r.body.error.message) || ""); }, false);
-      } else {
-        if (window.console) console.warn("[coach] assessment failed", r.status, r.body);
-        present(function () { renderError(reqBody, strong, r.status); }, false);
-      }
-    }).catch(function (err) {
-      if (window.console) console.warn("[coach] assessment error", err && err.message);
-      present(function () { renderError(reqBody, strong, 0); }, false);
-    }).then(function () {
-      setWorking(false);
-      // 401 / sign-in prompts leave nothing to show: drop the stale loading view.
-      if (onCoach() && document.querySelector("#coachBody .coach-ai-loading")) refresh();
+    function post() {
+      return fetchTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(reqBody)
+      }).then(function (res) {
+        if (res.status === 401) { if (window.GymUI) GymUI.promptSignIn(); return null; }
+        if (res.status === 429) { var reset = res.headers.get("X-RateLimit-Reset"); present(function () { renderQuota(reset); }, false); return null; }
+        return res.json().then(function (body) { return { status: res.status, body: body }; })
+          .catch(function () { return { status: res.status, body: null }; });
+      });
+    }
+    // The AI Coach consent comes first; "Not now" leaves the form as it was.
+    return GymCoachConsent.ensure().then(function (ok) {
+      if (!ok) return;
+      renderLoading();
+      setWorking(true);
+      return GymCoachConsent.run(post).then(function (r) {
+        if (!r) return;
+        handleAssessment(r, reqBody, strong);
+      }).catch(function (err) {
+        if (window.console) console.warn("[coach] assessment error", err && err.message);
+        present(function () { renderError(reqBody, strong, 0); }, false);
+      }).then(function () {
+        setWorking(false);
+        // 401 / sign-in prompts leave nothing to show: drop the stale loading view.
+        if (onCoach() && document.querySelector("#coachBody .coach-ai-loading")) refresh();
+      });
     });
+  }
+  function handleAssessment(r, reqBody, strong) {
+    var code = r.status === 403 && r.body && r.body.error && (r.body.error.code || r.body.error);
+    if ((code === "account_blocked" || code === "account_removed") && window.GymHeader && GymHeader.onBlocked) GymHeader.onBlocked(code === "account_removed");
+    if (r.status === 200 && r.body) {
+      r.body._reqStrong = strong;
+      saveJSON(LAST_KEY, r.body);
+      present(function () { renderResult(r.body); }, true);
+    } else if (r.status === 422) {
+      present(function () { renderRefusal((r.body && r.body.error && r.body.error.message) || ""); }, false);
+    } else {
+      if (window.console) console.warn("[coach] assessment failed", r.status, r.body);
+      present(function () { renderError(reqBody, strong, GymCoachConsent.isUnavailable(r) ? "consent_unavailable" : r.status); }, false);
+    }
   }
 
   // close any open tap-triggered tooltip when the user taps/clicks elsewhere
@@ -1573,7 +1593,7 @@
   function renderError(reqBody, strong, status) {
     mount(h("div", { class: "coach-state card-fx" },
       h("h2", {}, s("errTitle")),
-      h("p", {}, status === 502 ? s("err502") : s("errBody")),
+      h("p", {}, status === 502 ? s("err502") : status === "consent_unavailable" ? GymCoachConsent.unavailableText() : s("errBody")),
       h("div", { class: "coach-actions" },
         reqBody ? h("button", { type: "button", class: "coach-primary", on: { click: function () { runAssessment(reqBody, strong); } } }, s("retry")) : null,
         h("button", { type: "button", class: "coach-secondary", on: { click: function () { renderForm(); } } }, s("btnNew")))));

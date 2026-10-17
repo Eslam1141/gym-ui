@@ -31,6 +31,7 @@
   if (!window.GymDom) throw new Error("chat.js: dom.js must load first");
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
+    note: ["AI coach powered by Anthropic (US). Not medical advice.", "المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة). ليس نصيحة طبية."],
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
     title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
@@ -59,11 +60,11 @@
     photoPick: ["Choose from gallery", "اختيار من المعرض"],
     photoChip: ["Meal photo ready. Add a note if you like, then send.", "صورة الوجبة جاهزة. أضف ملاحظة إن أردت ثم أرسل."],
     photoRemove: ["Remove photo", "إزالة الصورة"],
-    photoNote: ["Add a note, e.g. half portion", "أضف ملاحظة، مثل نصف حصة"],
+    photoNote: ["Optional: portion size, cooking method or ingredients", "اختياري: حجم الحصة أو طريقة الطهي أو المكوّنات"],
     photoNotice: ["Your photo goes to Anthropic (US) to estimate calories. We don't save it, and Anthropic normally deletes it within 30 days. Photograph only your food: keep people, faces (especially children), medicines and documents out of the frame. Estimates can be well off, especially for oil, sauces and hidden ingredients.",
       "تُرسل صورتك إلى Anthropic (الولايات المتحدة) لتقدير السعرات الحرارية. لا نحتفظ بالصورة، وتحذفها Anthropic عادةً خلال 30 يومًا. صوّر طعامك فقط، وأبقِ الأشخاص والوجوه (خاصةً الأطفال) والأدوية والمستندات خارج الصورة. قد يختلف التقدير كثيرًا عن الواقع، خاصةً مع الزيوت والصلصات والمكوّنات غير الظاهرة."],
     photoTip: ["Sent to Anthropic (US) for an estimate; not saved by us. Food only, no people.", "تُرسل إلى Anthropic (الولايات المتحدة) للتقدير، ولا نحتفظ بها. الطعام فقط، من دون أشخاص."],
-    photoConsent: ["Turn on the AI coach to use meal photos, then try again.", "فعّل المدرّب الذكي لاستخدام صور الوجبات، ثم حاول مرة أخرى."],
+    photoFooter: ["Estimate from a photo. Check it before adding it to your log.", "تقدير من صورة؛ راجعه قبل إضافته إلى سجلك."],
     photoContinue: ["Continue", "متابعة"],
     photoCancel: ["Cancel", "إلغاء"],
     photoPlaceholder: ["📷 Meal photo", "📷 صورة وجبة"],
@@ -147,7 +148,7 @@
   var tipTimer = null;
   var tipHideTimer = null;
 
-  var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl;
+  var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
   var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoChipTip, photoRemove;
   var noticeEl, noticeText, noticeOk, noticeCancel;
 
@@ -161,6 +162,7 @@
     announceEl = document.getElementById("coachChatAnnounce");
     form = document.getElementById("coachChatForm");
     input = document.getElementById("coachChatInput");
+    noteEl = document.getElementById("coachChatNote");
     sendBtn = document.getElementById("coachChatSend");
     iconHost = document.getElementById("coachChatIcon");
     titleEl = document.getElementById("coachChatTitle");
@@ -299,6 +301,7 @@
     titleEl.textContent = s("title");
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
+    noteEl.textContent = s("note");
     fab.setAttribute("aria-label", s("fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
@@ -361,6 +364,10 @@
 
   function openChat() {
     if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
+    // The AI Coach consent comes first; "Not now" leaves the chat closed.
+    GymCoachConsent.ensure().then(function (ok) { if (ok) showChat(); });
+  }
+  function showChat() {
     open = true;
     chat.hidden = false;
     requestAnimationFrame(function () { chat.classList.add("show"); });
@@ -377,6 +384,9 @@
     fab.setAttribute("aria-expanded", "false");
     setTimeout(function () { if (!open) chat.hidden = true; }, 220);
     refreshFabVisibility();
+    // Hiding the panel would drop focus to <body>; hand it back to the opener.
+    var ae = document.activeElement;
+    if (!ae || ae === document.body || chat.contains(ae)) { try { fab.focus({ preventScroll: true }); } catch (e) {} }
   }
 
   function setSending(v) {
@@ -407,38 +417,45 @@
 
     var foodP = window.GymFood && GymFood.foodToday ? GymFood.foodToday() : Promise.resolve("");
     var foodWait = new Promise(function (resolve) { setTimeout(function () { resolve(""); }, FOOD_WAIT_MS); });
-    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
-      if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
+    function post(payload) {
+      if (!document.getElementById("coachChatTyping")) { msgsEl.appendChild(typingBubble()); scrollToBottom(); }
       return fetchTimeout(ASSIST_BASE + "/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify(body)
-      });
-    }).then(function (res) {
-      var typing = document.getElementById("coachChatTyping");
-      if (typing) typing.remove();
-      if (res.status === 401) { setSending(false); if (window.GymUI) GymUI.promptSignIn(); return null; }
-      if (res.status === 429) {
-        // new Date(null) silently gives the Unix epoch, not a throw — an
-        // absent/unreadable header must not render "Jan 1 1970".
-        var reset = res.headers.get("X-RateLimit-Reset");
-        var text = s("quotaGeneric");
-        if (reset) {
-          var d = new Date(reset);
-          if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
+        body: JSON.stringify(payload)
+      }).then(function (res) {
+        var typing = document.getElementById("coachChatTyping");
+        if (typing) typing.remove();
+        if (res.status === 401) { setSending(false); if (window.GymUI) GymUI.promptSignIn(); return null; }
+        if (res.status === 429) {
+          // new Date(null) silently gives the Unix epoch, not a throw — an
+          // absent/unreadable header must not render "Jan 1 1970".
+          var reset = res.headers.get("X-RateLimit-Reset");
+          var text = s("quotaGeneric");
+          if (reset) {
+            var d = new Date(reset);
+            if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
+          }
+          msgsEl.appendChild(systemBubble(text));
+          scrollToBottom(); setSending(false); refocusInput(hadFocus);
+          return null;
         }
-        msgsEl.appendChild(systemBubble(text));
-        scrollToBottom(); setSending(false); refocusInput(hadFocus);
-        return null;
-      }
-      return res.json().then(function (b) { return { status: res.status, body: b }; })
-        .catch(function () { return { status: res.status, body: null }; });
+        return res.json().then(function (b) { return { status: res.status, body: b }; })
+          .catch(function () { return { status: res.status, body: null }; });
+      });
+    }
+    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
+      if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
+      return GymCoachConsent.run(function () { return post(body); });
     }).then(function (r) {
-      if (!r) return;
+      if (!r) { setSending(false); return; } // 401/429 already answered; "Not now" on a retry lands here too
       setSending(false);
       var code = r.status === 403 && r.body && r.body.error && (r.body.error.code || r.body.error);
       if ((code === "account_blocked" || code === "account_removed") && window.GymHeader && GymHeader.onBlocked) GymHeader.onBlocked(code === "account_removed");
-      if (r.status === 200 && r.body && r.body.reply) {
+      if (GymCoachConsent.isUnavailable(r)) {
+        msgsEl.appendChild(systemBubble(GymCoachConsent.unavailableText(), { retry: function () { sendMessage(text); } }));
+        scrollToBottom();
+      } else if (r.status === 200 && r.body && r.body.reply) {
         pushHistory("assistant", r.body.reply);
         var replyEl = bubble("assistant", "");
         msgsEl.appendChild(replyEl);
@@ -685,8 +702,12 @@
   }
   function requestPhotoSend() {
     if (!authToken()) { if (window.GymUI) GymUI.promptSignIn(); return; }
-    if (!photoAcked()) { noticeEl.hidden = false; noticeOk.focus(); return; }
-    sendPendingPhoto();
+    // The AI Coach consent sheet comes first; the photo notice follows once.
+    GymCoachConsent.ensure().then(function (ok) {
+      if (!ok) return;
+      if (!photoAcked()) { noticeEl.hidden = false; noticeOk.focus(); return; }
+      sendPendingPhoto();
+    });
   }
   function sendPendingPhoto() {
     if (!pendingPhoto || sending) return;
@@ -718,7 +739,7 @@
       h("img", { src: url, alt: s("photoAlt") }),
       note ? h("div", { class: "coach-chat-photo-note" }, note) : null);
   }
-  function sendPhoto(blob, note, retried) {
+  function sendPhoto(blob, note) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
@@ -742,48 +763,50 @@
       msgsEl.appendChild(systemBubble(s(key), retryable ? { retry: function () { sendPhoto(blob, note); } } : undefined));
       scrollToBottom();
     }
-    Promise.race([kcalP, kcalWait]).catch(function () { return {}; }).then(function (kcal) {
+    function post(kcal) {
+      if (!document.getElementById("coachChatTyping")) { msgsEl.appendChild(wait); scrollToBottom(); }
       var fd = new FormData();
       fd.append("image", blob, "meal.jpg");
       fd.append("lang", lang());
       if (note) fd.append("note", note);
       if (kcal && kcal.targetKcal != null) fd.append("targetKcal", String(kcal.targetKcal));
       if (kcal && kcal.eatenKcal != null) fd.append("eatenKcal", String(kcal.eatenKcal));
-      return fetchTimeout(ASSIST_BASE + "/meal-photo", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd });
-    }).then(function (res) {
-      if (res.status === 401) { done(); if (window.GymUI) GymUI.promptSignIn(); return; }
-      if (res.status === 200) {
-        return res.json().then(function (b) {
-          if (!b || typeof b.reply !== "string" || !b.reply) { fail("err", true); return; }
-          done();
-          pushHistory("assistant", b.reply);
-          var replyEl = bubble("assistant", "");
-          msgsEl.appendChild(replyEl);
-          typeWriterReply(replyEl, b.reply);
-          var sum = summaryRow(b);
-          if (sum) msgsEl.appendChild(sum);
-          // The model only guesses the slot; the card has no slot picker, so use the user's local time of day like the food log does.
-          var slot = window.GymFood && GymFood.guessMealType ? GymFood.guessMealType() : null;
-          var card = proposedMealsCard(!slot || !Array.isArray(b.meals) ? b.meals : b.meals.map(function (m) { return m && typeof m === "object" ? Object.assign({}, m, { slot: slot }) : m; }));
-          if (card) msgsEl.appendChild(card);
-          scrollToBottom();
-        }, function () { fail("err", true); });
-      }
-      if (res.status === 403 && !retried) {
-        return res.json().catch(function () { return null; }).then(function (b) {
-          var code = b && b.error && (b.error.code || b.error);
-          if (code !== "consent_required") { fail("err", true); return; }
-          done();
-          // The shared AI Coach consent sheet when it is on this build; otherwise say what to do.
-          if (window.GymCoachConsent && GymCoachConsent.ensure) {
-            GymCoachConsent.reset();
-            GymCoachConsent.ensure().then(function (ok) { if (ok) sendPhoto(blob, note, true); });
-          } else {
-            msgsEl.appendChild(systemBubble(s("photoConsent")));
-            scrollToBottom();
-          }
+      return fetchTimeout(ASSIST_BASE + "/meal-photo", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd })
+        .then(function (res) {
+          return res.json().catch(function () { return null; }).then(function (b) { return { status: res.status, body: b }; });
         });
+    }
+    Promise.race([kcalP, kcalWait]).catch(function () { return {}; }).then(function (kcal) {
+      // A 403 consent_required (consent withdrawn elsewhere) asks again, then sends once more.
+      return GymCoachConsent.run(function () { return post(kcal); });
+    }).then(function (r) {
+      if (!r) { done(); return; } // "Not now" on the consent sheet
+      if (r.status === 401) { done(); if (window.GymUI) GymUI.promptSignIn(); return; }
+      if (r.status === 200) {
+        var b = r.body;
+        if (!b || typeof b.reply !== "string" || !b.reply) { fail("err", true); return; }
+        done();
+        pushHistory("assistant", b.reply);
+        var replyEl = bubble("assistant", "");
+        msgsEl.appendChild(replyEl);
+        typeWriterReply(replyEl, b.reply);
+        var sum = summaryRow(b);
+        if (sum) msgsEl.appendChild(sum);
+        // The model only guesses the slot; the card has no slot picker, so use the user's local time of day like the food log does.
+        var slot = window.GymFood && GymFood.guessMealType ? GymFood.guessMealType() : null;
+        var card = proposedMealsCard(!slot || !Array.isArray(b.meals) ? b.meals : b.meals.map(function (m) { return m && typeof m === "object" ? Object.assign({}, m, { slot: slot }) : m; }));
+        if (card) msgsEl.appendChild(card);
+        msgsEl.appendChild(h("p", { class: "coach-mp-foot" }, s("photoFooter")));
+        scrollToBottom();
+        return;
       }
+      if (GymCoachConsent.isUnavailable(r)) {
+        done();
+        msgsEl.appendChild(systemBubble(GymCoachConsent.unavailableText(), { retry: function () { sendPhoto(blob, note); } }));
+        scrollToBottom();
+        return;
+      }
+      var res = r;
       if (res.status === 422) fail("photoNotFood", false);
       else if (res.status === 429) fail("photoLimit", false);
       else if (res.status === 413) fail("photoTooBig", false);
