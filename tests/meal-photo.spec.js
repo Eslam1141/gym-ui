@@ -75,15 +75,17 @@ const OK = {
   totalKcal: 510, fits: "under", remainingKcal: 900
 };
 
-async function openChat({ browser, lang, theme, status, body, acked, viewport }) {
-  const { context, page } = await openApp(browser, { signedIn: true, lang, theme, viewport, ls: { gymcoach_last: TARGET } });
+// meals: what GET /meals answers (default: nothing logged); mealsStatus: make that GET fail; ls: replaces the stored plan target.
+async function openChat({ browser, lang, theme, status, body, acked, viewport, meals, mealsStatus, ls }) {
+  const { context, page } = await openApp(browser, { signedIn: true, lang, theme, viewport, ls: ls || { gymcoach_last: TARGET } });
   await page.emulateMedia({ reducedMotion: "reduce" });
   if (acked) await page.evaluate(() => localStorage.setItem("etq_mealphoto_ack", "1"));
   const calls = { photo: [], posts: [], chat: [] };
   await page.route((u) => u.pathname.endsWith("/api/v1/meals"), (route) => {
     const req = route.request();
     if (req.method() === "POST") { calls.posts.push(JSON.parse(req.postData())); return json(route, 201, { id: "n1", date: TODAY }); }
-    return json(route, 200, { meals: [] });
+    if (mealsStatus) return json(route, mealsStatus, { error: { code: "x", message: "x" } });
+    return json(route, 200, { meals: meals || [] });
   });
   await page.route((u) => u.pathname.endsWith("/api/v1/foods"), (route) => {
     const q = new URL(route.request().url()).searchParams.get("q") || "";
@@ -144,8 +146,9 @@ test("on a touch device the photo button opens a menu with Take photo and Choose
   await context.close();
 });
 
-test("photo is re-encoded to a small JPEG and sent as multipart with lang, note and planSummary; reply, badge and confirm card render; Add logs the meals", async ({ browser }) => {
-  const { context, page, calls } = await openChat({ browser, acked: true });
+test("photo is re-encoded to a small JPEG and sent as multipart with lang, note, targetKcal and eatenKcal (and no plan or food text); reply, badge and confirm card render; Add logs the meals", async ({ browser }) => {
+  const egg = { id: "m1", mealType: "breakfast", nameEn: "Boiled egg", grams: 100, nutrients: { kcal: 155, protein: 13, carbs: 1, fat: 11 }, date: TODAY };
+  const { context, page, calls } = await openChat({ browser, acked: true, meals: [egg, { ...egg, id: "m2", nutrients: { kcal: 100.4 } }] });
   await page.evaluate(() => { window.GymCoach.planSummary = () => "Plan: 4 days"; });
   await choose(page, "half portion");
   await page.press("#coachChatInput", "Enter");
@@ -156,7 +159,9 @@ test("photo is re-encoded to a small JPEG and sent as multipart with lang, note 
   expect(c.auth).toBe("Bearer tok");
   expect(c.fields.lang).toBe("en");
   expect(c.fields.note).toBe("half portion");
-  expect(c.fields.planSummary).toBe("Plan: 4 days");
+  expect(Object.keys(c.fields).sort()).toEqual(["eatenKcal", "lang", "note", "targetKcal"]); // no planSummary, no foodToday
+  expect(c.fields.targetKcal).toBe("2000");
+  expect(c.fields.eatenKcal).toBe("255"); // whole kcal: 155 + 100.4 rounded
   expect(c.image.head).toContain("image/jpeg");
   expect(c.image.body[0]).toBe(0xff); expect(c.image.body[1]).toBe(0xd8); // JPEG, not the PNG we picked
   expect(c.image.body.length).toBeLessThanOrEqual(900 * 1024);
@@ -202,7 +207,7 @@ test("first-time notice shows once: Cancel keeps the photo unsent, Continue send
   await choose(page);
   await page.press("#coachChatInput", "Enter");
   await expect(page.locator("#coachPhotoNotice")).toBeVisible();
-  await expect(page.locator("#coachPhotoNoticeText")).toHaveText("Your photo is sent to our AI provider to estimate calories and isn't stored.");
+  await expect(page.locator("#coachPhotoNoticeText")).toHaveText("Your photo goes to Anthropic (US) to estimate calories. We don't save it, and Anthropic normally deletes it within 30 days. Photograph only your food: keep people, faces (especially children), medicines and documents out of the frame. Estimates can be well off, especially for oil, sauces and hidden ingredients.");
   expect(calls.photo).toHaveLength(0);
   await page.click("#coachPhotoNoticeCancel");
   await expect(page.locator("#coachPhotoNotice")).toBeHidden();
@@ -216,6 +221,48 @@ test("first-time notice shows once: Cancel keeps the photo unsent, Continue send
   await page.press("#coachChatInput", "Enter");
   await expect(page.locator("#coachPhotoNotice")).toBeHidden();
   await expect.poll(() => calls.photo.length).toBe(2);
+  await context.close();
+});
+
+test("only known numbers are sent: no plan target and a failing meals lookup send neither field; an empty log sends eatenKcal 0", async ({ browser }) => {
+  let o = await openChat({ browser, acked: true, ls: {}, mealsStatus: 500 });
+  await choose(o.page);
+  await o.page.press("#coachChatInput", "Enter");
+  await expect(o.page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(Object.keys(o.calls.photo[0].fields).sort()).toEqual(["lang"]);
+  await o.context.close();
+  o = await openChat({ browser, acked: true, ls: {} });
+  await choose(o.page);
+  await o.page.press("#coachChatInput", "Enter");
+  await expect(o.page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(o.calls.photo[0].fields).toEqual({ lang: "en", eatenKcal: "0" });
+  await o.context.close();
+});
+
+test("the target comes from the Food screen's source, including the cached server plan (gymcoach_target)", async ({ browser }) => {
+  const o = await openChat({ browser, acked: true, ls: { gymcoach_target: { computed: { targetKcal: 2350.4 }, createdAt: "2026-10-01T00:00:00Z", sub: null } } });
+  await choose(o.page);
+  await o.page.press("#coachChatInput", "Enter");
+  await expect(o.page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(o.calls.photo[0].fields.targetKcal).toBe("2350");
+  await o.context.close();
+});
+
+test("the chip carries the food-only tip, in English and Arabic", async ({ browser }) => {
+  for (const [lang, tip] of [["en", "Food only, no people."], ["ar", "الطعام فقط، من دون أشخاص."]]) {
+    const o = await openChat({ browser, lang, acked: true });
+    await choose(o.page);
+    await expect(o.page.locator("#coachPhotoChipTip")).toContainText(tip);
+    await o.context.close();
+  }
+});
+
+test("a 403 consent_required without the shared consent sheet on this build explains what to do, and is not retried", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true, status: 403, body: { error: { code: "consent_required", message: "x" } } });
+  await choose(page);
+  await page.press("#coachChatInput", "Enter");
+  await expect(page.locator(".coach-chat-msg.system")).toContainText("Turn on the AI coach");
+  expect(calls.photo).toHaveLength(1);
   await context.close();
 });
 

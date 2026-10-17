@@ -60,7 +60,10 @@
     photoChip: ["Meal photo ready. Add a note if you like, then send.", "صورة الوجبة جاهزة. أضف ملاحظة إن أردت ثم أرسل."],
     photoRemove: ["Remove photo", "إزالة الصورة"],
     photoNote: ["Add a note, e.g. half portion", "أضف ملاحظة، مثل نصف حصة"],
-    photoNotice: ["Your photo is sent to our AI provider to estimate calories and isn't stored.", "تُرسَل صورتك إلى مزوّد الذكاء الاصطناعي لدينا لتقدير السعرات ولا يتم تخزينها."],
+    photoNotice: ["Your photo goes to Anthropic (US) to estimate calories. We don't save it, and Anthropic normally deletes it within 30 days. Photograph only your food: keep people, faces (especially children), medicines and documents out of the frame. Estimates can be well off, especially for oil, sauces and hidden ingredients.",
+      "تُرسل صورتك إلى Anthropic (الولايات المتحدة) لتقدير السعرات الحرارية. لا نحتفظ بالصورة، وتحذفها Anthropic عادةً خلال 30 يومًا. صوّر طعامك فقط، وأبقِ الأشخاص والوجوه (خاصةً الأطفال) والأدوية والمستندات خارج الصورة. قد يختلف التقدير كثيرًا عن الواقع، خاصةً مع الزيوت والصلصات والمكوّنات غير الظاهرة."],
+    photoTip: ["Sent to Anthropic (US) for an estimate; not saved by us. Food only, no people.", "تُرسل إلى Anthropic (الولايات المتحدة) للتقدير، ولا نحتفظ بها. الطعام فقط، من دون أشخاص."],
+    photoConsent: ["Turn on the AI coach to use meal photos, then try again.", "فعّل المدرّب الذكي لاستخدام صور الوجبات، ثم حاول مرة أخرى."],
     photoContinue: ["Continue", "متابعة"],
     photoCancel: ["Cancel", "إلغاء"],
     photoPlaceholder: ["📷 Meal photo", "📷 صورة وجبة"],
@@ -145,7 +148,7 @@
   var tipHideTimer = null;
 
   var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl;
-  var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoRemove;
+  var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoChipTip, photoRemove;
   var noticeEl, noticeText, noticeOk, noticeCancel;
 
   function els() {
@@ -170,6 +173,7 @@
     photoChip = document.getElementById("coachPhotoChip");
     photoThumb = document.getElementById("coachPhotoThumb");
     photoChipText = document.getElementById("coachPhotoChipText");
+    photoChipTip = document.getElementById("coachPhotoChipTip");
     photoRemove = document.getElementById("coachPhotoRemove");
     noticeEl = document.getElementById("coachPhotoNotice");
     noticeText = document.getElementById("coachPhotoNoticeText");
@@ -303,6 +307,7 @@
     photoPick.textContent = s("photoPick");
     photoRemove.setAttribute("aria-label", s("photoRemove"));
     photoChipText.textContent = s("photoChip");
+    photoChipTip.textContent = s("photoTip");
     noticeText.textContent = s("photoNotice");
     noticeOk.textContent = s("photoContinue");
     noticeCancel.textContent = s("photoCancel");
@@ -713,7 +718,7 @@
       h("img", { src: url, alt: s("photoAlt") }),
       note ? h("div", { class: "coach-chat-photo-note" }, note) : null);
   }
-  function sendPhoto(blob, note) {
+  function sendPhoto(blob, note, retried) {
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
@@ -728,22 +733,22 @@
     msgsEl.appendChild(wait);
     scrollToBottom();
 
-    var planSummary = window.GymCoach && GymCoach.planSummary ? GymCoach.planSummary() : "";
-    var foodP = window.GymFood && GymFood.foodToday ? GymFood.foodToday() : Promise.resolve("");
-    var foodWait = new Promise(function (resolve) { setTimeout(function () { resolve(""); }, FOOD_WAIT_MS); });
+    // Only two numbers go with the photo (today's target and kcal eaten), never plan or food text.
+    var kcalP = window.GymFood && GymFood.mealKcal ? GymFood.mealKcal() : Promise.resolve({});
+    var kcalWait = new Promise(function (resolve) { setTimeout(function () { resolve({}); }, FOOD_WAIT_MS); });
     function done() { var t = document.getElementById("coachChatTyping"); if (t) t.remove(); setSending(false); refocusInput(hadFocus); }
     function fail(key, retryable) {
       done();
       msgsEl.appendChild(systemBubble(s(key), retryable ? { retry: function () { sendPhoto(blob, note); } } : undefined));
       scrollToBottom();
     }
-    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
+    Promise.race([kcalP, kcalWait]).catch(function () { return {}; }).then(function (kcal) {
       var fd = new FormData();
       fd.append("image", blob, "meal.jpg");
       fd.append("lang", lang());
       if (note) fd.append("note", note);
-      if (planSummary) fd.append("planSummary", planSummary);
-      if (foodToday) fd.append("foodToday", String(foodToday).slice(0, 2000));
+      if (kcal && kcal.targetKcal != null) fd.append("targetKcal", String(kcal.targetKcal));
+      if (kcal && kcal.eatenKcal != null) fd.append("eatenKcal", String(kcal.eatenKcal));
       return fetchTimeout(ASSIST_BASE + "/meal-photo", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd });
     }).then(function (res) {
       if (res.status === 401) { done(); if (window.GymUI) GymUI.promptSignIn(); return; }
@@ -763,6 +768,21 @@
           if (card) msgsEl.appendChild(card);
           scrollToBottom();
         }, function () { fail("err", true); });
+      }
+      if (res.status === 403 && !retried) {
+        return res.json().catch(function () { return null; }).then(function (b) {
+          var code = b && b.error && (b.error.code || b.error);
+          if (code !== "consent_required") { fail("err", true); return; }
+          done();
+          // The shared AI Coach consent sheet when it is on this build; otherwise say what to do.
+          if (window.GymCoachConsent && GymCoachConsent.ensure) {
+            GymCoachConsent.reset();
+            GymCoachConsent.ensure().then(function (ok) { if (ok) sendPhoto(blob, note, true); });
+          } else {
+            msgsEl.appendChild(systemBubble(s("photoConsent")));
+            scrollToBottom();
+          }
+        });
       }
       if (res.status === 422) fail("photoNotFood", false);
       else if (res.status === 429) fail("photoLimit", false);

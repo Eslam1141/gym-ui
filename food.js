@@ -951,17 +951,38 @@
     }
     return out.slice(0, FOOD_TODAY_MAX);
   }
-  function foodToday() {
+  function todayMeals() {
     var token = authToken();
-    if (!token) return Promise.resolve("");
+    if (!token) return Promise.resolve(null);
     return fetchTimeout(MEALS_URL + "?date=" + encodeURIComponent(todayStr(0)), {
       headers: { "Authorization": "Bearer " + token }
     }).then(function (res) {
       return res.ok ? res.json() : null;
     }).then(function (body) {
-      return foodTodayText(body && Array.isArray(body.meals) ? body.meals : []);
-    }).catch(function () { return ""; });
+      return body && Array.isArray(body.meals) ? body.meals : null;
+    }).catch(function () { return null; });
+  }
+  function foodToday() {
+    if (!authToken()) return Promise.resolve("");
+    return todayMeals().then(function (meals) { return meals ? foodTodayText(meals) : ""; });
   }
 
-  window.GymFood = { refresh: refresh, retryFailed: retryFailed, reload: reload, foodToday: foodToday, guessMealType: guessMealType };
+  // The two numbers the meal-photo estimate needs, as whole kcal: today's target
+  // (the same source as the progress bar above) and what is eaten so far. Each
+  // is left out when unknown; no plan or food text leaves the device for this.
+  function mealKcal() {
+    var out = {};
+    var tg = targetInfo();
+    var target = tg ? Math.round(Number(tg.targetKcal)) : 0;
+    if (target >= 500 && target <= 10000) out.targetKcal = target;
+    return todayMeals().then(function (meals) {
+      if (meals) {
+        var eaten = Math.round(sumTotals(meals).kcal);
+        if (eaten >= 0 && eaten <= 20000) out.eatenKcal = eaten;
+      }
+      return out;
+    });
+  }
+
+  window.GymFood = { refresh: refresh, retryFailed: retryFailed, reload: reload, foodToday: foodToday, mealKcal: mealKcal, guessMealType: guessMealType };
 })();
