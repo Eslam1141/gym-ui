@@ -31,6 +31,7 @@
   if (!window.GymDom) throw new Error("chat.js: dom.js must load first");
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
+    note: ["AI coach powered by Anthropic (US). Not medical advice.", "المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة). ليس نصيحة طبية."],
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
     title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
@@ -114,7 +115,7 @@
   var tipTimer = null;
   var tipHideTimer = null;
 
-  var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl;
+  var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
 
   function els() {
     fab = document.getElementById("coachFab");
@@ -126,6 +127,7 @@
     announceEl = document.getElementById("coachChatAnnounce");
     form = document.getElementById("coachChatForm");
     input = document.getElementById("coachChatInput");
+    noteEl = document.getElementById("coachChatNote");
     sendBtn = document.getElementById("coachChatSend");
     iconHost = document.getElementById("coachChatIcon");
     titleEl = document.getElementById("coachChatTitle");
@@ -249,6 +251,7 @@
     titleEl.textContent = s("title");
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
+    noteEl.textContent = s("note");
     fab.setAttribute("aria-label", s("fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
@@ -296,6 +299,10 @@
 
   function openChat() {
     if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
+    // The AI Coach consent comes first; "Not now" leaves the chat closed.
+    GymCoachConsent.ensure().then(function (ok) { if (ok) showChat(); });
+  }
+  function showChat() {
     open = true;
     chat.hidden = false;
     requestAnimationFrame(function () { chat.classList.add("show"); });
@@ -344,38 +351,45 @@
 
     var foodP = window.GymFood && GymFood.foodToday ? GymFood.foodToday() : Promise.resolve("");
     var foodWait = new Promise(function (resolve) { setTimeout(function () { resolve(""); }, FOOD_WAIT_MS); });
-    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
-      if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
+    function post(payload) {
+      if (!document.getElementById("coachChatTyping")) { msgsEl.appendChild(typingBubble()); scrollToBottom(); }
       return fetchTimeout(ASSIST_BASE + "/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify(body)
-      });
-    }).then(function (res) {
-      var typing = document.getElementById("coachChatTyping");
-      if (typing) typing.remove();
-      if (res.status === 401) { setSending(false); if (window.GymUI) GymUI.promptSignIn(); return null; }
-      if (res.status === 429) {
-        // new Date(null) silently gives the Unix epoch, not a throw — an
-        // absent/unreadable header must not render "Jan 1 1970".
-        var reset = res.headers.get("X-RateLimit-Reset");
-        var text = s("quotaGeneric");
-        if (reset) {
-          var d = new Date(reset);
-          if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
+        body: JSON.stringify(payload)
+      }).then(function (res) {
+        var typing = document.getElementById("coachChatTyping");
+        if (typing) typing.remove();
+        if (res.status === 401) { setSending(false); if (window.GymUI) GymUI.promptSignIn(); return null; }
+        if (res.status === 429) {
+          // new Date(null) silently gives the Unix epoch, not a throw — an
+          // absent/unreadable header must not render "Jan 1 1970".
+          var reset = res.headers.get("X-RateLimit-Reset");
+          var text = s("quotaGeneric");
+          if (reset) {
+            var d = new Date(reset);
+            if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
+          }
+          msgsEl.appendChild(systemBubble(text));
+          scrollToBottom(); setSending(false); refocusInput(hadFocus);
+          return null;
         }
-        msgsEl.appendChild(systemBubble(text));
-        scrollToBottom(); setSending(false); refocusInput(hadFocus);
-        return null;
-      }
-      return res.json().then(function (b) { return { status: res.status, body: b }; })
-        .catch(function () { return { status: res.status, body: null }; });
+        return res.json().then(function (b) { return { status: res.status, body: b }; })
+          .catch(function () { return { status: res.status, body: null }; });
+      });
+    }
+    Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
+      if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
+      return GymCoachConsent.run(function () { return post(body); });
     }).then(function (r) {
-      if (!r) return;
+      if (!r) { setSending(false); return; } // 401/429 already answered; "Not now" on a retry lands here too
       setSending(false);
       var code = r.status === 403 && r.body && r.body.error && (r.body.error.code || r.body.error);
       if ((code === "account_blocked" || code === "account_removed") && window.GymHeader && GymHeader.onBlocked) GymHeader.onBlocked(code === "account_removed");
-      if (r.status === 200 && r.body && r.body.reply) {
+      if (GymCoachConsent.isUnavailable(r)) {
+        msgsEl.appendChild(systemBubble(GymCoachConsent.unavailableText(), { retry: function () { sendMessage(text); } }));
+        scrollToBottom();
+      } else if (r.status === 200 && r.body && r.body.reply) {
         pushHistory("assistant", r.body.reply);
         var replyEl = bubble("assistant", "");
         msgsEl.appendChild(replyEl);

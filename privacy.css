@@ -118,3 +118,11 @@
 @media (prefers-reduced-motion:reduce){
   .pv-sheet[open], .pv-btn.is-busy svg{ animation:none; }
 }
+
+/* ---- AI coach consent sheet (coach-consent.js): the delete sheet's frame, brand action ---- */
+.cc-sheet .pv-btn-fill{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+.cc-notice{ margin:0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--paper-dim); max-width:62ch; }
+.cc-agree{ align-items:flex-start; gap:var(--space-3); min-height:44px; padding:var(--space-3); border-radius:var(--radius-sm); background:var(--panel2); line-height:var(--lh-body); }
+.cc-agree input[type="checkbox"]{ margin-block-start:2px; }
+.cc-agree:has(input:focus-visible){ outline:2px solid var(--accent); outline-offset:2px; }
+.cc-sheet .pv-sh-title:focus-visible{ outline:none; }

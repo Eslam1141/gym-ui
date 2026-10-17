@@ -734,6 +734,7 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
 .coach-chat-pm-add:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 .coach-chat-pm-status{ font-size:var(--text-xs); color:var(--warn); min-height:0; }
 .coach-chat-pm-status:empty{ display:none; }
+.coach-chat-note{ margin:0; padding:6px 14px 0; font-size:var(--text-xs); line-height:var(--lh-body); color:var(--paper-dim); flex:none; }
 .coach-chat-form{ display:flex; gap:8px; padding:10px 10px calc(10px + var(--sab)); border-top:1px solid var(--line); flex:none; }
 #coachChatInput{
   flex:1; min-width:0; font-family:inherit; font-size:var(--text-base); color:var(--paper);

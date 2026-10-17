@@ -444,6 +444,7 @@
     </div>
     <div id="coachChatMsgs" class="coach-chat-msgs"></div>
     <div id="coachChatAnnounce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <p id="coachChatNote" class="coach-chat-note"></p>
     <form id="coachChatForm" class="coach-chat-form">
       <input id="coachChatInput" type="text" maxlength="600" autocomplete="off" />
       <button type="submit" id="coachChatSend" aria-label="Send">
@@ -468,6 +469,7 @@
 <!-- checkin.js must load before coach.js: coach.js's own refresh() can run
      synchronously as soon as its script executes and calls
      window.GymCheckin.renderCard() right away (see checkin.js header). -->
+<script src="coach-consent.js" defer></script>
 <script src="checkin.js" defer></script>
 <script src="mascot.js" defer></script>
 <script src="coach.js" defer></script>
