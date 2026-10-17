@@ -1652,7 +1652,7 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans) };
+  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans) };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

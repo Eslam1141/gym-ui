@@ -55,6 +55,34 @@
     gram: ["g", "جم"],
     slotbreakfast: ["Breakfast", "فطار"], slotlunch: ["Lunch", "غداء"], slotdinner: ["Dinner", "عشاء"],
     slotsnack: ["Snack", "سناك"], slotsuhoor: ["Suhoor", "سحور"], slotiftar: ["Iftar", "إفطار"],
+    photoBtn: ["Add a meal photo", "أضف صورة وجبة"],
+    photoTake: ["Take photo", "التقاط صورة"],
+    photoPick: ["Choose from gallery", "اختيار من المعرض"],
+    photoChip: ["Meal photo ready. Add a note if you like, then send.", "صورة الوجبة جاهزة. أضف ملاحظة إن أردت ثم أرسل."],
+    photoRemove: ["Remove photo", "إزالة الصورة"],
+    photoNote: ["Optional: portion size, cooking method or ingredients", "اختياري: حجم الحصة أو طريقة الطهي أو المكوّنات"],
+    photoNotice: ["Your photo goes to Anthropic (US) to estimate calories. We don't save it, and Anthropic normally deletes it within 30 days. Photograph only your food: keep people, faces (especially children), medicines and documents out of the frame. Estimates can be well off, especially for oil, sauces and hidden ingredients.",
+      "تُرسل صورتك إلى Anthropic (الولايات المتحدة) لتقدير السعرات الحرارية. لا نحتفظ بالصورة، وتحذفها Anthropic عادةً خلال 30 يومًا. صوّر طعامك فقط، وأبقِ الأشخاص والوجوه (خاصةً الأطفال) والأدوية والمستندات خارج الصورة. قد يختلف التقدير كثيرًا عن الواقع، خاصةً مع الزيوت والصلصات والمكوّنات غير الظاهرة."],
+    photoTip: ["Sent to Anthropic (US) for an estimate; not saved by us. Food only, no people.", "تُرسل إلى Anthropic (الولايات المتحدة) للتقدير، ولا نحتفظ بها. الطعام فقط، من دون أشخاص."],
+    photoFooter: ["Estimate from a photo. Check it before adding it to your log.", "تقدير من صورة؛ راجعه قبل إضافته إلى سجلك."],
+    photoContinue: ["Continue", "متابعة"],
+    photoCancel: ["Cancel", "إلغاء"],
+    photoPlaceholder: ["📷 Meal photo", "📷 صورة وجبة"],
+    photoAlt: ["Your meal photo", "صورة وجبتك"],
+    photoAnalysing: ["Analysing your meal…", "جارٍ تحليل وجبتك…"],
+    photoTotal: ["About {n} kcal", "حوالي {n} سعرة"],
+    fitUnder: ["Under target", "أقل من هدفك"],
+    fitUnderLeft: ["Under target, {n} kcal left", "أقل من هدفك، متبقي {n} سعرة"],
+    fitOnTrack: ["On track", "على المسار"],
+    fitOver: ["+{n} over", "+{n} زيادة"],
+    fitOverGeneric: ["Over target", "أعلى من هدفك"],
+    fitUnknown: ["Estimate only", "تقدير فقط"],
+    photoNotFood: ["I couldn't see food in that photo. Try a closer shot.", "لم أستطع رؤية طعام في الصورة. جرّب لقطة أقرب."],
+    photoLimit: ["You've used today's 5 meal photos. Try again tomorrow.", "استخدمت صور الوجبات الخمس المتاحة اليوم. حاول مجدداً غداً."],
+    photoTooBig: ["That photo is too large. Try a smaller one.", "الصورة كبيرة جداً. جرّب صورة أصغر."],
+    photoBadType: ["Use a JPEG, PNG or WebP photo.", "استخدم صورة بصيغة JPEG أو PNG أو WebP."],
+    photoBadImg: ["Couldn't read that image. Try another photo.", "تعذّرت قراءة الصورة. جرّب صورة أخرى."],
+    photoBusy: ["Meal analysis is unavailable right now. Try again in a bit.", "تحليل الوجبات غير متاح حالياً. حاول بعد قليل."],
     refused: ["Let's keep this to nutrition & training — for anything medical, please see a professional.",
       "لنُبقِ الحديث عن التغذية والتمرين — لأي أمر طبي، يُرجى مراجعة مختص."]
   };
@@ -109,6 +137,11 @@
       localStorage.removeItem(OLD_HIST_KEY);
     } catch (e) {}
   })();
+  var MEAL_PHOTO_ACK_KEY = "etq_mealphoto_ack";
+  var PHOTO_IN_MAX = 15 * 1024 * 1024; // refuse absurd inputs before decoding
+  var PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  var pendingPhoto = null;   // { blob, url } chosen but not yet sent
+  var thumbUrls = [];        // object URLs behind chat thumbnails; revoked when the thread is redrawn
   var history = loadJSON(HIST_KEY, []); // [{role:'user'|'assistant', content}]
   var open = false;
   var sending = false;
@@ -116,6 +149,8 @@
   var tipHideTimer = null;
 
   var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
+  var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoChipTip, photoRemove;
+  var noticeEl, noticeText, noticeOk, noticeCancel;
 
   function els() {
     fab = document.getElementById("coachFab");
@@ -131,6 +166,21 @@
     sendBtn = document.getElementById("coachChatSend");
     iconHost = document.getElementById("coachChatIcon");
     titleEl = document.getElementById("coachChatTitle");
+    photoBtn = document.getElementById("coachPhotoBtn");
+    photoMenu = document.getElementById("coachPhotoMenu");
+    photoTake = document.getElementById("coachPhotoTake");
+    photoPick = document.getElementById("coachPhotoPick");
+    photoCamera = document.getElementById("coachPhotoCamera");
+    photoGallery = document.getElementById("coachPhotoGallery");
+    photoChip = document.getElementById("coachPhotoChip");
+    photoThumb = document.getElementById("coachPhotoThumb");
+    photoChipText = document.getElementById("coachPhotoChipText");
+    photoChipTip = document.getElementById("coachPhotoChipTip");
+    photoRemove = document.getElementById("coachPhotoRemove");
+    noticeEl = document.getElementById("coachPhotoNotice");
+    noticeText = document.getElementById("coachPhotoNoticeText");
+    noticeOk = document.getElementById("coachPhotoNoticeOk");
+    noticeCancel = document.getElementById("coachPhotoNoticeCancel");
     return !!(fab && chat && form && input);
   }
 
@@ -255,6 +305,16 @@
     fab.setAttribute("aria-label", s("fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
+    photoBtn.setAttribute("aria-label", s("photoBtn"));
+    photoTake.textContent = s("photoTake");
+    photoPick.textContent = s("photoPick");
+    photoRemove.setAttribute("aria-label", s("photoRemove"));
+    photoChipText.textContent = s("photoChip");
+    photoChipTip.textContent = s("photoTip");
+    noticeText.textContent = s("photoNotice");
+    noticeOk.textContent = s("photoContinue");
+    noticeCancel.textContent = s("photoCancel");
+    if (pendingPhoto) input.placeholder = s("photoNote");
   }
 
   function bubble(role, text) {
@@ -279,7 +339,12 @@
     if (window.GymCoach && typeof GymCoach.newAssessment === "function") GymCoach.newAssessment();
   }
 
+  function revokeThumbs() {
+    thumbUrls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+    thumbUrls = [];
+  }
   function renderHistory() {
+    revokeThumbs();
     msgsEl.innerHTML = "";
     if (!history.length) {
       msgsEl.appendChild(h("div", { class: "coach-chat-empty" },
@@ -313,6 +378,7 @@
   }
   function closeChat() {
     open = false;
+    closeMenu();
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
     chat.classList.remove("show");
     fab.setAttribute("aria-expanded", "false");
@@ -562,6 +628,197 @@
     return card;
   }
 
+  // ---------------- meal photo ----------------
+  // Photo -> POST {ASSIST_BASE}/meal-photo (multipart). The image is re-encoded
+  // in the browser first (coach.js downscaleImage: <=1568px JPEG, no EXIF/GPS,
+  // <=900 KB). The thumbnail in the thread is an object URL and is never
+  // persisted: history keeps only a text placeholder.
+  function closeMenu() {
+    if (!photoMenu || photoMenu.hidden) return;
+    photoMenu.hidden = true;
+    photoBtn.setAttribute("aria-expanded", "false");
+  }
+  function hasCamera() {
+    try { return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); } catch (e) { return false; }
+  }
+  function clearPending() {
+    if (pendingPhoto) { try { URL.revokeObjectURL(pendingPhoto.url); } catch (e) {} }
+    pendingPhoto = null;
+    photoChip.hidden = true;
+    photoThumb.removeAttribute("src");
+    input.placeholder = s("placeholder");
+    noticeEl.hidden = true;
+  }
+  function photoError(key) {
+    msgsEl.querySelector(".coach-chat-empty") && (msgsEl.innerHTML = "");
+    msgsEl.appendChild(systemBubble(s(key)));
+    scrollToBottom();
+  }
+  function onPhotoChosen(file) {
+    if (!file) return;
+    if (PHOTO_TYPES.indexOf(file.type) === -1) { photoError("photoBadType"); return; }
+    if (file.size > PHOTO_IN_MAX) { photoError("photoTooBig"); return; }
+    if (!window.GymCoach || !GymCoach.downscaleImage) { photoError("photoBadImg"); return; }
+    GymCoach.downscaleImage(file).then(function (blob) {
+      clearPending();
+      pendingPhoto = { blob: blob, url: URL.createObjectURL(blob) };
+      photoThumb.src = pendingPhoto.url;
+      photoChip.hidden = false;
+      input.placeholder = s("photoNote");
+      try { input.focus({ preventScroll: true }); } catch (e) {}
+    }, function (err) { photoError(err && err.message === "toobig" ? "photoTooBig" : "photoBadImg"); });
+  }
+  function wirePhoto() {
+    photoBtn.addEventListener("click", function () {
+      if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
+      if (!hasCamera()) { photoGallery.click(); return; } // no camera to offer: one picker, no menu
+      var showing = photoMenu.hidden;
+      photoMenu.hidden = !showing;
+      photoBtn.setAttribute("aria-expanded", showing ? "true" : "false");
+      if (showing) photoTake.focus();
+    });
+    photoTake.addEventListener("click", function () { closeMenu(); photoCamera.click(); });
+    photoPick.addEventListener("click", function () { closeMenu(); photoGallery.click(); });
+    [photoCamera, photoGallery].forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0];
+        inp.value = ""; // choosing the same photo again must still fire change
+        onPhotoChosen(f);
+      });
+    });
+    photoRemove.addEventListener("click", clearPending);
+    document.addEventListener("click", function (e) {
+      if (!photoMenu.hidden && !photoMenu.contains(e.target) && !photoBtn.contains(e.target)) closeMenu();
+    });
+    noticeCancel.addEventListener("click", function () { noticeEl.hidden = true; });
+    noticeOk.addEventListener("click", function () {
+      try { localStorage.setItem(MEAL_PHOTO_ACK_KEY, "1"); } catch (e) {}
+      noticeEl.hidden = true;
+      sendPendingPhoto();
+    });
+  }
+  function photoAcked() {
+    try { return localStorage.getItem(MEAL_PHOTO_ACK_KEY) === "1"; } catch (e) { return false; }
+  }
+  function requestPhotoSend() {
+    if (!authToken()) { if (window.GymUI) GymUI.promptSignIn(); return; }
+    // The AI Coach consent sheet comes first; the photo notice follows once.
+    GymCoachConsent.ensure().then(function (ok) {
+      if (!ok) return;
+      if (!photoAcked()) { noticeEl.hidden = false; noticeOk.focus(); return; }
+      sendPendingPhoto();
+    });
+  }
+  function sendPendingPhoto() {
+    if (!pendingPhoto || sending) return;
+    var photo = pendingPhoto.blob;
+    var note = (input.value || "").trim().slice(0, 300);
+    input.value = "";
+    clearPending();
+    sendPhoto(photo, note);
+  }
+  function fitBadge(r) {
+    var left = typeof r.remainingKcal === "number" ? Math.round(r.remainingKcal) : null;
+    if (r.fits === "under") return { cls: "under", text: left > 0 ? fmt(s("fitUnderLeft"), { n: left }) : s("fitUnder") };
+    if (r.fits === "on_track") return { cls: "on_track", text: s("fitOnTrack") };
+    if (r.fits === "over") return { cls: "over", text: left != null && left < 0 ? fmt(s("fitOver"), { n: -left }) : s("fitOverGeneric") };
+    return { cls: "unknown", text: s("fitUnknown") };
+  }
+  function summaryRow(r) {
+    var total = Math.round(Number(r.totalKcal));
+    if (!(total >= 0)) return null;
+    var fit = fitBadge(r);
+    return h("div", { class: "coach-mp-sum" },
+      h("span", { class: "coach-mp-total" }, fmt(s("photoTotal"), { n: total })),
+      h("span", { class: "coach-mp-fit " + fit.cls }, fit.text));
+  }
+  function photoBubble(blob, note) {
+    var url = URL.createObjectURL(blob);
+    thumbUrls.push(url);
+    return h("div", { class: "coach-chat-msg user has-photo" },
+      h("img", { src: url, alt: s("photoAlt") }),
+      note ? h("div", { class: "coach-chat-photo-note" }, note) : null);
+  }
+  function sendPhoto(blob, note) {
+    var token = authToken();
+    if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
+    if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
+    var hadFocus = document.activeElement === input;
+    pushHistory("user", s("photoPlaceholder") + (note ? " - " + note : ""));
+    msgsEl.querySelector(".coach-chat-empty") && (msgsEl.innerHTML = "");
+    msgsEl.appendChild(photoBubble(blob, note));
+    setSending(true);
+    var wait = typingBubble();
+    wait.setAttribute("role", "status");
+    wait.appendChild(h("span", { class: "sr-only" }, s("photoAnalysing")));
+    msgsEl.appendChild(wait);
+    scrollToBottom();
+
+    // Only two numbers go with the photo (today's target and kcal eaten), never plan or food text.
+    var kcalP = window.GymFood && GymFood.mealKcal ? GymFood.mealKcal() : Promise.resolve({});
+    var kcalWait = new Promise(function (resolve) { setTimeout(function () { resolve({}); }, FOOD_WAIT_MS); });
+    function done() { var t = document.getElementById("coachChatTyping"); if (t) t.remove(); setSending(false); refocusInput(hadFocus); }
+    function fail(key, retryable) {
+      done();
+      msgsEl.appendChild(systemBubble(s(key), retryable ? { retry: function () { sendPhoto(blob, note); } } : undefined));
+      scrollToBottom();
+    }
+    function post(kcal) {
+      if (!document.getElementById("coachChatTyping")) { msgsEl.appendChild(wait); scrollToBottom(); }
+      var fd = new FormData();
+      fd.append("image", blob, "meal.jpg");
+      fd.append("lang", lang());
+      if (note) fd.append("note", note);
+      if (kcal && kcal.targetKcal != null) fd.append("targetKcal", String(kcal.targetKcal));
+      if (kcal && kcal.eatenKcal != null) fd.append("eatenKcal", String(kcal.eatenKcal));
+      return fetchTimeout(ASSIST_BASE + "/meal-photo", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: fd })
+        .then(function (res) {
+          return res.json().catch(function () { return null; }).then(function (b) { return { status: res.status, body: b }; });
+        });
+    }
+    Promise.race([kcalP, kcalWait]).catch(function () { return {}; }).then(function (kcal) {
+      // A 403 consent_required (consent withdrawn elsewhere) asks again, then sends once more.
+      return GymCoachConsent.run(function () { return post(kcal); });
+    }).then(function (r) {
+      if (!r) { done(); return; } // "Not now" on the consent sheet
+      if (r.status === 401) { done(); if (window.GymUI) GymUI.promptSignIn(); return; }
+      if (r.status === 200) {
+        var b = r.body;
+        if (!b || typeof b.reply !== "string" || !b.reply) { fail("err", true); return; }
+        done();
+        pushHistory("assistant", b.reply);
+        var replyEl = bubble("assistant", "");
+        msgsEl.appendChild(replyEl);
+        typeWriterReply(replyEl, b.reply);
+        var sum = summaryRow(b);
+        if (sum) msgsEl.appendChild(sum);
+        // The model only guesses the slot; the card has no slot picker, so use the user's local time of day like the food log does.
+        var slot = window.GymFood && GymFood.guessMealType ? GymFood.guessMealType() : null;
+        var card = proposedMealsCard(!slot || !Array.isArray(b.meals) ? b.meals : b.meals.map(function (m) { return m && typeof m === "object" ? Object.assign({}, m, { slot: slot }) : m; }));
+        if (card) msgsEl.appendChild(card);
+        msgsEl.appendChild(h("p", { class: "coach-mp-foot" }, s("photoFooter")));
+        scrollToBottom();
+        return;
+      }
+      if (GymCoachConsent.isUnavailable(r)) {
+        done();
+        msgsEl.appendChild(systemBubble(GymCoachConsent.unavailableText(), { retry: function () { sendPhoto(blob, note); } }));
+        scrollToBottom();
+        return;
+      }
+      var res = r;
+      if (res.status === 422) fail("photoNotFood", false);
+      else if (res.status === 429) fail("photoLimit", false);
+      else if (res.status === 413) fail("photoTooBig", false);
+      else if (res.status === 415) fail("photoBadType", false);
+      else if (res.status === 503) fail("photoBusy", true);
+      else fail("err", true);
+    }).catch(function (err) {
+      if (window.console) console.warn("[chat] meal photo error", err && err.message);
+      fail("err", true);
+    });
+  }
+
   function wire() {
     renderStatic();
     fab.addEventListener("click", function () {
@@ -578,7 +835,7 @@
     fabTip.addEventListener("mouseleave", resumeTipHide);
     closeBtn.addEventListener("click", closeChat);
     backdrop.addEventListener("click", closeChat);
-    document.addEventListener("keydown", function (e) { if (open && e.key === "Escape") closeChat(); });
+    document.addEventListener("keydown", function (e) { if (open && e.key === "Escape") { if (!photoMenu.hidden) closeMenu(); else closeChat(); } });
     // Tapping Send must not move focus off the input, or the soft keyboard
     // closes. Only mousedown: preventDefault on touchstart/pointerdown would
     // also cancel the tap's click (Chrome sends mousedown before the click).
@@ -587,12 +844,14 @@
       e.preventDefault();
       if (sending) return;
       var v = (input.value || "").trim();
+      if (pendingPhoto) { requestPhotoSend(); return; }
       if (!v) return;
       if (v.length > MSG_MAX) v = v.slice(0, MSG_MAX);
       input.value = "";
       sendMessage(v);
     });
 
+    wirePhoto();
     watchTimers();
     refreshFabVisibility();
     startTipCycle();
