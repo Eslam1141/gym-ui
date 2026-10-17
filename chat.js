@@ -311,6 +311,9 @@
     fab.setAttribute("aria-expanded", "false");
     setTimeout(function () { if (!open) chat.hidden = true; }, 220);
     refreshFabVisibility();
+    // Hiding the panel would drop focus to <body>; hand it back to the opener.
+    var ae = document.activeElement;
+    if (!ae || ae === document.body || chat.contains(ae)) { try { fab.focus({ preventScroll: true }); } catch (e) {} }
   }
 
   function setSending(v) {
