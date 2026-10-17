@@ -1,0 +1,288 @@
+const { test, expect } = require("@playwright/test");
+const fs = require("fs");
+const path = require("path");
+const zlib = require("zlib");
+const { openApp, TODAY } = require("./helpers");
+
+test.setTimeout(90000);
+
+const SHOTS = process.env.SHOT_DIR;
+const TARGET = { computed: { targetKcal: 2000, proteinG: 150, carbG: 200, fatG: 60 } };
+const json = (route, status, body) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+
+// A 2000x1400 noisy PNG (about 8 MB): bigger than the 900 KB / 1568 px limits, so the re-encode has to do real work.
+function bigPng() {
+  const w = 2000, h = 1400, row = 1 + w * 3;
+  const raw = Buffer.alloc(row * h);
+  let seed = 12345;
+  for (let y = 0; y < h; y++) {
+    raw[y * row] = 0;
+    for (let x = 0; x < w * 3; x++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      raw[y * row + 1 + x] = ((x / 3 / w) * 160 + (seed >> 16) % 96) & 255;
+    }
+  }
+  const crcT = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => {
+    const t = Buffer.from(type), len = Buffer.alloc(4), c = Buffer.alloc(4);
+    len.writeUInt32BE(data.length); c.writeUInt32BE(crc(Buffer.concat([t, data])));
+    return Buffer.concat([len, t, data, c]);
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw, { level: 1 })), chunk("IEND", Buffer.alloc(0))]);
+}
+const PNG = bigPng();
+const photo = () => ({ name: "lunch.png", mimeType: "image/png", buffer: PNG });
+
+// Minimal multipart reader: field name -> string, plus the image part as a Buffer.
+function parseMultipart(req) {
+  const ct = req.headers()["content-type"] || "";
+  const boundary = "--" + ct.split("boundary=")[1];
+  const buf = req.postDataBuffer();
+  const out = { fields: {}, image: null };
+  let pos = buf.indexOf(boundary);
+  while (pos >= 0) {
+    const next = buf.indexOf(boundary, pos + boundary.length);
+    if (next < 0) break;
+    const part = buf.subarray(pos + boundary.length + 2, next - 2);
+    const split = part.indexOf("\r\n\r\n");
+    const head = part.subarray(0, split).toString("latin1");
+    const body = part.subarray(split + 4);
+    const name = /name="([^"]+)"/.exec(head)[1];
+    if (name === "image") out.image = { head, body }; else out.fields[name] = body.toString("utf8");
+    pos = next;
+  }
+  return out;
+}
+function jpegSize(b) {
+  let i = 2;
+  while (i < b.length) {
+    if (b[i] !== 0xff) { i++; continue; }
+    const m = b[i + 1];
+    if (m >= 0xc0 && m <= 0xc3) return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) };
+    i += 2 + b.readUInt16BE(i + 2);
+  }
+  return null;
+}
+
+const OK = {
+  reply: "Looks like grilled chicken with rice, around 640 kcal.",
+  meals: [
+    { text: "Grilled chicken", grams: 150, kcalApprox: 250, proteinG: 40, slot: "dinner" },
+    { text: "Cooked rice", grams: 200, kcalApprox: 260, proteinG: 5, slot: "dinner" }
+  ],
+  totalKcal: 510, fits: "under", remainingKcal: 900
+};
+
+async function openChat({ browser, lang, theme, status, body, acked, viewport }) {
+  const { context, page } = await openApp(browser, { signedIn: true, lang, theme, viewport, ls: { gymcoach_last: TARGET } });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  if (acked) await page.evaluate(() => localStorage.setItem("etq_mealphoto_ack", "1"));
+  const calls = { photo: [], posts: [], chat: [] };
+  await page.route((u) => u.pathname.endsWith("/api/v1/meals"), (route) => {
+    const req = route.request();
+    if (req.method() === "POST") { calls.posts.push(JSON.parse(req.postData())); return json(route, 201, { id: "n1", date: TODAY }); }
+    return json(route, 200, { meals: [] });
+  });
+  await page.route((u) => u.pathname.endsWith("/api/v1/foods"), (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") || "";
+    return json(route, 200, { foods: [{ id: "f_" + q.replace(/\W+/g, "_"), nameEn: "Catalog " + q, nameAr: "كتالوج " + q }] });
+  });
+  await page.route((u) => u.pathname.endsWith("/api/v1/assistant/chat"), (route) => {
+    calls.chat.push(JSON.parse(route.request().postData()));
+    return json(route, 200, { reply: "ok" });
+  });
+  await page.route((u) => u.pathname.endsWith("/api/v1/assistant/meal-photo"), (route) => {
+    const req = route.request();
+    calls.photo.push({ auth: req.headers().authorization, ...parseMultipart(req) });
+    return json(route, status || 200, body || OK);
+  });
+  await page.click('#appNav button[data-tab="coach"]');
+  await page.click("#coachFab");
+  await expect(page.locator("#coachChat.show")).toBeVisible();
+  return { context, page, calls };
+}
+async function choose(page, note) {
+  await page.setInputFiles("#coachPhotoGallery", photo());
+  await expect(page.locator("#coachPhotoChip")).toBeVisible({ timeout: 30000 });
+  if (note) await page.fill("#coachChatInput", note);
+}
+async function shot(page, name, o) {
+  if (!SHOTS) return;
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe(o.lang);
+  expect(await page.evaluate(() => document.documentElement.dir)).toBe(o.lang === "ar" ? "rtl" : "ltr");
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(o.theme);
+  expect(await page.evaluate(() => window.innerWidth)).toBe(390);
+  fs.mkdirSync(SHOTS, { recursive: true });
+  await page.screenshot({ path: path.join(SHOTS, `mealphoto-${name}-${o.lang}-${o.theme}.png`) });
+}
+
+test("the inputs are real file inputs: the camera one has capture=environment, the gallery one does not", async ({ browser }) => {
+  const { context, page } = await openChat({ browser });
+  await expect(page.locator("#coachPhotoCamera")).toHaveAttribute("capture", "environment");
+  await expect(page.locator("#coachPhotoCamera")).toHaveAttribute("accept", "image/*");
+  await expect(page.locator("#coachPhotoGallery")).not.toHaveAttribute("capture", /.*/);
+  await expect(page.locator("#coachPhotoGallery")).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+  await context.close();
+});
+
+test("on a touch device the photo button opens a menu with Take photo and Choose from gallery", async ({ browser }) => {
+  const { context, page } = await openChat({ browser });
+  await page.evaluate(() => { const mm = window.matchMedia.bind(window); window.matchMedia = (q) => (/pointer:\s*coarse/.test(q) ? { matches: true, media: q, addEventListener() {}, removeEventListener() {} } : mm(q)); });
+  await page.click("#coachPhotoBtn");
+  await expect(page.locator("#coachPhotoMenu")).toBeVisible();
+  await expect(page.locator("#coachPhotoTake")).toHaveText("Take photo");
+  await expect(page.locator("#coachPhotoPick")).toHaveText("Choose from gallery");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#coachPhotoTake")]);
+  expect(chooser.isMultiple()).toBe(false);
+  await expect(page.locator("#coachPhotoMenu")).toBeHidden();
+  await page.click("#coachPhotoBtn");
+  await page.keyboard.press("Escape"); // closes the menu first, not the chat
+  await expect(page.locator("#coachPhotoMenu")).toBeHidden();
+  await expect(page.locator("#coachChat.show")).toBeVisible();
+  await context.close();
+});
+
+test("photo is re-encoded to a small JPEG and sent as multipart with lang, note and planSummary; reply, badge and confirm card render; Add logs the meals", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true });
+  await page.evaluate(() => { window.GymCoach.planSummary = () => "Plan: 4 days"; });
+  await choose(page, "half portion");
+  await page.press("#coachChatInput", "Enter");
+
+  await expect(page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(calls.photo).toHaveLength(1);
+  const c = calls.photo[0];
+  expect(c.auth).toBe("Bearer tok");
+  expect(c.fields.lang).toBe("en");
+  expect(c.fields.note).toBe("half portion");
+  expect(c.fields.planSummary).toBe("Plan: 4 days");
+  expect(c.image.head).toContain("image/jpeg");
+  expect(c.image.body[0]).toBe(0xff); expect(c.image.body[1]).toBe(0xd8); // JPEG, not the PNG we picked
+  expect(c.image.body.length).toBeLessThanOrEqual(900 * 1024);
+  const dim = jpegSize(c.image.body);
+  expect(Math.max(dim.w, dim.h)).toBeLessThanOrEqual(1568);
+  expect(PNG.length).toBeGreaterThan(900 * 1024);
+
+  await expect(page.locator(".coach-chat-msg.user img")).toBeVisible();
+  await expect(page.locator(".coach-chat-msg.user")).toContainText("half portion");
+  await expect(page.locator(".coach-mp-total")).toHaveText("About 510 kcal");
+  await expect(page.locator(".coach-mp-fit")).toHaveText("Under target, 900 kcal left");
+  await expect(page.locator(".coach-mp-fit")).toHaveClass(/under/);
+  const rows = page.locator(".coach-chat-pm .coach-chat-pm-item");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Catalog Grilled chicken");
+  expect(await page.evaluate(() => document.activeElement.id)).toBe("coachChatInput"); // #123: keyboard stays up
+  expect(await page.locator("#coachChatInput").isEnabled()).toBe(true);
+  await page.locator(".coach-chat-pm-add").click();
+  await expect(page.locator("#gymToast")).toContainText("Added 2 to today's log");
+  // the model said "dinner"; the card uses the user's local time of day (10:00 in the test clock = breakfast)
+  expect(calls.posts.map((p) => [p.mealType, p.grams])).toEqual([["breakfast", 150], ["breakfast", 200]]);
+  await shot(page, "result", { lang: "en", theme: "dark" });
+  await context.close();
+});
+
+test("fits badge: on_track is green, over shows +X over, unknown is neutral", async ({ browser }) => {
+  for (const [body, cls, text] of [
+    [{ ...OK, fits: "on_track", remainingKcal: 40 }, /on_track/, "On track"],
+    [{ ...OK, fits: "over", remainingKcal: -120 }, /over/, "+120 over"],
+    [{ ...OK, fits: "unknown", remainingKcal: null }, /unknown/, "Estimate only"]
+  ]) {
+    const { context, page } = await openChat({ browser, acked: true, body });
+    await choose(page);
+    await page.press("#coachChatInput", "Enter");
+    await expect(page.locator(".coach-mp-fit")).toHaveText(text);
+    await expect(page.locator(".coach-mp-fit")).toHaveClass(cls);
+    await context.close();
+  }
+});
+
+test("first-time notice shows once: Cancel keeps the photo unsent, Continue sends and remembers", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser });
+  await choose(page);
+  await page.press("#coachChatInput", "Enter");
+  await expect(page.locator("#coachPhotoNotice")).toBeVisible();
+  await expect(page.locator("#coachPhotoNoticeText")).toHaveText("Your photo is sent to our AI provider to estimate calories and isn't stored.");
+  expect(calls.photo).toHaveLength(0);
+  await page.click("#coachPhotoNoticeCancel");
+  await expect(page.locator("#coachPhotoNotice")).toBeHidden();
+  await expect(page.locator("#coachPhotoChip")).toBeVisible();
+  expect(calls.photo).toHaveLength(0);
+  await page.press("#coachChatInput", "Enter");
+  await page.click("#coachPhotoNoticeOk");
+  await expect(page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  expect(calls.photo).toHaveLength(1);
+  await choose(page);
+  await page.press("#coachChatInput", "Enter");
+  await expect(page.locator("#coachPhotoNotice")).toBeHidden();
+  await expect.poll(() => calls.photo.length).toBe(2);
+  await context.close();
+});
+
+test("errors use the {error:{code}} envelope: not_food and rate_limited become friendly bubbles", async ({ browser }) => {
+  const nf = await openChat({ browser, acked: true, status: 422, body: { error: { code: "not_food", message: "no food" } } });
+  await choose(nf.page);
+  await nf.page.press("#coachChatInput", "Enter");
+  await expect(nf.page.locator(".coach-chat-msg.system")).toHaveText("I couldn't see food in that photo. Try a closer shot.");
+  await expect(nf.page.locator(".coach-chat-pm")).toHaveCount(0);
+  expect(await nf.page.locator("#coachChatInput").isEnabled()).toBe(true);
+  await shot(nf.page, "not-food", { lang: "en", theme: "dark" });
+  await nf.context.close();
+
+  const rl = await openChat({ browser, acked: true, status: 429, body: { error: { code: "rate_limited", message: "slow down" } } });
+  await choose(rl.page);
+  await rl.page.press("#coachChatInput", "Enter");
+  await expect(rl.page.locator(".coach-chat-msg.system")).toHaveText("You've used today's 5 meal photos. Try again tomorrow.");
+  await rl.context.close();
+});
+
+test("a failing server gives a retryable bubble; the thread stays usable", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true, status: 503, body: { error: { code: "coach_busy", message: "busy" } } });
+  await choose(page);
+  await page.press("#coachChatInput", "Enter");
+  await expect(page.locator(".coach-chat-msg.system")).toContainText("unavailable right now");
+  await page.locator(".coach-chat-retry").click();
+  await expect.poll(() => calls.photo.length).toBe(2);
+  await context.close();
+});
+
+test("unsupported file type is refused before upload", async ({ browser }) => {
+  const { context, page, calls } = await openChat({ browser, acked: true });
+  await page.setInputFiles("#coachPhotoGallery", { name: "a.gif", mimeType: "image/gif", buffer: Buffer.from("GIF89a") });
+  await expect(page.locator(".coach-chat-msg.system")).toHaveText("Use a JPEG, PNG or WebP photo.");
+  expect(calls.photo).toHaveLength(0);
+  await context.close();
+});
+
+test("the thumbnail is not persisted: history keeps a text placeholder and no image after reload", async ({ browser }) => {
+  const { context, page } = await openChat({ browser, acked: true });
+  await choose(page);
+  await page.press("#coachChatInput", "Enter");
+  await expect(page.locator(".coach-chat-msg.assistant")).toHaveText(OK.reply);
+  const stored = await page.evaluate(() => localStorage.getItem("gymcoach_chat_history"));
+  expect(stored).toContain("📷 Meal photo");
+  expect(stored).not.toContain("blob:");
+  expect(stored).not.toContain("data:image");
+  await page.reload();
+  await page.click('#appNav button[data-tab="coach"]');
+  await page.click("#coachFab");
+  await expect(page.locator(".coach-chat-msg.user").first()).toContainText("📷 Meal photo");
+  await expect(page.locator("#coachChatMsgs img")).toHaveCount(0);
+  await context.close();
+});
+
+for (const [lang, theme] of [["en", "light"], ["ar", "dark"], ["ar", "light"]]) {
+  test(`screenshots ${lang}/${theme}: chip, notice and result fit at 390px without overflow`, async ({ browser }) => {
+    const { context, page } = await openChat({ browser, lang, theme });
+    await choose(page, lang === "ar" ? "نصف حصة" : "half portion");
+    await shot(page, "chip", { lang, theme });
+    await page.press("#coachChatInput", "Enter");
+    await shot(page, "notice", { lang, theme });
+    await page.click("#coachPhotoNoticeOk");
+    await expect(page.locator(".coach-mp-sum")).toBeVisible();
+    await shot(page, "result", { lang, theme });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    if (lang === "ar") await expect(page.locator(".coach-mp-total")).toContainText("حوالي");
+    await context.close();
+  });
+}

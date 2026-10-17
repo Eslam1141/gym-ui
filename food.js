@@ -963,5 +963,5 @@
     }).catch(function () { return ""; });
   }
 
-  window.GymFood = { refresh: refresh, retryFailed: retryFailed, reload: reload, foodToday: foodToday };
+  window.GymFood = { refresh: refresh, retryFailed: retryFailed, reload: reload, foodToday: foodToday, guessMealType: guessMealType };
 })();
