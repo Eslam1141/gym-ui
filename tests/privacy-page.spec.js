@@ -17,7 +17,7 @@ const ANCHORS = ["who-we-are", "at-a-glance", "what-we-collect", "purposes", "ai
 const FILLED = {
   LEGAL_ENTITY_NAME: "Etqadem LLC", STATE: "Wyoming", REGISTERED_ADDRESS: "1 Main St, Cheyenne", PRIVACY_EMAIL: "privacy@example.com",
   DPO: false, HOSTING_COUNTRY: "Germany", BACKUP_DAYS: 35, LOG_DAYS: 14,
-  EFFECTIVE_DATE: { en: "20 October 2026", ar: "20 أكتوبر 2026" }, FEEDBACK_TTL_LIVE: false
+  EFFECTIVE_DATE: { en: "20 October 2026", ar: "20 أكتوبر 2026" }, FEEDBACK_TTL_LIVE: true
 };
 
 async function openPolicy(browser, { lang = "en", hash = "", width = 1280, facts } = {}) {
@@ -119,7 +119,7 @@ test("Draft banner is hidden once every fact is filled, and the values are rende
 });
 
 test("BACKUP_DAYS: false drops the backups row, FEEDBACK_TTL_LIVE switches the feedback retention text", async ({ browser }) => {
-  let o = await openPolicy(browser, { facts: { ...FILLED, BACKUP_DAYS: false } });
+  let o = await openPolicy(browser, { facts: { ...FILLED, BACKUP_DAYS: false, FEEDBACK_TTL_LIVE: false } });
   await expect(o.page.locator("#doc-en [data-optional=BACKUP_DAYS]")).toBeHidden();
   await expect(o.page.locator("#doc-en [data-draft]")).toBeHidden();
   await expect(o.page.locator("#doc-en [data-ttl=fallback]")).toBeVisible();
@@ -127,8 +127,16 @@ test("BACKUP_DAYS: false drops the backups row, FEEDBACK_TTL_LIVE switches the f
   await o.context.close();
   o = await openPolicy(browser, { facts: { ...FILLED, FEEDBACK_TTL_LIVE: true } });
   await expect(o.page.locator("#doc-en [data-ttl=live]")).toBeVisible();
+  await expect(o.page.locator("#doc-en [data-ttl=live]")).toContainText("deleted 90 days later");
   await expect(o.page.locator("#doc-en [data-ttl=fallback]")).toBeHidden();
   await o.context.close();
+});
+
+test("the shipped config has the feedback schedule live (gym-be TTL is merged)", async ({ browser }) => {
+  const { context, page } = await openPolicy(browser);
+  await expect(page.locator("#doc-en [data-ttl=live]")).toBeVisible();
+  await expect(page.locator("#doc-en [data-ttl=fallback]")).toBeHidden();
+  await context.close();
 });
 
 test("the shipped config really is unfilled (the owner still has to supply the facts)", async ({ browser }) => {
@@ -363,4 +371,16 @@ test("assessment form (AR): age 17 is rejected in Arabic", async ({ browser }) =
   await page.locator('#coachBody input[name="age"]').fill("17");
   await expect(page.locator('#coachBody [data-field="age"] .coach-fe')).toHaveText("يجب أن يكون العمر 18 عاماً فأكثر");
   await context.close();
+});
+
+test("server 400 age_below_minimum (form bypassed) shows the 18+ message, EN and AR", async ({ browser }) => {
+  for (const [lang, text] of [["en", "Etqadem is for people 18 and older, so the AI coach can't build a plan for this age."], ["ar", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب الذكي إعداد خطة لهذا العمر."]]) {
+    const { context, page } = await openApp(browser, { signedIn: true, lang, ls: { gym_coach_form_draft: { age: "30", heightCm: "175", weightKg: "80" } } });
+    await context.route(/\/api\/v1\/me\/consents/, (route) => json(route, 200, { consents: [{ type: "coach_ai", textVersion: "coach_ai.v1", grantedAt: "2026-10-17T09:00:00Z" }] }));
+    await context.route(/\/api\/v1\/assistant\/assessment/, (route) => json(route, 400, { error: { code: "age_below_minimum", message: "age" } }));
+    await page.click('#appNav button[data-tab="coach"]');
+    await page.locator("#coachBody form button[type=submit]").first().click();
+    await expect(page.locator("#coachBody .coach-state")).toContainText(text);
+    await context.close();
+  }
 });

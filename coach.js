@@ -130,6 +130,7 @@
     vRequired: ["Required", "مطلوب"],
     vRange: ["Enter {min}–{max}", "أدخل {min}–{max}"],
     vRangeU: ["Enter {min}–{max} {u}", "أدخل {min}–{max} {u}"],
+    ageBelowMin: ["Etqadem is for people 18 and older, so the AI coach can't build a plan for this age.", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب الذكي إعداد خطة لهذا العمر."],
     vAgeMin: ["Must be 18 or older", "يجب أن يكون العمر 18 عاماً فأكثر"],
     vInt: ["Whole number only", "رقم صحيح فقط"],
     vNotesMax: ["Max 300 characters", "الحد الأقصى 300 حرف"],
@@ -1230,6 +1231,8 @@
       r.body._reqStrong = strong;
       saveJSON(LAST_KEY, r.body);
       present(function () { renderResult(r.body); }, true);
+    } else if (r.status === 400 && r.body && r.body.error && (r.body.error.code || r.body.error) === "age_below_minimum") {
+      present(function () { renderRefusal(s("ageBelowMin")); }, false);
     } else if (r.status === 422) {
       present(function () { renderRefusal((r.body && r.body.error && r.body.error.message) || ""); }, false);
     } else {

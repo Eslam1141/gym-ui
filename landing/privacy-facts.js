@@ -9,10 +9,10 @@
 //     and the Backups row from the policy.
 //   - EFFECTIVE_DATE is written per language, e.g.
 //     { en: "19 October 2026", ar: "19 أكتوبر 2026" }.
-//   - FEEDBACK_TTL_LIVE: leave false until gym-be deletes feedback
-//     automatically (precondition C1). While false the policy says feedback
-//     is deleted once handled or with the account; set true to publish the
-//     90 days / 12 months / 6 months schedule instead.
+//   - FEEDBACK_TTL_LIVE: true now that gym-be deletes feedback automatically
+//     (precondition C1), so the policy shows the 90 days / 12 months / 6
+//     months schedule. false would show the fallback sentence (deleted once
+//     handled, or with the account).
 window.PRIVACY_FACTS = {
   LEGAL_ENTITY_NAME: "",
   STATE: "",
@@ -23,5 +23,5 @@ window.PRIVACY_FACTS = {
   BACKUP_DAYS: "",
   LOG_DAYS: "",
   EFFECTIVE_DATE: { en: "", ar: "" },
-  FEEDBACK_TTL_LIVE: false
+  FEEDBACK_TTL_LIVE: true
 };
