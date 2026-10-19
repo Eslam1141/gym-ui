@@ -49,10 +49,13 @@
   #screen-profile{ view-transition-name:screen-profile; }
   /* Persistent chrome gets its own groups so the sliding screen groups cannot paint over it
      (it used to live in the root snapshot, underneath them, and blinked). The old image is
-     dropped and the live element stays solid for the whole transition. */
+     dropped and the live element stays solid for the whole transition. Groups paint in
+     document order, and the chrome precedes the screens, so z-index lifts its groups above
+     the sliding screens (without it the sliding content showed through the nav). */
   #appNav{ view-transition-name:app-nav; }
   #topBar{ view-transition-name:app-topbar; }
   #topPrefs{ view-transition-name:app-topprefs; }
+  ::view-transition-group(app-nav), ::view-transition-group(app-topbar), ::view-transition-group(app-topprefs){ z-index:1; }
   ::view-transition-group(app-nav), ::view-transition-group(app-topbar), ::view-transition-group(app-topprefs),
   ::view-transition-new(app-nav), ::view-transition-new(app-topbar), ::view-transition-new(app-topprefs){ animation:none; }
   ::view-transition-old(app-nav), ::view-transition-old(app-topbar), ::view-transition-old(app-topprefs){ display:none; }
