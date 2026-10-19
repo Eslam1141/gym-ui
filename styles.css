@@ -131,7 +131,8 @@ html,body{margin:0; padding:0;}
 html.pre-auth body > :not(#onboarding){ visibility:hidden; }
 /* overflow-x:clip hides sideways overflow WITHOUT making the element a scroll
    container, so it never interferes with normal vertical / two-finger scroll. */
-html{ background:var(--bg); height:100%; overflow-x:clip; }
+/* stable gutter: a classic scrollbar appears on tall screens only, and would shift the centred wrap, rail and top bar between tabs */
+html{ background:var(--bg); height:100%; overflow-x:clip; scrollbar-gutter:stable; }
 body{
   background:transparent;
   color:var(--paper);
@@ -1359,8 +1360,6 @@ body.rest-view .warmup-card, body.rest-view #resetLink{ display:none; }
 .coach-bullets li::before{
   content:"\2713"; position:absolute; inset-inline-start:0; color:var(--green); font-weight:var(--fw-black);
 }
-/* the Coach hero has no icon (the Pacer lives in the teaser / result / loading view) */
-#screen-coach > .wrap > header.hero{ padding-top:8px; }
 
 /* ---- Coach: form ---- */
 .coach-form{ display:flex; flex-direction:column; gap:14px; margin-bottom:24px; }
