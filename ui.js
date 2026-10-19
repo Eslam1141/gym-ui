@@ -428,6 +428,13 @@
     // whatever tab gym_tab cached, which is the bug this replaces (a random
     // last-active tab with a sign-in prompt buried inside it, instead of a
     // dedicated screen).
+    // The landing's guest "Sign in" link opens /app/?signin: show the login
+    // choices for a guest, ignore it when signed in. Dropped from the URL either way.
+    var wantSignIn = /[?&]signin(=|&|$)/.test(location.search);
+    if (wantSignIn) {
+      try { var q = new URLSearchParams(location.search); q.delete("signin"); var qs = q.toString();
+        history.replaceState(history.state, "", location.pathname + (qs ? "?" + qs : "") + location.hash); } catch (e) {}
+    }
     if (isAuthed()) {
       // signed in — the restored tab above is correct, nothing to route.
     } else if (window.GymSync && typeof GymSync.shouldResolveSilently === "function" && GymSync.shouldResolveSilently()) {
@@ -436,7 +443,8 @@
       // GIS re-auth — don't downgrade that to the plain login/anon screen here.
       showResolvingSession();
     } else if (isAnon()) {
-      // explicit "continue without signing in" choice — leave it alone.
+      // explicit "continue without signing in" choice — leave it alone, unless ?signin asked for the login.
+      if (wantSignIn) promptSignIn();
     } else if (!onboarded()) {
       showOnboarding(); // first-ever visit: the full hero splash
     } else {
