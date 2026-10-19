@@ -308,6 +308,9 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
   .plans-row { gap: 14px; }
   .plan-f { margin-top: 24px; }
 }
+@media (max-width: 399px) {
+  .auth-guest .nav-end .btn-quiet, .auth-guest .lang { padding-inline: 7px; font-size: .8125rem; }
+}
 
 @media (max-width: 439px) { .nav .brand-name { display: none; } }
 
