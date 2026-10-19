@@ -32,6 +32,7 @@
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     note: ["AI coach powered by Anthropic (US). Not medical advice.", "المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة). ليس نصيحة طبية."],
+    privacy: ["Privacy", "الخصوصية"],
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
     title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
@@ -150,7 +151,7 @@
 
   var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
   var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoChipTip, photoRemove;
-  var noticeEl, noticeText, noticeOk, noticeCancel;
+  var noticeEl, noticeText, noticeOk, noticeCancel, noticePolicy;
 
   function els() {
     fab = document.getElementById("coachFab");
@@ -181,6 +182,7 @@
     noticeText = document.getElementById("coachPhotoNoticeText");
     noticeOk = document.getElementById("coachPhotoNoticeOk");
     noticeCancel = document.getElementById("coachPhotoNoticeCancel");
+    noticePolicy = document.getElementById("coachPhotoNoticePrivacy");
     return !!(fab && chat && form && input);
   }
 
@@ -301,7 +303,8 @@
     titleEl.textContent = s("title");
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
-    noteEl.textContent = s("note");
+    noteEl.textContent = s("note") + " ";
+    noteEl.appendChild(GymDom.policyLink("ai-coach", s("privacy"), true));
     fab.setAttribute("aria-label", s("fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
@@ -312,6 +315,7 @@
     photoChipText.textContent = s("photoChip");
     photoChipTip.textContent = s("photoTip");
     noticeText.textContent = s("photoNotice");
+    noticePolicy.textContent = s("privacy");
     noticeOk.textContent = s("photoContinue");
     noticeCancel.textContent = s("photoCancel");
     if (pendingPhoto) input.placeholder = s("photoNote");

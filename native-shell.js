@@ -130,6 +130,14 @@
     return document.documentElement.lang === "ar" ? "اضغط رجوع مرة أخرى للخروج" : "Press back again to exit";
   }
 
+  // true when the native App plugin took the exit.
+  function exitApp() {
+    var c = cap(), app = c && plugin(c, "App");
+    if (!app || typeof app.exitApp !== "function") return false;
+    app.exitApp();
+    return true;
+  }
+
   function handleBack(canGoBack) {
     if (closeTopLayer()) return;
     var ui = window.GymUI;
@@ -143,8 +151,7 @@
     var now = Date.now();
     if (exitArmedAt && now - exitArmedAt <= EXIT_WINDOW_MS) {
       exitArmedAt = 0;
-      var c = cap(), app = c && plugin(c, "App");
-      if (app && typeof app.exitApp === "function") app.exitApp();
+      exitApp();
       return;
     }
     exitArmedAt = now;
@@ -205,7 +212,7 @@
     } catch (e) {}
   }
 
-  window.GymNativeShell = { init: init, handleBack: handleBack };
+  window.GymNativeShell = { init: init, handleBack: handleBack, exitApp: exitApp };
   installSessionStore();
   init();
 })();

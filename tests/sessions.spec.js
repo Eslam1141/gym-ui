@@ -140,7 +140,7 @@ async function open(browser, s, opts) {
     try {
       if (sessionStorage.getItem("__seeded")) return;
       sessionStorage.setItem("__seeded", "1");
-      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1");
+      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_age_ok", "1");
       localStorage.setItem("gym_plan", "male"); localStorage.setItem("gym_style", "gym"); localStorage.setItem("gym_theme", "dark");
       Object.keys(o.ls || {}).forEach((k) => localStorage.setItem(k, o.ls[k]));
       Object.keys(o.ss || {}).forEach((k) => sessionStorage.setItem(k, o.ss[k]));

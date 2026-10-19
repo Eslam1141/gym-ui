@@ -59,7 +59,7 @@ async function open(browser, opts) {
     try {
       if (sessionStorage.getItem("__seeded")) return;
       sessionStorage.setItem("__seeded", "1");
-      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1");
+      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_age_ok", "1");
       localStorage.setItem("gym_plan", "male"); localStorage.setItem("gym_style", "gym"); localStorage.setItem("gym_theme", "dark");
       if (o.ls) localStorage.setItem("gymauth_refresh", o.ls);
     } catch (e) {}

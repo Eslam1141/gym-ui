@@ -32,6 +32,7 @@
       "يعمل المدرّب الذكي في اتقدم بتقنية شركة Anthropic، وهي شركة ذكاء اصطناعي في الولايات المتحدة الأمريكية. ولإعداد خطتك والرد عليك في الدردشة وتقدير وجباتك من الصور، نرسل إلى Anthropic ما يحتاجه المدرّب فقط: عمرك وجنسك وطولك ووزنك وهدفك ومستوى نشاطك؛ وأي حساسية غذائية أو ملاحظات أو أرقام InBody تضيفها؛ وأهدافك من السعرات الحرارية والعناصر الغذائية؛ وسجل طعامك لليوم؛ ورسائلك في الدردشة؛ وصور الوجبات التي تختار إرسالها؛ وما إذا كان وضع رمضان مفعّلًا. وبعض هذه البيانات معلومات صحية. لا نرسل اسمك أو بريدك الإلكتروني أو معرّف حسابك. تستخدم Anthropic هذه البيانات للرد علينا فقط، ولا تستخدمها في تدريب الذكاء الاصطناعي، وتحذفها عادةً خلال 30 يومًا. إجابات المدرّب تقديرات وإرشادات عامة، وليست نصيحة طبية. ويمكنك مواصلة استخدام التمارين وتسجيل الطعام من دون المدرّب الذكي."],
     agree: ["I'm 18 or older, and I agree that Etqadem sends this information, including my health information, to Anthropic in the United States so the AI coach can work. I can withdraw this at any time in More → Privacy & data.",
       "عمري 18 عامًا أو أكثر، وأوافق على أن ترسل اتقدم هذه المعلومات، بما فيها معلوماتي الصحية، إلى شركة Anthropic في الولايات المتحدة الأمريكية لكي يعمل المدرّب الذكي. ويمكنني سحب هذه الموافقة في أي وقت من: المزيد ← الخصوصية والبيانات."],
+    policy: ["Privacy Policy", "سياسة الخصوصية"],
     go: ["Turn on the AI coach", "تفعيل المدرّب الذكي"],
     saving: ["Saving…", "جارٍ الحفظ…"],
     cancel: ["Not now", "ليس الآن"],
@@ -94,6 +95,7 @@
         h("div", { class: "pv-sheet-grip", "aria-hidden": "true" }),
         h("h2", { class: "pv-sh-title", id: "ccTitle", tabindex: "-1" }, s("title")),
         h("p", { class: "cc-notice" }, s("notice")),
+        h("p", { class: "pol-line" }, GymDom.policyLink("ai-coach", s("policy"), true)),
         h("label", { class: "coach-check cc-agree", for: "ccAgree" }, agreeBox, h("span", {}, s("agree"))),
         errEl,
         h("div", { class: "pv-actions" }, cancelBtn, goBtn)));
@@ -102,6 +104,7 @@
   function paintText() {
     dlg.querySelector("#ccTitle").textContent = s("title");
     dlg.querySelector(".cc-notice").textContent = s("notice");
+    dlg.querySelector(".pol-link").textContent = s("policy");
     dlg.querySelector(".cc-agree span").textContent = s("agree");
     cancelBtn.textContent = s("cancel");
     goBtn.textContent = s("go");
