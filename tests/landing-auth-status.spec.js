@@ -159,3 +159,34 @@ test("no horizontal overflow at 360px for guest, EN and AR", async ({ browser })
     await context.close();
   }
 });
+
+test("guest Sign in link targets /app/?signin", async ({ browser }) => {
+  const { context, page } = await open(browser, { anon: true });
+  await expect(page.locator(".auth-signin")).toHaveAttribute("href", "/app/?signin");
+  await context.close();
+});
+
+test("guest: /app/?signin opens the sign-in screen and cleans the URL", async ({ browser }) => {
+  const { context, page } = await open(browser, { anon: true });
+  await page.locator(".auth-signin").click();
+  await page.waitForURL("**/app/**");
+  await expect(page.locator("#obContinueBtn")).toBeVisible();
+  await page.waitForFunction(() => !/signin/.test(location.search));
+  expect(new URL(page.url()).search).toBe("");
+  await page.reload();
+  await page.waitForTimeout(800);
+  await expect(page.locator("#obContinueBtn")).toBeHidden();
+  await context.close();
+});
+
+test("signed in: /app/?signin is ignored but still cleaned", async ({ browser }) => {
+  const { context, page } = await open(browser, { sub: true });
+  await page.addInitScript(() => sessionStorage.setItem("gymauth_session", JSON.stringify({
+    token: "tok", exp: Math.floor(Date.now() / 1000) + 3600, source: "local", profile: { name: "Sam", email: "sam@example.com" }
+  })));
+  await page.goto("/app/?signin");
+  await page.waitForFunction(() => !/signin/.test(location.search));
+  await expect(page.locator("#appNav")).toBeVisible();
+  await expect(page.locator("#obContinueBtn")).toBeHidden();
+  await context.close();
+});
