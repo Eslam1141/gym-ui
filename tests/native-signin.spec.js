@@ -11,7 +11,7 @@ async function open(browser, { native }) {
   const context = await browser.newContext({
     ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}), serviceWorkers: "block"
   });
-  await context.addInitScript(() => { try { localStorage.setItem("gym_age_ok", "1"); } catch (e) {} });
+  await context.addInitScript(() => { try { localStorage.setItem("gym_terms_ok", "terms.v1"); } catch (e) {} });
   const token = fakeJwt({ sub: "g-123", email: "a@b.c", name: "A", exp: Math.floor(Date.now() / 1000) + 3600 });
   if (native) {
     await context.addInitScript((token) => {

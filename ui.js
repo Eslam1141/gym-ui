@@ -3,7 +3,7 @@
  * Loads before app.js. Owns:
  *   - #appNav (Plan / Coach / More) and screen switching via navigate(tab)
  *   - the #onboarding screen and the gym_onboarded / gym_anon local flags
- *   - the 18+ confirmation (#ageGate) and its gym_age_ok flag
+ *   - the sign-up agreement line (#obLegal) and its gym_terms_ok flag
  *
  * app.js reads gym_anon directly for content gating and exposes
  * window.GymAppRebuild() to re-render after a state change. sync.js calls
@@ -22,7 +22,9 @@
   }
   function isAnon() { return ls("gym_anon") === "1"; }
   function onboarded() { return ls("gym_onboarded") === "1"; }
-  function ageOk() { return ls("gym_age_ok") === "1"; }
+  // Version of the Terms/Privacy text the user last agreed to by tapping a sign-in choice.
+  var TERMS_VERSION = "terms.v1";
+  function acceptTerms() { set("gym_terms_ok", TERMS_VERSION); }
 
   var ob = null;
 
@@ -232,6 +234,8 @@
     var resolving = el("obStepResolving");
     var email = el("obStepEmail");
     if (!start || !choices) return;
+    var legal = el("obLegal");
+    if (legal) legal.hidden = step !== "choices" && step !== "email";
     start.inert = step !== "start";
     choices.inert = step !== "choices";
     if (resolving) resolving.inert = step !== "resolving";
@@ -240,41 +244,6 @@
     // #obStepEmail size that would clip on smaller screens.
     if (email) { email.inert = step !== "email"; }
     if (ob) ob.classList.toggle("ob-email-mode", step === "email");
-  }
-
-  // ---------------- 18+ confirmation ----------------
-  // Shown over everything (sign-in screen or app) until the user confirms,
-  // once per device. gym_age_ok is a plain gym_ key, so sync.js also carries
-  // it to the account's settings. Exit closes the native app; on the web
-  // there is nothing to close, so it says why the app can't be used.
-  var ageInerted = [];
-  function showAgeGate() {
-    var gate = el("ageGate");
-    if (!gate || !gate.hidden) return;
-    // Everything behind the dialog is unreachable (keyboard and screen readers) while it is up.
-    ageInerted = Array.prototype.filter.call(document.body.children, function (n) {
-      return n !== gate && n.tagName !== "SCRIPT" && n.id !== "bootLoader" && !n.inert;
-    });
-    ageInerted.forEach(function (n) { n.inert = true; });
-    gate.hidden = false;
-    var title = el("ageTitle");
-    if (title) title.focus();
-  }
-  function hideAgeGate() {
-    var gate = el("ageGate");
-    if (!gate) return;
-    gate.hidden = true;
-    ageInerted.forEach(function (n) { n.inert = false; });
-    ageInerted = [];
-  }
-  function wireAgeGate() {
-    var yes = el("ageYes"), exit = el("ageExit");
-    if (yes) yes.addEventListener("click", function () { set("gym_age_ok", "1"); hideAgeGate(); });
-    if (exit) exit.addEventListener("click", function () {
-      if (window.GymNativeShell && GymNativeShell.exitApp && GymNativeShell.exitApp()) return;
-      var blocked = el("ageBlocked");
-      if (blocked) blocked.hidden = false;
-    });
   }
 
   function showOnboarding() {
@@ -325,6 +294,8 @@
   // Called by sync.js from onCredential once a Google token is in hand.
   function completeSignIn() {
     clearResolvingFallback();
+    // Signing in from the sign-in screen (Google button) is the agreement tap.
+    if (ob && !ob.hidden) acceptTerms();
     set("gym_onboarded", "1");
     del("gym_anon");
     hideOnboarding();
@@ -398,7 +369,6 @@
     isAuthed: isAuthed,
     isAnon: isAnon,
     onboarded: onboarded,
-    ageOk: ageOk,
     startAnon: startAnon,
     completeSignIn: completeSignIn,
     promptSignIn: promptSignIn,
@@ -437,10 +407,15 @@
       startBtn.addEventListener("click", function () { showObStep("choices"); });
     }
     var cont = el("obContinueBtn");
-    if (cont) cont.addEventListener("click", startAnon);
+    if (cont) cont.addEventListener("click", function () { acceptTerms(); startAnon(); });
+    // The web Google button is a GIS iframe whose taps can't be seen from here;
+    // completeSignIn() covers it. The native button is ours, so it counts at the tap.
+    var googleBtn = el("obGoogleBtn");
+    if (googleBtn) googleBtn.addEventListener("click", acceptTerms);
     var emailBtn = el("obEmailBtn");
     if (emailBtn) {
       emailBtn.addEventListener("click", function () {
+        acceptTerms();
         if (window.GymAuthEmail && typeof GymAuthEmail.open === "function") GymAuthEmail.open("login");
       });
     }
@@ -488,8 +463,6 @@
     } else {
       promptSignIn(); // returning, signed-out, no active choice: straight to login
     }
-    wireAgeGate();
-    if (!ageOk()) showAgeGate();
     // Routed: the app may paint now (index.html's pre-paint hid it while signed out).
     document.documentElement.classList.remove("pre-auth");
     releaseBootLoader();

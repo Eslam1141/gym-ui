@@ -97,19 +97,6 @@
 
 <div id="bgfx" aria-hidden="true"><span></span><span></span><span></span></div>
 
-<!-- 18+ confirmation (ui.js): shown on first launch, over the sign-in screen, until gym_age_ok=1. -->
-<div id="ageGate" class="age-gate" role="alertdialog" aria-modal="true" aria-labelledby="ageTitle" aria-describedby="ageBody" hidden>
-  <div class="age-card">
-    <img class="age-logo" src="icons/logo-etq.svg" alt="" width="64" height="64">
-    <h2 id="ageTitle" class="age-title" tabindex="-1" data-i18n="ageTitle">Etqadem is for people 18 and older</h2>
-    <p id="ageBody" class="age-body" data-i18n="ageBody">Confirm you are 18 or older to continue.</p>
-    <p id="ageBlocked" class="age-blocked" role="status" data-i18n="ageBlocked" hidden>Etqadem can't be used by people under 18. You can close this page.</p>
-    <div class="age-actions">
-      <button type="button" id="ageYes" class="ob-start-btn" data-i18n="ageYes">I'm 18 or older</button>
-      <button type="button" id="ageExit" class="ob-secondary" data-i18n="ageExit">Exit</button>
-    </div>
-  </div>
-</div>
 <section id="onboarding" hidden>
   <!-- Decorative stage: a rising staircase (the Etqadem mark's steps) with a dot climbing it.
        Pure SVG + CSS, see onboarding.css. Left panel at >=1024px, faint backdrop below. -->
@@ -145,7 +132,6 @@
           <li data-i18n="obWhy2">All training days &amp; important notes</li>
           <li data-i18n="obWhy3">A personalised AI coach</li>
         </ul>
-        <p class="ob-legal" data-i18n-html="obLegal">By continuing, you confirm you have read our <a href="/privacy">Privacy Policy</a>.</p>
       </div>
       <div id="obStepResolving" class="ob-step ob-step-resolving" inert>
         <div class="coach-spin" aria-hidden="true"></div>
@@ -155,6 +141,8 @@
            showObStep("email") first shows this step. -->
       <div id="obStepEmail" class="ob-step ob-step-email" inert></div>
     </div>
+    <!-- Sign-up agreement (ui.js acceptTerms): shown on the choices and email steps. No checkbox; tapping a button accepts. -->
+    <p id="obLegal" class="ob-legal" data-i18n-html="obLegal" hidden>By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a> and confirm you're 18 or older.</p>
   </div>
 </section>
 

@@ -24,6 +24,9 @@
     polTitle: ["Privacy Policy", "سياسة الخصوصية"],
     polDesc: ["How Etqadem collects, uses and protects your data, and how to use your rights.", "كيف تجمع اتقدم بياناتك وتستخدمها وتحميها، وكيف تمارس حقوقك."],
     polBtn: ["Read the policy", "اقرأ السياسة"],
+    termsTitle: ["Terms of Use", "شروط الاستخدام"],
+    termsDesc: ["The terms for using Etqadem, including the AI coach and Premium.", "شروط استخدام اتقدم، ومنها المدرّب الذكي والاشتراك المميّز."],
+    termsBtn: ["Read the terms", "اقرأ الشروط"],
     dlDesc: ["A ZIP file with your profile, workouts, meals, progress, notifications, feedback, consent records, coach data and profile photo.", "ملف ZIP يضم ملفك الشخصي وتمارينك ووجباتك وتقدمك وإشعاراتك وآراءك وسجلات موافقتك وبيانات المدرب وصورة ملفك الشخصي."],
     dlMore: ["What's included", "ما الذي يتضمنه"],
     wdMore: ["Learn more", "اعرف المزيد"],
@@ -282,6 +285,10 @@
         '<div class="pv-row">' +
           '<div class="pv-text"><div class="pv-title" data-pk="polTitle"></div><p class="pv-desc" data-pk="polDesc"></p></div>' +
           '<a class="pv-btn" id="pvPolicy" href="/privacy"><span data-pk="polBtn"></span></a>' +
+        '</div>' +
+        '<div class="pv-row">' +
+          '<div class="pv-text"><div class="pv-title" data-pk="termsTitle"></div><p class="pv-desc" data-pk="termsDesc"></p></div>' +
+          '<a class="pv-btn" id="pvTerms" href="/terms"><span data-pk="termsBtn"></span></a>' +
         '</div>' +
         '<div class="pv-row">' +
           '<div class="pv-text"><div class="pv-title" data-pk="dlTitle"></div><p class="pv-desc" data-pk="dlDesc"></p><a class="pv-link" href="/privacy#export" data-pk="dlMore"></a></div>' +

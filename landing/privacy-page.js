@@ -1,4 +1,4 @@
-// /privacy: language (one block at a time), the owner facts from
+// /privacy and /terms: language (one block at a time), the owner facts from
 // privacy-facts.js, the Draft banner and anchor handling. Deliberately NOT
 // boot.js (that redirects signed-in visitors to the app); the page must open
 // for everyone. No inline script: CSP allows 'self' only.
@@ -49,8 +49,10 @@
   }
 
   var unfilled = renderFacts();
-  d.classList.toggle("is-draft", unfilled.length > 0);
-  document.querySelectorAll("[data-draft]").forEach(function (n) { n.hidden = unfilled.length === 0; });
+  // data-draft-force on <body>: the page text itself is not final (the /terms scaffold).
+  var isDraft = unfilled.length > 0 || document.body.hasAttribute("data-draft-force");
+  d.classList.toggle("is-draft", isDraft);
+  document.querySelectorAll("[data-draft]").forEach(function (n) { n.hidden = !isDraft; });
 
   function baseId(hash) { return decodeURIComponent((hash || "").replace(/^#/, "")).replace(/^ar-/, ""); }
   function targetFor(hash, l) {
@@ -77,7 +79,7 @@
     var btn = document.getElementById("langBtn");
     btn.textContent = l === "ar" ? "English" : "العربية";
     btn.setAttribute("aria-label", l === "ar" ? "Switch to English" : "التبديل إلى العربية");
-    document.title = l === "ar" ? "سياسة الخصوصية | اتقدم" : "Privacy Policy | Etqadem";
+    document.title = document.body.getAttribute("data-title-" + l) || document.title;
     syncToc();
     observe();
   }

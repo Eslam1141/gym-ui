@@ -43,7 +43,7 @@
       plans_h: "Plans for men and women", plans_p: "Choose the men's or women's day templates. Switch any time, in Arabic or English.",
       plan_m: "Men's plan", plan_f: "Women's plan",
       final_h: "Ready for today's session?", final_p: "It's free. Sign in with Google, or look around without an account.",
-      foot_privacy: "Privacy Policy", foot_delete: "Delete account",
+      foot_privacy: "Privacy Policy", foot_terms: "Terms of Use", foot_delete: "Delete account",
       credit_pre: "Photo:", credit_post: ". Cropped and recolored.",
       credit2_pre: "Animated emoji:", credit2_post: ". Resized."
     },
@@ -85,7 +85,7 @@
       plans_h: "خطط للرجال والنساء", plans_p: "اختر قوالب الرجال أو النساء. بدّل متى شئت، بالعربية أو الإنجليزية.",
       plan_m: "خطة الرجال", plan_f: "خطة النساء",
       final_h: "جاهز لتمرين اليوم؟", final_p: "التطبيق مجاني. سجّل بحساب Google، أو تجوّل بدون حساب.",
-      foot_privacy: "سياسة الخصوصية", foot_delete: "حذف الحساب",
+      foot_privacy: "سياسة الخصوصية", foot_terms: "شروط الاستخدام", foot_delete: "حذف الحساب",
       credit_pre: "الصورة:", credit_post: ". تم القص وتغيير الألوان.",
       credit2_pre: "الإيموجي المتحرك:", credit2_post: ". تم تصغير الحجم."
     }

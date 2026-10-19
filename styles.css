@@ -987,8 +987,8 @@ body.onboarding-open #coachFabTip{ display:none !important; }
   transition:max-height .25s ease; width:100%; max-width:280px; text-align:start;
 }
 .ob-why.open{ max-height:200px; }
-.ob-legal{ margin:0; max-width:280px; text-align:center; font-size:var(--text-xs); line-height:1.6; color:var(--paper-dim); }
-.ob-legal a{ color:var(--primary-text); font-weight:var(--fw-bold); text-underline-offset:3px; }
+.ob-legal{ margin:0; max-width:300px; text-align:center; font-size:var(--text-xs); line-height:1.6; color:var(--paper-dim); }
+.ob-legal a{ white-space:nowrap; color:var(--primary-text); font-weight:var(--fw-bold); text-underline-offset:3px; }
 .ob-why li{
   font-size:var(--text-sm); color:var(--paper-dim); padding-block:6px; padding-inline-start:22px; position:relative;
 }
