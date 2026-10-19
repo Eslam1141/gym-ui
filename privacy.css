@@ -87,6 +87,8 @@
   text-decoration:underline; text-underline-offset:3px;
 }
 .pv-link:disabled{ opacity:.5; cursor:progress; }
+a.pv-link{ display:inline-flex; align-items:center; }
+a.pv-btn{ text-decoration:none; }
 
 .pv-field{ display:flex; flex-direction:column; gap:6px; font-size:var(--text-sm); font-weight:var(--fw-bold); color:var(--paper); }
 .pv-field input{

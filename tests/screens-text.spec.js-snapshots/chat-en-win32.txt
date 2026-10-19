@@ -176,3 +176,4 @@ Nutrition & fitness chat
 Ask a quick question…
 Want a full plan? Generate one
 AI coach powered by Anthropic (US). Not medical advice.
+Privacy

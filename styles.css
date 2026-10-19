@@ -986,6 +986,8 @@ body.onboarding-open #coachFabTip{ display:none !important; }
   transition:max-height .25s ease; width:100%; max-width:280px; text-align:start;
 }
 .ob-why.open{ max-height:200px; }
+.ob-legal{ margin:0; max-width:280px; text-align:center; font-size:var(--text-xs); line-height:1.6; color:var(--paper-dim); }
+.ob-legal a{ color:var(--primary-text); font-weight:var(--fw-bold); text-underline-offset:3px; }
 .ob-why li{
   font-size:var(--text-sm); color:var(--paper-dim); padding-block:6px; padding-inline-start:22px; position:relative;
 }
@@ -2454,6 +2456,11 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   .syd-backdrop, .syd-panel{ animation:none; }
   .rest-btn{ transition:none; }
 }
+
+/* link to the public privacy policy (dom.js policyLink), in notices and sheets */
+.pol-link{ color:var(--primary-text); font-weight:var(--fw-bold); text-decoration:underline; text-underline-offset:3px; }
+.pol-line{ margin:0; font-size:var(--text-sm); }
+.pol-line .pol-link{ display:inline-flex; align-items:center; min-height:44px; }
 
 /* feedback sheet (feedback.js): the .syd sheet with a type picker, a counter and a status line */
 .fb-panel{ max-height:calc(100dvh - var(--space-6)); overflow-y:auto; }

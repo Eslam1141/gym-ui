@@ -24,6 +24,7 @@
     msgLabel: ["Your message", "رسالتك"],
     msgPh: ["Tell us what happened or what you'd like to see.", "احكيلنا إيه اللي حصل أو إيه اللي نفسك تشوفه."],
     emailLabel: ["Email (optional, if you want a reply)", "الإيميل (اختياري، لو عايز رد)"],
+    policy: ["Privacy Policy", "سياسة الخصوصية"],
     send: ["Send", "ابعت"],
     sending: ["Sending…", "جارٍ الإرسال…"],
     cancel: ["Cancel", "إلغاء"],
@@ -189,6 +190,13 @@
       emailWrap.appendChild(email);
     }
 
+    var policy = node("p", "pol-line");
+    var policyLink = node("a", "pol-link", s("policy"));
+    policyLink.href = "/privacy#feedback";
+    policyLink.target = "_blank";
+    policyLink.rel = "noopener";
+    policy.appendChild(policyLink);
+
     var status = node("p", "fb-status");
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
@@ -206,6 +214,7 @@
     form.appendChild(msg);
     form.appendChild(count);
     if (emailWrap) form.appendChild(emailWrap);
+    form.appendChild(policy);
     form.appendChild(status);
     form.appendChild(actions);
 

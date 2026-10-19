@@ -83,6 +83,7 @@
     visceralFatLevel: ["Visceral fat level", "مستوى الدهون الحشوية"],
     bmrKcal: ["Measured BMR (kcal)", "معدل الأيض المُقاس (سعرة)"],
     notes: ["Notes", "ملاحظات"],
+    policy: ["Privacy Policy", "سياسة الخصوصية"],
     ibTitle: ["Read numbers from a photo (optional)", "قراءة الأرقام من صورة (اختياري)"],
     ibNotice: ["We send your photo to Anthropic, our AI provider in the United States, only to read 5 numbers: body fat %, skeletal muscle mass, visceral fat level, BMR and weight. We don't save the photo. Anthropic normally deletes it within 30 days and doesn't use it to train AI. Only the numbers you keep in the form are saved, with your plan. You can type the numbers yourself instead.",
       "نرسل صورتك إلى شركة Anthropic، مزوّد الذكاء الاصطناعي لدينا في الولايات المتحدة الأمريكية، لقراءة 5 أرقام فقط: نسبة الدهون، والكتلة العضلية الهيكلية، ومستوى الدهون الحشوية، ومعدل الأيض الأساسي، والوزن. لا نحتفظ بالصورة، وتحذفها Anthropic عادةً خلال 30 يومًا ولا تستخدمها في تدريب الذكاء الاصطناعي. ولا يُحفظ إلا الأرقام التي تُبقيها في النموذج، وذلك مع خطتك. ويمكنك بدلًا من ذلك كتابة الأرقام بنفسك."],
@@ -129,7 +130,7 @@
     vRequired: ["Required", "مطلوب"],
     vRange: ["Enter {min}–{max}", "أدخل {min}–{max}"],
     vRangeU: ["Enter {min}–{max} {u}", "أدخل {min}–{max} {u}"],
-    vAgeMin: ["Must be 16 or older", "يجب أن يكون العمر 16 عاماً فأكثر"],
+    vAgeMin: ["Must be 18 or older", "يجب أن يكون العمر 18 عاماً فأكثر"],
     vInt: ["Whole number only", "رقم صحيح فقط"],
     vNotesMax: ["Max 300 characters", "الحد الأقصى 300 حرف"],
     vFixTop: ["Fill the required fields to continue", "أكمل الحقول المطلوبة للمتابعة"],
@@ -439,7 +440,7 @@
   };
   // num fields: {min,max,int,unit}. required unless optional:true (InBody).
   var NUM = {
-    age: { min: 16, max: 100, int: true, hardMin: 10 },
+    age: { min: 18, max: 100, int: true, hardMin: 10 },
     heightCm: { min: 120, max: 230, unit: "cm" },
     weightKg: { min: 35, max: 250, unit: "kg", step: "0.1" },
     trainingDaysPerWeek: { min: 1, max: 6, int: true, unit: s("daysWk") },
@@ -931,6 +932,7 @@
       var ibMsg = h("p", { class: "coach-ib-cmsg", role: "status", "aria-live": "polite" });
       var ibAsk = h("div", { class: "coach-ib-ask" },
         h("p", { class: "coach-ib-notice" }, s("ibNotice")),
+        h("p", { class: "pol-line" }, GymDom.policyLink("inbody", s("policy"), true)),
         h("label", { class: "coach-check coach-ib-agree", for: "coachIbAgree" }, ibAgree, h("span", {}, s("ibConsent"))),
         ibMeta, ibMsg);
       // text/kind: an optional message for the live region; the consent state itself comes from ibConsented.

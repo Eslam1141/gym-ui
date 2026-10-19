@@ -21,7 +21,12 @@
   var STR = {
     label: ["Privacy & data", "الخصوصية والبيانات"],
     dlTitle: ["Download my data", "تنزيل بياناتي"],
-    dlDesc: ["A ZIP file with your profile, workouts, meals, progress, notifications and coach data.", "ملف ZIP يضم ملفك الشخصي وتمارينك ووجباتك وتقدمك وإشعاراتك وبيانات المدرب."],
+    polTitle: ["Privacy Policy", "سياسة الخصوصية"],
+    polDesc: ["How Etqadem collects, uses and protects your data, and how to use your rights.", "كيف تجمع اتقدم بياناتك وتستخدمها وتحميها، وكيف تمارس حقوقك."],
+    polBtn: ["Read the policy", "اقرأ السياسة"],
+    dlDesc: ["A ZIP file with your profile, workouts, meals, progress, notifications, feedback, consent records, coach data and profile photo.", "ملف ZIP يضم ملفك الشخصي وتمارينك ووجباتك وتقدمك وإشعاراتك وآراءك وسجلات موافقتك وبيانات المدرب وصورة ملفك الشخصي."],
+    dlMore: ["What's included", "ما الذي يتضمنه"],
+    wdMore: ["Learn more", "اعرف المزيد"],
     dlBtn: ["Download my data", "تنزيل بياناتي"],
     dlBusy: ["Preparing your file… this can take up to a minute.", "جارٍ تجهيز الملف… قد يستغرق الأمر حتى دقيقة."],
     dlOk: ["Your data was downloaded.", "تم تنزيل بياناتك."],
@@ -44,8 +49,8 @@
     ibBtn: ["Withdraw consent", "سحب الموافقة"],
     ibOk: ["Consent withdrawn. Photo upload is off until you agree again.", "تم سحب الموافقة. رفع الصور متوقف حتى توافق مرة أخرى."],
     caTitle: ["AI coach (Anthropic, US)", "المدرّب الذكي (Anthropic، الولايات المتحدة)"],
-    caDesc: ["Stop sending your data to Anthropic for plans, chat and meal photos. The AI coach stays off until you turn it on again. Plans you already have stay until you delete them.",
-      "أوقف إرسال بياناتك إلى Anthropic للخطط والدردشة وصور الوجبات. يبقى المدرّب الذكي متوقفًا حتى تفعّله مرة أخرى. وتبقى خططك الحالية إلى أن تحذفها."],
+    caDesc: ["Stop sending your data to Anthropic for plans, chat and meal photos. The AI coach stays off until you turn it on again. Plans and check-ins you already have stay until you delete your account.",
+      "أوقف إرسال بياناتك إلى Anthropic للخطط والدردشة وصور الوجبات. يبقى المدرّب الذكي متوقفًا حتى تفعّله مرة أخرى. وتبقى خططك ومتابعاتك الحالية إلى أن تحذف حسابك."],
     caBtn: ["Turn off AI coach", "إيقاف المدرّب الذكي"],
     caOk: ["AI coach turned off. Nothing more will be sent to Anthropic.", "تم إيقاف المدرّب الذكي، ولن يُرسل أي شيء آخر إلى Anthropic."],
     caErr: ["Couldn't turn off the AI coach. It's still on. Check your connection and try again.", "تعذّر إيقاف المدرّب الذكي وما زال يعمل. تحقق من اتصالك وحاول مرة أخرى."],
@@ -275,17 +280,21 @@
       '<div class="more-label" data-pk="label"></div>' +
       '<div class="pv-card">' +
         '<div class="pv-row">' +
-          '<div class="pv-text"><div class="pv-title" data-pk="dlTitle"></div><p class="pv-desc" data-pk="dlDesc"></p></div>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="polTitle"></div><p class="pv-desc" data-pk="polDesc"></p></div>' +
+          '<a class="pv-btn" id="pvPolicy" href="/privacy"><span data-pk="polBtn"></span></a>' +
+        '</div>' +
+        '<div class="pv-row">' +
+          '<div class="pv-text"><div class="pv-title" data-pk="dlTitle"></div><p class="pv-desc" data-pk="dlDesc"></p><a class="pv-link" href="/privacy#export" data-pk="dlMore"></a></div>' +
           '<button type="button" class="pv-btn" id="pvDownload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.4L11 13.6V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg><span data-pk="dlBtn"></span></button>' +
           '<p class="pv-status" id="pvStatus" role="status" aria-live="polite"></p>' +
         '</div>' +
         '<div class="pv-row" id="pvCaRow" hidden>' +
-          '<div class="pv-text"><div class="pv-title" data-pk="caTitle"></div><p class="pv-desc" data-pk="caDesc"></p></div>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="caTitle"></div><p class="pv-desc" data-pk="caDesc"></p><a class="pv-link" href="/privacy#withdraw" data-pk="wdMore"></a></div>' +
           '<button type="button" class="pv-btn" id="pvCaBtn"><span data-pk="caBtn"></span></button>' +
           '<p class="pv-status" id="pvCaStatus" role="status" aria-live="polite"></p>' +
         '</div>' +
         '<div class="pv-row" id="pvIbRow" hidden>' +
-          '<div class="pv-text"><div class="pv-title" data-pk="ibTitle"></div><p class="pv-desc" data-pk="ibDesc"></p></div>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="ibTitle"></div><p class="pv-desc" data-pk="ibDesc"></p><a class="pv-link" href="/privacy#withdraw" data-pk="wdMore"></a></div>' +
           '<button type="button" class="pv-btn" id="pvIbBtn"><span data-pk="ibBtn"></span></button>' +
           '<p class="pv-status" id="pvIbStatus" role="status" aria-live="polite"></p>' +
         '</div>' +

@@ -4,7 +4,8 @@
  *
  * h()      tiny element builder: h(tag, attrs, ...children)
  * lang()   "ar" | "en" for the screen modules' own STR tables
- * makeT()  builds a module's s(key) over its { key: [en, ar] } table */
+ * makeT()  builds a module's s(key) over its { key: [en, ar] } table
+ * policyLink()  <a> to a section of the public /privacy page */
 (function () {
   "use strict";
 
@@ -48,5 +49,13 @@
     return node;
   }
 
-  window.GymDom = { h: h, lang: lang, makeT: makeT };
+  // newTab: for links inside a sheet or drawer, so the action in progress isn't lost.
+  function policyLink(section, text, newTab) {
+    return h("a", {
+      class: "pol-link", href: "/privacy" + (section ? "#" + section : ""),
+      target: newTab ? "_blank" : null, rel: newTab ? "noopener" : null
+    }, text);
+  }
+
+  window.GymDom = { h: h, lang: lang, makeT: makeT, policyLink: policyLink };
 })();
