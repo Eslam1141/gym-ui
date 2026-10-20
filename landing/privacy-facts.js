@@ -13,6 +13,11 @@
 //     (precondition C1), so the policy shows the 90 days / 12 months / 6
 //     months schedule. false would show the fallback sentence (deleted once
 //     handled, or with the account).
+//   - /terms (terms.html) shows the first five keys above plus CONTACT_EMAIL,
+//     GOVERNING_VENUE, LIABILITY_CAP, NOTICE_DAYS and LANGUAGE_PREVAILS
+//     (written per language, e.g. { en: "English", ar: "الإنجليزية" }). Each
+//     page's Draft banner counts only the keys that page shows, so these
+//     do not affect /privacy.
 window.PRIVACY_FACTS = {
   LEGAL_ENTITY_NAME: "",
   STATE: "",
@@ -23,5 +28,10 @@ window.PRIVACY_FACTS = {
   BACKUP_DAYS: "",
   LOG_DAYS: "",
   EFFECTIVE_DATE: { en: "", ar: "" },
-  FEEDBACK_TTL_LIVE: true
+  FEEDBACK_TTL_LIVE: true,
+  CONTACT_EMAIL: "",
+  GOVERNING_VENUE: "",
+  LIABILITY_CAP: "",
+  NOTICE_DAYS: "",
+  LANGUAGE_PREVAILS: { en: "", ar: "" }
 };

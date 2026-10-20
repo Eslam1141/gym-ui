@@ -143,7 +143,7 @@ test("the shipped config really is unfilled (the owner still has to supply the f
   const { context, page } = await openPolicy(browser);
   const facts = await page.evaluate(() => window.PRIVACY_FACTS);
   const empty = Object.keys(facts).filter((k) => k !== "FEEDBACK_TTL_LIVE" && (facts[k] === "" || (typeof facts[k] === "object" && !facts[k].en)));
-  expect(empty.sort()).toEqual(["BACKUP_DAYS", "DPO", "EFFECTIVE_DATE", "HOSTING_COUNTRY", "LEGAL_ENTITY_NAME", "LOG_DAYS", "PRIVACY_EMAIL", "REGISTERED_ADDRESS", "STATE"]);
+  expect(empty.sort()).toEqual(["BACKUP_DAYS", "CONTACT_EMAIL", "DPO", "EFFECTIVE_DATE", "GOVERNING_VENUE", "HOSTING_COUNTRY", "LANGUAGE_PREVAILS", "LEGAL_ENTITY_NAME", "LIABILITY_CAP", "LOG_DAYS", "NOTICE_DAYS", "PRIVACY_EMAIL", "REGISTERED_ADDRESS", "STATE"]);
   await context.close();
 });
 
@@ -347,17 +347,32 @@ test("/terms: loads in EN and AR with the Draft banner, cross-links to /privacy,
     await expect(page.locator("h1:visible")).toHaveText(lang === "ar" ? "شروط الاستخدام" : "Terms of Use");
     await expect(page.locator("[data-draft]:visible")).toHaveCount(1);
     await expect(page.locator("[data-draft]:visible")).toContainText(lang === "ar" ? "مسودة" : "Draft");
-    expect(await page.locator(".sec:visible").count()).toBe(13);
+    expect(await page.locator(".sec:visible").count()).toBe(18);
     expect(await page.locator('.foot-link[href="/privacy"]:visible').count()).toBe(1);
     expect(errors).toEqual([]);
     await context.close();
   }
 });
 
-test("/terms: still shows the Draft banner when every owner fact is filled in (text not final)", async ({ browser }) => {
-  const { context, page } = await openPolicy(browser, { route: "/terms", facts: FILLED });
-  await expect(page.locator("[data-draft]:visible")).toHaveCount(1);
-  await context.close();
+const page_draft = (page) => page.locator("[data-draft]:visible");
+const TERMS_FACTS = { ...FILLED, CONTACT_EMAIL: "help@example.com", GOVERNING_VENUE: "Cheyenne, Wyoming", LIABILITY_CAP: "USD 100", NOTICE_DAYS: 14, LANGUAGE_PREVAILS: { en: "English", ar: "الإنجليزي" } };
+
+test("/terms: Draft banner follows the facts it shows; filling them all removes it, and /privacy is unaffected by the new keys", async ({ browser }) => {
+  // privacy facts alone leave the terms-only keys empty: banner stays
+  let r = await openPolicy(browser, { route: "/terms", facts: FILLED });
+  await expect(page_draft(r.page)).toHaveCount(1);
+  await r.context.close();
+  // every terms fact filled: no banner, the values render, the mailbox is a link
+  r = await openPolicy(browser, { route: "/terms", facts: TERMS_FACTS });
+  await expect(page_draft(r.page)).toHaveCount(0);
+  await expect(r.page.locator("#doc-en .is-todo")).toHaveCount(0);
+  expect(await href(r.page.locator('#doc-en [data-fact="CONTACT_EMAIL"] a').first())).toBe("mailto:help@example.com");
+  await expect(r.page.locator("#doc-en #liability")).toContainText("USD 100");
+  await r.context.close();
+  // /privacy with only its own facts filled: no banner (terms keys don't count)
+  r = await openPolicy(browser, { facts: FILLED });
+  await expect(page_draft(r.page)).toHaveCount(0);
+  await r.context.close();
 });
 
 // ---------------- age minimum in the assessment ----------------

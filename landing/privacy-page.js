@@ -28,7 +28,7 @@
       var v = valueOf(key, l);
       if (!v) { missing[key] = true; return; }
       n.classList.remove("is-todo");
-      if (key === "PRIVACY_EMAIL") {
+      if (key === "PRIVACY_EMAIL" || key === "CONTACT_EMAIL") {
         var a = document.createElement("a");
         a.href = "mailto:" + v;
         a.textContent = v;
@@ -49,10 +49,8 @@
   }
 
   var unfilled = renderFacts();
-  // data-draft-force on <body>: the page text itself is not final (the /terms scaffold).
-  var isDraft = unfilled.length > 0 || document.body.hasAttribute("data-draft-force");
-  d.classList.toggle("is-draft", isDraft);
-  document.querySelectorAll("[data-draft]").forEach(function (n) { n.hidden = !isDraft; });
+  d.classList.toggle("is-draft", unfilled.length > 0);
+  document.querySelectorAll("[data-draft]").forEach(function (n) { n.hidden = unfilled.length === 0; });
 
   function baseId(hash) { return decodeURIComponent((hash || "").replace(/^#/, "")).replace(/^ar-/, ""); }
   function targetFor(hash, l) {
