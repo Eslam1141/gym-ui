@@ -283,10 +283,10 @@ const EX_ALIASES = {
   "row":"Seated Cable Row", "cable row":"Seated Cable Row", "seated row":"Seated Cable Row",
   "bent over row":"Chest-Supported Row", "barbell row":"Chest-Supported Row", "bent over barbell row":"Chest-Supported Row",
   "dumbbell row":"One-Arm Dumbbell Row", "single arm dumbbell row":"One-Arm Dumbbell Row",
-  "bicep curl":"Barbell Curl", "biceps curl":"Barbell Curl", "bicep curls":"Barbell Curl", "barbell bicep curl":"Barbell Curl",
+  "bicep curl":"Barbell Curl", "biceps curl":"Barbell Curl", "bicep curls":"Barbell Curl", "biceps curls":"Barbell Curl", "barbell bicep curl":"Barbell Curl", "curl":"Barbell Curl", "curls":"Barbell Curl",
   "dumbbell curl":"Incline Dumbbell Curl", "dumbbell bicep curl":"Incline Dumbbell Curl", "hammer curls":"Hammer Curl",
-  "tricep extension":"Overhead Cable Triceps Extension", "triceps extension":"Overhead Cable Triceps Extension", "overhead tricep extension":"Overhead Cable Triceps Extension",
-  "tricep pushdown":"Cable Rope Pushdown", "triceps pushdown":"Cable Rope Pushdown", "rope pushdown":"Cable Rope Pushdown",
+  "tricep extension":"Overhead Cable Triceps Extension", "triceps extension":"Overhead Cable Triceps Extension", "tricep extensions":"Overhead Cable Triceps Extension", "triceps extensions":"Overhead Cable Triceps Extension", "overhead tricep extension":"Overhead Cable Triceps Extension",
+  "tricep pushdown":"Cable Rope Pushdown", "triceps pushdown":"Cable Rope Pushdown", "tricep pushdowns":"Cable Rope Pushdown", "triceps pushdowns":"Cable Rope Pushdown", "pushdown":"Cable Rope Pushdown", "pushdowns":"Cable Rope Pushdown", "rope pushdown":"Cable Rope Pushdown",
   "dips":"Bench Dips", "tricep dips":"Bench Dips", "dip":"Bench Dips",
   "shoulder press":"Seated Dumbbell Shoulder Press", "overhead press":"Seated Dumbbell Shoulder Press", "military press":"Seated Dumbbell Shoulder Press", "dumbbell shoulder press":"Seated Dumbbell Shoulder Press",
   "lateral raise":"Dumbbell Lateral Raise", "lateral raises":"Dumbbell Lateral Raise", "side raise":"Dumbbell Lateral Raise", "side raises":"Dumbbell Lateral Raise",
@@ -332,6 +332,16 @@ window.GymExerciseVideo = function(name){
 // _normEx drops non-latin letters, which would collapse every Arabic name to ""; keep them here.
 function _shapeKey(s){ return String(s||"").toLowerCase().replace(/\(.*?\)/g," ").replace(/[^a-z0-9\u0600-\u06FF]+/g," ").trim(); }
 const EX_SHAPE_SKIP = { "side plank":1 }; // reuses the Plank video, but trains the obliques
+// Generic names that don't say which head ("bicep curl", "tricep pushdown") train the whole muscle,
+// not the one head of the clip they borrow. Named variations (hammer, overhead, rope) keep theirs.
+const EX_WHOLE = { biceps:["biceps_long","biceps_short"], triceps:["triceps_long","triceps_lateral"] };
+const EX_GENERIC = {
+  "bicep curl":"biceps", "biceps curl":"biceps", "bicep curls":"biceps", "biceps curls":"biceps", "barbell bicep curl":"biceps",
+  "dumbbell curl":"biceps", "dumbbell bicep curl":"biceps", "curl":"biceps", "curls":"biceps",
+  "tricep extension":"triceps", "triceps extension":"triceps", "tricep extensions":"triceps", "triceps extensions":"triceps",
+  "tricep pushdown":"triceps", "triceps pushdown":"triceps", "tricep pushdowns":"triceps", "triceps pushdowns":"triceps",
+  "pushdown":"triceps", "pushdowns":"triceps", "dips":"triceps", "tricep dips":"triceps", "dip":"triceps"
+};
 const EX_SHAPE = (function(){
   const m = {};
   [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
@@ -344,7 +354,8 @@ const EX_SHAPE = (function(){
   });
   Object.keys(EX_ALIASES).forEach(alias=>{
     const tags = m[_shapeKey(EX_ALIASES[alias])];
-    if(tags && !EX_SHAPE_SKIP[alias] && !m[_shapeKey(alias)]) m[_shapeKey(alias)] = tags;
+    const whole = EX_GENERIC[alias] && EX_WHOLE[EX_GENERIC[alias]];
+    if(tags && !EX_SHAPE_SKIP[alias] && !m[_shapeKey(alias)]) m[_shapeKey(alias)] = whole ? {shape:whole[0], shape2:whole[1]} : tags;
   });
   return m;
 })();
@@ -482,6 +493,7 @@ const T = {
   warmup2:["<b>Loosen the day's joints</b> — 5-8 slow reps each. Upper-body days: band pull-aparts, shoulder dislocates, arm circles, cat-cow. Lower-body days: leg swings front & side, hip circles, 10 bodyweight squats, walking lunges.","<b>حرّك مفاصل اليوم</b> — 5-8 تكرارات بطيئة لكل حركة. أيام الجزء العلوي: شد المطاط، تدوير الكتف والذراعين، القطة-البقرة. أيام الجزء السفلي: أرجحة الساق أماماً وجانباً، تدوير الورك، 10 سكوات بوزن الجسم، طعنات مشي."],
   warmup3:["<b>Ramp up the first lift only</b> — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.","<b>تدرّج في التمرين الأول فقط</b> — بار فارغ ×10، ثم ~50% ×5، ~70% ×3، ~85% ×1. استرِح 60-90 ثانية وأوقف كل مجموعة قبل الإجهاد. (في الكاليسثينكس: مجموعة خفيفة واحدة من الحركة الأولى.)"],
   warmup4:["<b>Start working set 1.</b> Isolation moves (raises, curls, extensions) need just one light feeder set.","<b>ابدأ المجموعة الأولى الفعلية.</b> تمارين العزل (الرفرفة، المرجحة، التمديد) تحتاج مجموعة تحضيرية خفيفة واحدة فقط."],
+  viewFront:["Front","أمام"], viewBack:["Back","خلف"],
   setsGroup:["Sets","المجموعات"], setLblReps:["Set {n} · {r} reps","المجموعة {n} · {r} تكرار"], setLblSec:["Set {n} · {r} sec","المجموعة {n} · {r} ث"], setLblRaw:["Set {n} · {r}","المجموعة {n} · {r}"],
   sets:["sets","مجموعات"], reps:["reps","تكرار"], rest:["rest","راحة"],
   save:["Save","حفظ"], saved:["✓ Saved","✓ تم الحفظ"], restBtn:["Rest","راحة"],
@@ -1049,6 +1061,7 @@ let restSlot = null;
 function weekSlots(){ return DAYS === DAYS_MALE ? WEEK_MALE : null; }
 
 let openVideoId = null; // which exercise currently has an inline player mounted
+const motionReduced = () => !!(window.GymMotion && GymMotion.reduced());
 let animateCards = true; // replay the card entrance only on a real context change (day/plan/language)
 
 function loadJSON(key, fallback){
@@ -1186,7 +1199,7 @@ function renderRestPanel(){
   renderMuscleTiles(null);
   exList.innerHTML = "";
   const panel = document.createElement("section");
-  panel.className = "rest-panel" + (animateCards ? " anim-in" : "");
+  panel.className = "rest-panel" + (animateCards && !motionReduced() ? " anim-in" : "");
   panel.setAttribute("aria-labelledby", "restPanelTitle");
   panel.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.7 14.4A8.5 8.5 0 0 1 9.6 3.3a.75.75 0 0 0-1-.9A10 10 0 1 0 21.6 15.4a.75.75 0 0 0-.9-1z"/></svg>' +
     '<h3 id="restPanelTitle"></h3><p class="rest-panel-body"></p><p class="rest-panel-next"></p>';
@@ -1211,17 +1224,26 @@ function exShapes(ex){
   const g = window.GymExerciseShape ? GymExerciseShape(ex.en) : null;
   return g ? { shape: g.shape, shape2: g.shape2 || "" } : null;
 }
+// Both heads of a two-part muscle (biceps, triceps) read as the muscle's own name.
+function bothHeads(sh){
+  const a = SHAPE_BY_ID[sh.shape], b = sh.shape2 && SHAPE_BY_ID[sh.shape2];
+  return !!b && a.group === b.group && MUSCLE_SHAPES.filter(s=>s.group === a.group).length === 2;
+}
 function shapeText(sh){
   const name = id => activeLang === "ar" ? SHAPE_BY_ID[id].labelAr : SHAPE_BY_ID[id].label;
+  if(bothHeads(sh)) return activeLang === "ar" ? SHAPE_BY_ID[sh.shape].groupAr : SHAPE_BY_ID[sh.shape].group;
   return name(sh.shape) + (sh.shape2 ? " \u00b7 " + name(sh.shape2) : "");
 }
 // Close-up picture + label chip for one exercise ("" + "" when untagged).
-function muscleBits(ex){
+// settleIdx >= 0 plays the one-time settle entrance, staggered by that index.
+function muscleBits(ex, settleIdx){
   const sh = window.GymMuscleArt ? exShapes(ex) : null;
   const svg = sh ? GymMuscleArt.closeup(sh.shape, { sex: figureSex(), secondary: sh.shape2 || undefined }) : "";
   if(!svg) return { pic:"", chip:"" };
   const text = GymUI.esc(shapeText(sh));
-  return { pic:`<span class="ex-mus" role="img" aria-label="${text}">${svg}</span>`, chip:`<span class="ex-mus-chip">${text}</span>` };
+  const view = `<span class="ex-mus-view" aria-hidden="true">${t(GymMuscleArt.viewOf(sh.shape) === "back" ? "viewBack" : "viewFront")}</span>`;
+  const settle = settleIdx >= 0 ? ` mus-settle" style="--i:${settleIdx}` : "";
+  return { pic:`<span class="ex-mus${settle}" role="img" aria-label="${text}">${svg}${view}</span>`, chip:`<span class="ex-mus-chip">${text}</span>` };
 }
 
 // One tile per muscle group the day trains (catalog order); none for a rest day
@@ -1241,6 +1263,7 @@ function renderMuscleTiles(day){
   });
   dayMuscleTiles.innerHTML = html;
   dayMuscleTiles.hidden = !html;
+  if(html && animateCards && window.GymMotion) GymMotion.enter(dayMuscleTiles);   // no-op under reduced motion
 }
 
 function renderExercises(){
@@ -1253,12 +1276,13 @@ function renderExercises(){
   const dayChecks = checks[key] || {};
 
   exList.innerHTML = "";
+  const play = animateCards && !motionReduced(); // entrance only on a real context change, never under reduced motion
   day.exercises.forEach((ex, i)=>{
     const done = !!dayChecks[ex.id];
     const isOpen = openVideoId === ex.id;
     const card = document.createElement("div");
-    card.className = "ex-card" + (done ? " done" : "") + (animateCards ? " anim-in" : "");
-    if(animateCards) card.style.animationDelay = (i * 45) + "ms";
+    card.className = "ex-card" + (done ? " done" : "") + (play ? " anim-in" : "");
+    if(play) card.style.animationDelay = (i * 45) + "ms";
 
     const last = lastLog(ex.id);
     const esc = GymUI.esc;
@@ -1267,7 +1291,7 @@ function renderExercises(){
     const eid = esc(ex.id);
     const hasVid = !!ex.vid; // coach-generated plans have no demo clip
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
-    const mus = muscleBits(ex);
+    const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
 
     card.innerHTML = `
       <div class="ex-top">
@@ -1328,6 +1352,7 @@ function renderExercises(){
     `;
     exList.appendChild(card);
   });
+  if(play) setTimeout(()=>exList.querySelectorAll(".mus-settle").forEach(e=>e.classList.remove("mus-settle")), 1200);
   animateCards = false;
 
   // --- checkbox: flip just this card, no list rebuild ---

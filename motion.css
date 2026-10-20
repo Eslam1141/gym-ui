@@ -301,3 +301,18 @@
 @keyframes celeb-breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.07); } }
 @keyframes celeb-sleepy{ to{ transform:scaleY(.15); } }
 @keyframes celeb-halo{ 0%,100%{ opacity:0; transform:scale(.8); } 50%{ opacity:1; transform:scale(1.25); } }
+
+/* ---- Plan muscle pictures: one-time settle when a card first renders (app.js .mus-settle) ----
+   The picture eases down from a hair larger while the lit muscle fades up a beat later. */
+@keyframes m-settle{ from{ transform:scale(1.08); } }
+@keyframes m-lit{ from{ opacity:.3; } }
+@media (prefers-reduced-motion:no-preference){
+  .mus-settle > svg{
+    animation:m-settle var(--dur-slow) var(--ease-out) backwards;
+    animation-delay:calc(var(--i, 0) * var(--dur-stagger));
+  }
+  .mus-settle .ma-hi, .mus-settle .ma-hi2{
+    animation:m-lit calc(var(--dur-slow) * 1.4) var(--ease-out) backwards;
+    animation-delay:calc(var(--i, 0) * var(--dur-stagger) + var(--dur-med));
+  }
+}

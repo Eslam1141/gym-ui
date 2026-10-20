@@ -50,6 +50,7 @@ Ramp up the first lift only
 — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.
 Start working set 1.
 Isolation moves (raises, curls, extensions) need just one light feeder set.
+Front
 Barbell Bench Press
 Mid chest
 4
@@ -68,6 +69,7 @@ Save
 Rest
 Video
 No log yet
+Back
 Lat Pulldown / Pull-up
 Lats (width)
 4
@@ -86,6 +88,7 @@ Save
 Rest
 Video
 No log yet
+Front
 Seated Dumbbell Shoulder Press
 Front delt
 3
@@ -103,6 +106,7 @@ Save
 Rest
 Video
 No log yet
+Back
 Chest-Supported Row
 Mid-back / rhomboids (thickness)
 4
@@ -121,6 +125,7 @@ Save
 Rest
 Video
 No log yet
+Front
 Dumbbell Lateral Raise
 Side delt
 3
@@ -138,6 +143,7 @@ Save
 Rest
 Video
 No log yet
+Back
 Band Face Pull
 Rear delt
 3
