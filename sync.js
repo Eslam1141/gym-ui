@@ -236,7 +236,7 @@
   var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_"];
   function clearUserData() {
     clearCachedSession(); // don't let a stale cached token restore the old account
-    var keep = { gym_onboarded: 1, gym_lang: 1, gym_tab: 1, gym_anon: 1, gym_age_ok: 1 };
+    var keep = { gym_onboarded: 1, gym_lang: 1, gym_tab: 1, gym_anon: 1, gym_terms_ok: 1 };
     try {
       var rm = [];
       for (var i = 0; i < localStorage.length; i++) {

@@ -1,4 +1,4 @@
-// /privacy: language (one block at a time), the owner facts from
+// /privacy and /terms: language (one block at a time), the owner facts from
 // privacy-facts.js, the Draft banner and anchor handling. Deliberately NOT
 // boot.js (that redirects signed-in visitors to the app); the page must open
 // for everyone. No inline script: CSP allows 'self' only.
@@ -28,7 +28,7 @@
       var v = valueOf(key, l);
       if (!v) { missing[key] = true; return; }
       n.classList.remove("is-todo");
-      if (key === "PRIVACY_EMAIL") {
+      if (key === "PRIVACY_EMAIL" || key === "CONTACT_EMAIL") {
         var a = document.createElement("a");
         a.href = "mailto:" + v;
         a.textContent = v;
@@ -77,7 +77,7 @@
     var btn = document.getElementById("langBtn");
     btn.textContent = l === "ar" ? "English" : "العربية";
     btn.setAttribute("aria-label", l === "ar" ? "Switch to English" : "التبديل إلى العربية");
-    document.title = l === "ar" ? "سياسة الخصوصية | اتقدم" : "Privacy Policy | Etqadem";
+    document.title = document.body.getAttribute("data-title-" + l) || document.title;
     syncToc();
     observe();
   }

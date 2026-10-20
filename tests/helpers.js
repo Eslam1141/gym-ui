@@ -62,7 +62,7 @@ async function mockApi(context, s) {
   });
 }
 
-// opts: { ageOk (false = leave the 18+ gate unconfirmed), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
+// opts: { termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
@@ -80,7 +80,7 @@ async function openApp(browser, opts) {
       const ls = localStorage;
       ls.setItem("gym_lang", o.lang || "en");
       ls.setItem("gym_onboarded", "1");
-      if (o.ageOk !== false) ls.setItem("gym_age_ok", "1"); // the 18+ gate has its own spec
+      if (o.termsOk !== false) ls.setItem("gym_terms_ok", "terms.v1"); // the agreement line has its own spec
       ls.setItem("gym_plan", o.plan || "male");
       ls.setItem("gym_style", "gym");
       ls.setItem("gym_theme", o.theme || "dark");

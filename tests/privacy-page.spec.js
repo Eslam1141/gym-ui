@@ -1,5 +1,5 @@
 // The public /privacy page (landing/privacy.html), the in-app links to it, the
-// 18+ confirmation and the assessment's age minimum. The route table serves
+// sign-up agreement line, /terms and the assessment's age minimum. The route table serves
 // landing/ at "/" (with /privacy -> privacy.html, as docker/default.conf does)
 // and the repo root for /icons.
 const { test, expect } = require("@playwright/test");
@@ -20,7 +20,7 @@ const FILLED = {
   EFFECTIVE_DATE: { en: "20 October 2026", ar: "20 أكتوبر 2026" }, FEEDBACK_TTL_LIVE: true
 };
 
-async function openPolicy(browser, { lang = "en", hash = "", width = 1280, facts } = {}) {
+async function openPolicy(browser, { lang = "en", hash = "", width = 1280, facts, route = "/privacy" } = {}) {
   const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block", locale: lang === "ar" ? "ar-EG" : "en-US" });
   await context.addInitScript((l) => { try { if (l) localStorage.setItem("gym_lang", l); } catch (e) {} }, lang);
   await context.route("**/*", async (route) => {
@@ -29,7 +29,7 @@ async function openPolicy(browser, { lang = "en", hash = "", width = 1280, facts
     if (facts && u.pathname === "/privacy-facts.js") {
       return route.fulfill({ status: 200, contentType: "text/javascript", body: "window.PRIVACY_FACTS = " + JSON.stringify(facts) + ";" });
     }
-    const p = u.pathname === "/privacy" ? "privacy.html" : u.pathname.slice(1);
+    const p = u.pathname === "/privacy" ? "privacy.html" : u.pathname === "/terms" ? "terms.html" : u.pathname.slice(1);
     let file = path.join(LANDING, p);
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(REPO, p);
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) return route.fulfill({ status: 404, body: "" });
@@ -38,7 +38,7 @@ async function openPolicy(browser, { lang = "en", hash = "", width = 1280, facts
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  await page.goto("/privacy" + hash);
+  await page.goto(route + hash);
   await page.waitForFunction(() => document.querySelector("[data-doc]:not([hidden])"));
   return { context, page, errors };
 }
@@ -143,7 +143,7 @@ test("the shipped config really is unfilled (the owner still has to supply the f
   const { context, page } = await openPolicy(browser);
   const facts = await page.evaluate(() => window.PRIVACY_FACTS);
   const empty = Object.keys(facts).filter((k) => k !== "FEEDBACK_TTL_LIVE" && (facts[k] === "" || (typeof facts[k] === "object" && !facts[k].en)));
-  expect(empty.sort()).toEqual(["BACKUP_DAYS", "DPO", "EFFECTIVE_DATE", "HOSTING_COUNTRY", "LEGAL_ENTITY_NAME", "LOG_DAYS", "PRIVACY_EMAIL", "REGISTERED_ADDRESS", "STATE"]);
+  expect(empty.sort()).toEqual(["BACKUP_DAYS", "CONTACT_EMAIL", "DPO", "EFFECTIVE_DATE", "GOVERNING_VENUE", "HOSTING_COUNTRY", "LANGUAGE_PREVAILS", "LEGAL_ENTITY_NAME", "LIABILITY_CAP", "LOG_DAYS", "NOTICE_DAYS", "PRIVACY_EMAIL", "REGISTERED_ADDRESS", "STATE"]);
   await context.close();
 });
 
@@ -240,19 +240,7 @@ test("More > Privacy & data wording: plans and check-ins stay until the account 
   await ar.context.close();
 });
 
-test("sign-in screen: the 'By continuing' line links to /privacy (EN and AR)", async ({ browser }) => {
-  for (const [lang, text] of [["en", "By continuing, you confirm you have read our Privacy Policy."], ["ar", "بالمتابعة، فإنك تؤكد أنك قرأت سياسة الخصوصية."]]) {
-    const { context, page } = await openApp(browser, { lang });
-    await page.evaluate(() => GymUI.promptSignIn());
-    const line = page.locator("#obStepChoices .ob-legal");
-    await expect(line).toBeVisible();
-    await expect(line).toHaveText(text);
-    expect(await href(line.locator("a"))).toBe("/privacy");
-    await context.close();
-  }
-});
-
-test("landing footer links to /privacy and /delete-account; the landing no longer offers email sign-in", async ({ browser }) => {
+test("landing footer links to /privacy, /terms and /delete-account; the landing no longer offers email sign-in", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await context.route("**/*", async (route) => {
     const u = new URL(route.request().url());
@@ -265,7 +253,7 @@ test("landing footer links to /privacy and /delete-account; the landing no longe
   await page.goto("/?home");
   await page.waitForFunction(() => !document.documentElement.classList.contains("pending"));
   const links = page.locator(".foot-links a");
-  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("href")))).toEqual(["/privacy", "/delete-account"]);
+  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("href")))).toEqual(["/privacy", "/terms", "/delete-account"]);
   await expect(page.locator("[data-i18n=final_p]")).toHaveText("It's free. Sign in with Google, or look around without an account.");
   await context.close();
 });
@@ -279,70 +267,112 @@ test("delete-account page: export is a ZIP, the coach holds plans and check-ins 
   expect(html.match(/href="\/privacy#retention"/g).length).toBe(2);
 });
 
-// ---------------- 18+ gate (C3) ----------------
+// ---------------- sign-up agreement line (replaces the 18+ popup) ----------------
 
-test("18+ gate: shows on first launch, Exit does not proceed, confirming stores gym_age_ok and it never shows again", async ({ browser }) => {
-  const { context, page } = await openApp(browser, { ageOk: false });
-  const gate = page.locator("#ageGate");
-  await expect(gate).toBeVisible();
-  await expect(page.locator("#ageTitle")).toHaveText("Etqadem is for people 18 and older");
-  await expect(page.locator("#ageYes")).toHaveText("I'm 18 or older");
-  await expect(page.locator("#ageExit")).toHaveText("Exit");
-  expect(await gate.getAttribute("role")).toBe("alertdialog");
-  expect(await gate.getAttribute("aria-modal")).toBe("true");
-  expect(await page.evaluate(() => document.activeElement.id)).toBe("ageTitle");
-  // everything behind it is unreachable
-  expect(await page.evaluate(() => document.getElementById("appNav").inert)).toBe(true);
-  // Exit (web): says why, keeps the gate, stores nothing
-  await page.click("#ageExit");
-  await expect(page.locator("#ageBlocked")).toBeVisible();
-  await expect(gate).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("gym_age_ok"))).toBeNull();
-  // Confirm
-  await page.click("#ageYes");
-  await expect(gate).toBeHidden();
-  expect(await page.evaluate(() => [localStorage.getItem("gym_age_ok"), document.getElementById("appNav").inert])).toEqual(["1", false]);
-  // once only: a reload and a fresh boot don't ask again
-  await page.reload();
-  await page.waitForFunction(() => window.GymUI);
-  await expect(page.locator("#ageGate")).toBeHidden();
+const AGREE = {
+  en: { text: "By continuing, you agree to our Terms and Privacy Policy and confirm you're 18 or older.", terms: "Terms", privacy: "Privacy Policy" },
+  ar: { text: "بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية وتؤكد أن عمرك 18 عامًا أو أكثر.", terms: "شروط الاستخدام", privacy: "سياسة الخصوصية" }
+};
+
+test("agreement line: shown under the sign-in buttons with Terms and Privacy links, no popup (EN and AR)", async ({ browser }) => {
+  for (const lang of ["en", "ar"]) {
+    const { context, page } = await openApp(browser, { termsOk: false, lang });
+    expect(await page.evaluate(() => [document.documentElement.lang, document.documentElement.dir])).toEqual([lang, lang === "ar" ? "rtl" : "ltr"]);
+    await expect(page.locator("#ageGate")).toHaveCount(0);
+    await page.evaluate(() => GymUI.promptSignIn());
+    const line = page.locator("#obLegal");
+    await expect(line).toBeVisible();
+    await expect(line).toHaveText(AGREE[lang].text);
+    await expect(line.locator("a")).toHaveCount(2);
+    expect(await href(line.locator("a").nth(0))).toBe("/terms");
+    expect(await href(line.locator("a").nth(1))).toBe("/privacy");
+    await expect(line.locator("a").nth(0)).toHaveText(AGREE[lang].terms);
+    await expect(line.locator("a").nth(1)).toHaveText(AGREE[lang].privacy);
+    // the app behind is not locked by a modal
+    expect(await page.evaluate(() => document.getElementById("appNav").inert)).toBe(false);
+    await context.close();
+  }
+});
+
+test("agreement line: also shown on the email step, hidden on the start and resolving steps", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { termsOk: false });
+  await page.evaluate(() => { GymUI.promptSignIn(); GymUI.showObStep("email"); });
+  await expect(page.locator("#obLegal")).toBeVisible();
+  await page.evaluate(() => GymUI.showObStep("start"));
+  await expect(page.locator("#obLegal")).toBeHidden();
+  await page.evaluate(() => GymUI.showObStep("resolving"));
+  await expect(page.locator("#obLegal")).toBeHidden();
   await context.close();
 });
 
-test("18+ gate: not shown when gym_age_ok is already set", async ({ browser }) => {
-  const { context, page } = await openApp(browser, {});
-  await expect(page.locator("#ageGate")).toBeHidden();
-  await context.close();
-});
-
-test("18+ gate: Exit in the Android app closes the app", async ({ browser }) => {
-  const { context, page } = await openApp(browser, { ageOk: false });
-  await page.evaluate(() => {
-    window.__exited = 0;
-    window.Capacitor = { isNativePlatform: () => true, Plugins: { App: { exitApp: () => { window.__exited++; } } } };
-  });
-  await page.click("#ageExit");
-  expect(await page.evaluate(() => window.__exited)).toBe(1);
-  await expect(page.locator("#ageGate")).toBeVisible();
-  await context.close();
-});
-
-test("18+ gate: Arabic, RTL, and it covers the sign-in screen for a first-time visitor", async ({ browser }) => {
-  const { context, page } = await openApp(browser, { ageOk: false, lang: "ar" });
-  expect(await page.evaluate(() => [document.documentElement.lang, document.documentElement.dir])).toEqual(["ar", "rtl"]);
-  await expect(page.locator("#ageTitle")).toHaveText("اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر");
-  await expect(page.locator("#ageYes")).toHaveText("عمري 18 عامًا أو أكثر");
-  await expect(page.locator("#ageExit")).toHaveText("خروج");
+test("agreement line: nothing is recorded until a sign-in choice is tapped; Continue without signing in records terms.v1", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { termsOk: false });
   await page.evaluate(() => GymUI.promptSignIn());
-  expect(await page.evaluate(() => document.getElementById("onboarding").inert || !!document.getElementById("onboarding").closest("[inert]"))).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBeNull();
+  await page.click("#obContinueBtn");
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
   await context.close();
 });
 
-test("18+ gate: signing out keeps the confirmation on the device", async ({ browser }) => {
+test("agreement line: completing a Google sign-in from the sign-in screen records terms.v1", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { termsOk: false });
+  await page.evaluate(() => GymUI.promptSignIn());
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBeNull();
+  await page.evaluate(() => GymUI.completeSignIn());
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
+  await context.close();
+});
+
+test("agreement line: signing out keeps the agreement on the device and it is on the sync keep-list", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true });
   await page.evaluate(() => GymSync.signOut());
-  expect(await page.evaluate(() => localStorage.getItem("gym_age_ok"))).toBe("1");
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
   await context.close();
+});
+
+test("More tab: Privacy & data lists a Terms of Use link to /terms", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true });
+  await page.click('#appNav button[data-tab="more"]');
+  expect(await href(page.locator("#pvTerms"))).toBe("/terms");
+  await context.close();
+});
+
+// ---------------- /terms page ----------------
+
+test("/terms: loads in EN and AR with the Draft banner, cross-links to /privacy, no script errors", async ({ browser }) => {
+  for (const lang of ["en", "ar"]) {
+    const { context, page, errors } = await openPolicy(browser, { lang, route: "/terms" });
+    expect(await page.evaluate(() => [document.documentElement.lang, document.documentElement.dir, document.title])).toEqual(
+      lang === "ar" ? ["ar", "rtl", "شروط الاستخدام | اتقدم"] : ["en", "ltr", "Terms of Use | Etqadem"]);
+    await expect(page.locator("h1:visible")).toHaveText(lang === "ar" ? "شروط الاستخدام" : "Terms of Use");
+    await expect(page.locator("[data-draft]:visible")).toHaveCount(1);
+    await expect(page.locator("[data-draft]:visible")).toContainText(lang === "ar" ? "مسودة" : "Draft");
+    expect(await page.locator(".sec:visible").count()).toBe(18);
+    expect(await page.locator('.foot-link[href="/privacy"]:visible').count()).toBe(1);
+    expect(errors).toEqual([]);
+    await context.close();
+  }
+});
+
+const page_draft = (page) => page.locator("[data-draft]:visible");
+const TERMS_FACTS = { ...FILLED, CONTACT_EMAIL: "help@example.com", GOVERNING_VENUE: "Cheyenne, Wyoming", LIABILITY_CAP: "USD 100", NOTICE_DAYS: 14, LANGUAGE_PREVAILS: { en: "English", ar: "الإنجليزي" } };
+
+test("/terms: Draft banner follows the facts it shows; filling them all removes it, and /privacy is unaffected by the new keys", async ({ browser }) => {
+  // privacy facts alone leave the terms-only keys empty: banner stays
+  let r = await openPolicy(browser, { route: "/terms", facts: FILLED });
+  await expect(page_draft(r.page)).toHaveCount(1);
+  await r.context.close();
+  // every terms fact filled: no banner, the values render, the mailbox is a link
+  r = await openPolicy(browser, { route: "/terms", facts: TERMS_FACTS });
+  await expect(page_draft(r.page)).toHaveCount(0);
+  await expect(r.page.locator("#doc-en .is-todo")).toHaveCount(0);
+  expect(await href(r.page.locator('#doc-en [data-fact="CONTACT_EMAIL"] a').first())).toBe("mailto:help@example.com");
+  await expect(r.page.locator("#doc-en #liability")).toContainText("USD 100");
+  await r.context.close();
+  // /privacy with only its own facts filled: no banner (terms keys don't count)
+  r = await openPolicy(browser, { facts: FILLED });
+  await expect(page_draft(r.page)).toHaveCount(0);
+  await r.context.close();
 });
 
 // ---------------- age minimum in the assessment ----------------

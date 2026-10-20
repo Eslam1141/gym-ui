@@ -47,5 +47,5 @@ p { margin: 0 0 12px; max-width: 62ch; }
 .keep .why { grid-column: 1 / -1; font-weight: 400; color: var(--muted); font-size: .9375rem; }
 
 .contact { font-size: 1.125rem; font-weight: 700; }
-.foot { padding-block: 24px calc(48px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin-top: 24px; }
+.foot { padding-block: 24px calc(48px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin-top: 24px; display: flex; flex-wrap: wrap; gap: 4px 28px; }
 .foot-link { font-weight: 700; display: inline-block; min-height: 44px; line-height: 44px; }
