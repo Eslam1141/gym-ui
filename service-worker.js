@@ -20,6 +20,7 @@ const ASSETS = [
   "./theme-boot.js",
   "./boot-loader.js",
   "./app.js",
+  "./muscle-art.js",
   "./ui.js",
   "./mascot.js",
   "./coach-consent.js",

@@ -61,6 +61,17 @@
 
   /* coach macro colours (ring + tiles): protein / carbs / fat */
   --macro-p:#3CC2B8; --macro-c:#F2C14E; --macro-f:#F08A6B;
+  /* anatomy figures (muscle-art.js): stage, skin, muscle volume, fibre lines,
+     and the lit muscle (primary) / lighter secondary. Derived from the persona
+     tokens, so the women's palette recolours them with no extra work. */
+  --mus-stage:color-mix(in srgb, var(--surface) 76%, #000);
+  --mus-skin-a:color-mix(in srgb, var(--surface-3) 78%, var(--surface)); --mus-skin-b:color-mix(in srgb, var(--surface-3) 52%, var(--surface));
+  --mus-m-hi:color-mix(in srgb, var(--surface-3) 48%, var(--ink)); --mus-m-lo:color-mix(in srgb, var(--surface-3) 92%, var(--surface)); --mus-hair:color-mix(in srgb, var(--surface-3) 68%, var(--ink));
+  --mus-edge:color-mix(in srgb, var(--surface) 55%, #000); --mus-fiber:color-mix(in srgb, var(--surface) 45%, #000);
+  --mus-hi-a:color-mix(in srgb, var(--primary-text) 80%, #fff); --mus-hi-b:color-mix(in srgb, var(--primary) 82%, #000);
+  --mus-hi-edge:var(--primary-text); --mus-hi-fiber:color-mix(in srgb, var(--primary) 50%, #000);
+  --mus-hi2-a:color-mix(in srgb, var(--primary-text) 50%, var(--mus-m-hi)); --mus-hi2-b:color-mix(in srgb, var(--primary) 42%, var(--mus-m-lo));
+  --mus-hi2-edge:color-mix(in srgb, var(--primary-text) 55%, var(--mus-edge));
 }
 /* dark / women: rose + violet. Fill is a deeper rose so white text clears AA;
    the lighter #e85c9a rose lives in --primary-text / --glow for dark surfaces. */
@@ -94,6 +105,14 @@
   --sheen:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0) 42%);
   --bg-alt:#ECE8DD;
   --macro-p:#0B7A75; --macro-c:#B07A00; --macro-f:#C2492B;
+  --mus-stage:color-mix(in srgb, var(--surface-3) 70%, var(--surface-2));
+  --mus-skin-a:color-mix(in srgb, var(--surface-3) 88%, var(--ink)); --mus-skin-b:color-mix(in srgb, var(--surface-3) 74%, var(--ink)); --mus-hair:color-mix(in srgb, var(--ink) 62%, var(--surface-3));
+  --mus-m-hi:color-mix(in srgb, var(--surface-3) 55%, #fff); --mus-m-lo:color-mix(in srgb, var(--surface-3) 80%, var(--ink));
+  --mus-edge:color-mix(in srgb, var(--ink) 52%, var(--surface-3)); --mus-fiber:color-mix(in srgb, var(--ink) 42%, var(--surface-3));
+  --mus-hi-a:color-mix(in srgb, var(--primary) 62%, #fff); --mus-hi-b:color-mix(in srgb, var(--primary) 92%, #000);
+  --mus-hi-edge:var(--primary-pressed); --mus-hi-fiber:color-mix(in srgb, var(--primary-pressed) 80%, #000);
+  --mus-hi2-a:color-mix(in srgb, var(--primary) 30%, var(--mus-m-hi)); --mus-hi2-b:color-mix(in srgb, var(--primary) 40%, var(--mus-m-lo));
+  --mus-hi2-edge:color-mix(in srgb, var(--primary) 55%, var(--mus-edge));
 }
 /* light / women */
 :root[data-theme="light"][data-plan="female"]{
@@ -269,6 +288,26 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
   transition:border-color .2s, background .2s;
 }
 .ex-card.done{ border-color:var(--green); background:var(--green-soft); }
+
+/* ---- anatomy figures (muscle-art.js) ----
+   Strokes are screen pixels (non-scaling) so a tight close-up and a full
+   figure keep the same line weight. Lit muscles use the persona's primary. */
+.ma-svg{ display:block; width:100%; height:100%; }
+.ma-svg .ma-out, .ma-svg .ma-sh, .ma-svg .ma-fb, .ma-svg .ma-ln, .ma-svg .ma-bust{ vector-effect:non-scaling-stroke; stroke-linejoin:round; stroke-linecap:round; }
+.ma-svg .ma-out{ fill:none; stroke:var(--mus-edge); stroke-width:2.4px; }
+.ma-svg .ma-sh{ stroke:var(--mus-edge); stroke-width:.8px; }
+.ma-svg .ma-fb{ fill:none; stroke:var(--mus-fiber); stroke-width:.6px; opacity:.7; }
+.ma-svg .ma-ctx .ma-fb{ opacity:.4; }
+.ma-svg .ma-ln{ fill:none; stroke:var(--mus-edge); stroke-width:1.2px; opacity:.8; }
+.ma-svg .ma-bust{ fill:none; stroke:var(--mus-m-hi); stroke-width:1.5px; opacity:.6; }
+.ma-svg .ma-bust-s{ fill:none; stroke:var(--mus-edge); stroke-width:7px; opacity:.28; vector-effect:non-scaling-stroke; stroke-linecap:round; }
+.ma-svg .ma-hair{ fill:var(--mus-hair); stroke:var(--mus-edge); stroke-width:.8px; vector-effect:non-scaling-stroke; }
+.ma-svg .ma-hi .ma-sh{ stroke:var(--mus-hi-edge); stroke-width:1.1px; }
+.ma-svg .ma-hi .ma-fb{ stroke:var(--mus-hi-fiber); opacity:.85; }
+.ma-svg .ma-hi2 .ma-sh{ stroke:var(--mus-hi2-edge); stroke-width:1px; }
+.ma-svg .ma-hi2 .ma-fb{ stroke:var(--mus-hi-fiber); opacity:.6; }
+.ma-svg.ma-female .ma-fb{ opacity:.5; }
+.ma-svg.ma-female .ma-hi .ma-fb{ opacity:.75; }
 
 .ex-top{ display:flex; align-items:flex-start; gap:12px; }
 .check{
