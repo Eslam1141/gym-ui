@@ -1206,8 +1206,10 @@ function figureSex(){ return !isAnonMode() && activePlan === "female" ? "female"
 // {shape, shape2} for an exercise, or null when it has no known tag (no picture then).
 function exShapes(ex){
   const known = id => !!(id && SHAPE_BY_ID[id]);
-  if(!known(ex.shape)) return null;
-  return { shape: ex.shape, shape2: known(ex.shape2) && ex.shape2 !== ex.shape ? ex.shape2 : "" };
+  if(known(ex.shape)) return { shape: ex.shape, shape2: known(ex.shape2) && ex.shape2 !== ex.shape ? ex.shape2 : "" };
+  // Plans saved before tags existed: exact/alias name match, else no picture.
+  const g = window.GymExerciseShape ? GymExerciseShape(ex.en) : null;
+  return g ? { shape: g.shape, shape2: g.shape2 || "" } : null;
 }
 function shapeText(sh){
   const name = id => activeLang === "ar" ? SHAPE_BY_ID[id].labelAr : SHAPE_BY_ID[id].label;
