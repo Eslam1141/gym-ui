@@ -1564,6 +1564,16 @@
     return details(s("resWorkout"), kids, { open: open, meta: meta.join("  ·  "), cls: "coach-workout" });
   }
 
+  // Muscle tags for the Plan tab's pictures: the assistant's own `shape` when it
+  // is one of the 20 catalogue ids, else an exact/alias name match against the
+  // built-in exercises, else none (no picture rather than a wrong one).
+  function muscleTags(e) {
+    var ids = window.GymMuscleArt ? window.GymMuscleArt.REGIONS : [];
+    if (ids.indexOf(e.shape) !== -1) {
+      return { shape: e.shape, shape2: ids.indexOf(e.shape2) !== -1 && e.shape2 !== e.shape ? e.shape2 : "" };
+    }
+    return window.GymExerciseShape ? window.GymExerciseShape(e.name) : null;
+  }
   function mapWorkout(wp) {
     return (wp.days || []).map(function (d, i) {
       return {
@@ -1574,6 +1584,8 @@
           var o = { id: "coach_" + i + "_" + j, en: e.name, sets: e.sets || 3, reps: e.reps || "", rest: e.restSec || 90 };
           var vid = window.GymExerciseVideo ? window.GymExerciseVideo(e.name) : "";
           if (vid) o.vid = vid;   // reuse the app's demo clip when the move matches
+          var tags = muscleTags(e);
+          if (tags) { o.shape = tags.shape; if (tags.shape2) o.shape2 = tags.shape2; }
           return o;
         })
       };
@@ -1657,7 +1669,7 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans) };
+  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
