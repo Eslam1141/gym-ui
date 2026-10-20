@@ -1116,6 +1116,7 @@ function sessionKey(dayId){ return todayStr() + "_" + dayId; }
 // ---------------- RENDER ----------------
 const exList = document.getElementById("exList");
 const dayMuscles = document.getElementById("dayMuscles");
+const dayMuscleTiles = document.getElementById("dayMuscleTiles");
 const progressPill = document.getElementById("progressPill");
 const barFill = document.getElementById("barFill");
 const todayLabel = document.getElementById("todayLabel");
@@ -1182,6 +1183,7 @@ function renderRestPanel(){
   for(let i = 1; i <= week.length && !nextDay; i++) nextDay = DAYS.find(d=>d.id === week[(restSlot + i) % week.length]);
   document.body.classList.add("rest-view");
   dayMuscles.textContent = t("restBadge");
+  renderMuscleTiles(null);
   exList.innerHTML = "";
   const panel = document.createElement("section");
   panel.className = "rest-panel" + (animateCards ? " anim-in" : "");
@@ -1220,11 +1222,31 @@ function muscleBits(ex){
   return { pic:`<span class="ex-mus" role="img" aria-label="${text}">${svg}</span>`, chip:`<span class="ex-mus-chip">${text}</span>` };
 }
 
+// One tile per muscle group the day trains (catalog order); none for a rest day
+// or a day whose exercises carry no known tag.
+function renderMuscleTiles(day){
+  const used = {};
+  if(day && window.GymMuscleArt) day.exercises.forEach(ex=>{
+    const sh = exShapes(ex);
+    if(sh){ used[SHAPE_BY_ID[sh.shape].group] = 1; if(sh.shape2) used[SHAPE_BY_ID[sh.shape2].group] = 1; }
+  });
+  const sex = figureSex(), seen = {};
+  let html = "";
+  MUSCLE_SHAPES.forEach(s=>{
+    if(!used[s.group] || seen[s.group]) return;
+    seen[s.group] = 1;
+    html += `<div class="mus-tile" data-group="${GymUI.esc(s.group)}">${GymMuscleArt.group(s.group, { sex })}<span>${GymUI.esc(activeLang === "ar" ? s.groupAr : s.group)}</span></div>`;
+  });
+  dayMuscleTiles.innerHTML = html;
+  dayMuscleTiles.hidden = !html;
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
   const day = DAYS.find(d=>d.id===activeDay);
   dayMuscles.textContent = dayLabel(day) + " — " + musLabel(day);
+  renderMuscleTiles(day);
   const key = sessionKey(day.id);
   const dayChecks = checks[key] || {};
 

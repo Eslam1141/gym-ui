@@ -37,6 +37,9 @@ Not started yet
 Start Workout
 Upper — Chest, Back, Shoulders
 0/6
+Chest
+Back
+Shoulders
 Warm-up — do this first
 Video
 Raise your temperature
