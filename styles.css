@@ -329,8 +329,22 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 .check svg{ width:15px; height:15px; fill:#fff; display:none; }
 .check.on svg{ display:block; }
 
-.ex-title{ flex:1; }
+.ex-title{ flex:1; min-width:0; }
 .ex-title .en{ font-weight:700; font-size:var(--text-md); color:var(--paper); }
+/* muscle close-up (left of the title, mirrored in RTL) + the chip naming it */
+.ex-mus{
+  flex:none; width:64px; height:64px; border-radius:12px; overflow:hidden;
+  background:var(--mus-stage); border:1px solid var(--line);
+}
+.ex-mus-chip{
+  display:inline-flex; align-items:center; gap:6px; max-width:100%; margin-top:6px; padding:2px 10px 2px 8px;
+  border-radius:10px; font-size:var(--text-xs); font-weight:var(--fw-medium); line-height:1.45;
+  color:var(--primary-text);
+  background:color-mix(in srgb, var(--primary) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+}
+.ex-mus-chip::before{ content:""; flex:none; width:7px; height:7px; border-radius:50%; background:var(--primary-text); }
+[dir="rtl"] .ex-mus-chip{ padding:2px 8px 2px 10px; }
 
 .ex-meta{
   display:flex; gap:14px; margin:10px 0 10px 38px;

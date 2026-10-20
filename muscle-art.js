@@ -383,7 +383,7 @@
     sil.forEach(function (s) { out += '<path class="ma-sil" fill="url(#' + p + 's)" d="' + s.d + '"/>'; });
     if (V.hair && (!box || hits(V.hairBox, box))) out += '<path class="ma-hair" d="' + V.hair + '"/>';
     V.regs.forEach(function (r) {
-      if (box && !hits(r.boxAll, box)) return;
+      if (box && !hits(r.boxAll, box) && !lit[r.id]) return;   // a lit region is always in the markup
       var cls = lit[r.id] || (r.ctx ? "ma-m ma-ctx" : "ma-m");
       out += regionSvg(p, r, cls, lit[r.id] === "ma-hi" ? "h" : lit[r.id] === "ma-hi2" ? "h2" : "m");
     });
@@ -421,7 +421,13 @@
     var sex = sexOf(o), lit = {}, sec = o && o.secondary;
     if (sec && sec !== id && viewOf(sec) === view) lit[sec] = "ma-hi2";
     lit[id] = "ma-hi";
-    return render(view, sex, lit, cropFor(sex, view, Object.keys(lit), GROUP[id]));
+    var crop = cropFor(sex, view, [id], GROUP[id]);
+    // Frame the secondary muscle too, unless it is far enough away to shrink the primary.
+    if (lit[sec]) {
+      var both = cropFor(sex, view, [id, sec], GROUP[id]);
+      if (both && crop && both[2] <= crop[2] * 1.5) crop = both;
+    }
+    return render(view, sex, lit, crop);
   }
 
   function group(name, o) {

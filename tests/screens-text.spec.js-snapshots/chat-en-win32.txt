@@ -48,6 +48,7 @@ Ramp up the first lift only
 Start working set 1.
 Isolation moves (raises, curls, extensions) need just one light feeder set.
 Barbell Bench Press
+Mid chest
 4
 sets
 6-8
@@ -65,6 +66,7 @@ Rest
 Video
 No log yet
 Lat Pulldown / Pull-up
+Lats (width)
 4
 sets
 8-10
@@ -82,6 +84,7 @@ Rest
 Video
 No log yet
 Seated Dumbbell Shoulder Press
+Front delt
 3
 sets
 10-12
@@ -98,6 +101,7 @@ Rest
 Video
 No log yet
 Chest-Supported Row
+Mid-back / rhomboids (thickness)
 4
 sets
 8-10
@@ -115,6 +119,7 @@ Rest
 Video
 No log yet
 Dumbbell Lateral Raise
+Side delt
 3
 sets
 15-20
@@ -131,6 +136,7 @@ Rest
 Video
 No log yet
 Band Face Pull
+Rear delt
 3
 sets
 15-20

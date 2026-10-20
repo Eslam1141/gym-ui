@@ -1196,6 +1196,30 @@ function renderRestPanel(){
   exList.appendChild(panel);
 }
 
+// ---- muscle pictures (muscle-art.js) ----
+const SHAPE_BY_ID = {};
+MUSCLE_SHAPES.forEach(s=>{ SHAPE_BY_ID[s.id] = s; });
+// The anonymous preview always uses the male figure; signed-in plans follow the persona.
+function figureSex(){ return !isAnonMode() && activePlan === "female" ? "female" : "male"; }
+// {shape, shape2} for an exercise, or null when it has no known tag (no picture then).
+function exShapes(ex){
+  const known = id => !!(id && SHAPE_BY_ID[id]);
+  if(!known(ex.shape)) return null;
+  return { shape: ex.shape, shape2: known(ex.shape2) && ex.shape2 !== ex.shape ? ex.shape2 : "" };
+}
+function shapeText(sh){
+  const name = id => activeLang === "ar" ? SHAPE_BY_ID[id].labelAr : SHAPE_BY_ID[id].label;
+  return name(sh.shape) + (sh.shape2 ? " \u00b7 " + name(sh.shape2) : "");
+}
+// Close-up picture + label chip for one exercise ("" + "" when untagged).
+function muscleBits(ex){
+  const sh = window.GymMuscleArt ? exShapes(ex) : null;
+  const svg = sh ? GymMuscleArt.closeup(sh.shape, { sex: figureSex(), secondary: sh.shape2 || undefined }) : "";
+  if(!svg) return { pic:"", chip:"" };
+  const text = GymUI.esc(shapeText(sh));
+  return { pic:`<span class="ex-mus" role="img" aria-label="${text}">${svg}</span>`, chip:`<span class="ex-mus-chip">${text}</span>` };
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
@@ -1219,14 +1243,17 @@ function renderExercises(){
     const eid = esc(ex.id);
     const hasVid = !!ex.vid; // coach-generated plans have no demo clip
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
+    const mus = muscleBits(ex);
 
     card.innerHTML = `
       <div class="ex-top">
         <div class="check ${done?'on':''}" data-id="${eid}">
           <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
         </div>
+        ${mus.pic}
         <div class="ex-title">
           <div class="en">${nm}</div>
+          ${mus.chip}
         </div>
       </div>
       <div class="ex-meta">
