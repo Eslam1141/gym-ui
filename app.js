@@ -42,7 +42,7 @@ const DAYS_MALE = [
     {id:"bbb_tbar", en:"T-Bar Row", sets:4, reps:"8-10", rest:90, vid:"1iQSSqin3ro", shape:"back_mid", tier:"hard"},
     {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"bba_inclcurl", en:"Incline Dumbbell Curl", sets:3, reps:"10-12", rest:45, vid:"XhIsIcjIbCw", shape:"biceps_long", tier:"medium"},
-    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_short", tier:"medium"},
+    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
     {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
     {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy"},
   ]},
@@ -101,7 +101,7 @@ const LEGACY_MALE_DAYS = [
     {id:"mub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy"},
     {id:"mub_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
     {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_short", tier:"medium"},
+    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
     {id:"mub_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
   ]},
   { id:"m_lowerB", label:"Lower B", muscles:"Quads, Hamstrings, Calves", exercises:[
@@ -122,7 +122,7 @@ const DAYS_FEMALE = [
     {id:"fla_lunge", en:"Reverse Lunge (Dumbbell)", sets:3, reps:"10-12/leg", rest:60, vid:"YXL_f378hLM", shape:"quads", tier:"medium"},
     {id:"fla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
     {id:"fla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"fla_deadbug", en:"Dead Bug (core)", sets:3, reps:"10-12/side", rest:30, vid:"XcYtWYMz39w", shape:"core_obliques", tier:"easy"},
+    {id:"fla_deadbug", en:"Dead Bug (core)", sets:3, reps:"10-12/side", rest:30, vid:"XcYtWYMz39w", shape:"core_lower", tier:"easy"},
   ]},
   { id:"f_upperA", label:"Upper A", muscles:"Push focus", exercises:[
     {id:"fua_bench", en:"Dumbbell Bench Press", sets:3, reps:"10-12", rest:60, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium"},
@@ -130,10 +130,10 @@ const DAYS_FEMALE = [
     {id:"fua_press", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"12-15", rest:45, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
     {id:"fua_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"fua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"fua_arms", en:"Biceps Curl + Triceps Extension (superset)", sets:3, reps:"12-15", rest:45, vid:"8UIbEovL-xU", shape:"biceps_short", tier:"medium"},
+    {id:"fua_arms", en:"Biceps Curl + Triceps Extension (superset)", sets:3, reps:"12-15", rest:45, vid:"8UIbEovL-xU", shape:"biceps_short", shape2:"triceps_long", tier:"medium"},
   ]},
   { id:"f_lowerB", label:"Lower B", muscles:"Hamstrings & Glutes", exercises:[
-    {id:"flb_sumo", en:"Dumbbell Sumo Squat", sets:3, reps:"12-15", rest:60, vid:"bRCjBCtBGIo", shape:"quads", tier:"medium"},
+    {id:"flb_sumo", en:"Dumbbell Sumo Squat", sets:3, reps:"12-15", rest:60, vid:"bRCjBCtBGIo", shape:"quads", shape2:"glutes", tier:"medium"},
     {id:"flb_sldl", en:"Single-Leg Dumbbell RDL", sets:3, reps:"10-12/leg", rest:45, vid:"kQf5g0y0mO4", shape:"hamstrings", tier:"hard"},
     {id:"flb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:60, vid:"uODWo4YqbT8", shape:"quads", tier:"hard"},
     {id:"flb_kickback", en:"Band Glute Kickback", sets:3, reps:"15-20/leg", rest:30, vid:"aw9WClmz5jw", shape:"glutes", tier:"easy"},
@@ -145,7 +145,7 @@ const DAYS_FEMALE = [
     {id:"fub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy"},
     {id:"fub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium"},
     {id:"fub_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"fub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_short", tier:"medium"},
+    {id:"fub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
     {id:"fub_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
   ]},
 ];
@@ -157,24 +157,24 @@ const DAYS_MALE_CAL = [
     {id:"mcp_pike", en:"Pike Push-ups", sets:3, reps:"8-12", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
     {id:"mcp_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
     {id:"mcp_plank", en:"Plank (core)", sets:3, reps:"45-60s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
-    {id:"mcp_hollow", en:"Hollow Body Hold", sets:3, reps:"25-40s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_upper", tier:"medium"},
-    {id:"mcp_mtn", en:"Mountain Climbers", sets:4, reps:"40s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", tier:"medium"},
+    {id:"mcp_hollow", en:"Hollow Body Hold", sets:3, reps:"25-40s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium"},
+    {id:"mcp_mtn", en:"Mountain Climbers", sets:4, reps:"40s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium"},
   ]},
   { id:"mc_legs", label:"Legs", muscles:"Legs & Cardio", exercises:[
     {id:"mcl_squat", en:"Bodyweight Squats", sets:4, reps:"25-35", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy"},
     {id:"mcl_lunge", en:"Reverse Lunges", sets:3, reps:"12-16/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy"},
     {id:"mcl_bridge", en:"Glute Bridge", sets:3, reps:"20-25", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"mcl_jump", en:"Squat Jumps", sets:4, reps:"12-15", rest:45, vid:"dX9bNPQeQa8", shape:"quads", tier:"hard"},
+    {id:"mcl_jump", en:"Squat Jumps", sets:4, reps:"12-15", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard"},
     {id:"mcl_calf", en:"Standing Calf Raise", sets:3, reps:"25-30", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"mcl_burpee", en:"Burpees", sets:5, reps:"10-15", rest:60, vid:"DNHWxCUp8MY", shape:"core_lower", tier:"hard"},
+    {id:"mcl_burpee", en:"Burpees", sets:5, reps:"10-15", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard"},
   ]},
   { id:"mc_pull", label:"Pull", muscles:"Pull & Total Body", exercises:[
     {id:"mcx_row", en:"Inverted Row (under a table)", sets:4, reps:"10-15", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
     {id:"mcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"20-25", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"mcx_superman", en:"Superman", sets:3, reps:"15-20", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
     {id:"mcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"mcx_flutter", en:"Flutter Kicks", sets:4, reps:"40s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", tier:"easy"},
-    {id:"mcx_bear", en:"Bear Crawl", sets:3, reps:"30s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", tier:"medium"},
+    {id:"mcx_flutter", en:"Flutter Kicks", sets:4, reps:"40s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy"},
+    {id:"mcx_bear", en:"Bear Crawl", sets:3, reps:"30s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium"},
   ]},
 ];
 
@@ -184,24 +184,24 @@ const DAYS_FEMALE_CAL = [
     {id:"fcp_pike", en:"Pike Push-ups", sets:3, reps:"6-10", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
     {id:"fcp_dips", en:"Bench Dips", sets:3, reps:"8-12", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
     {id:"fcp_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
-    {id:"fcp_hollow", en:"Hollow Body Hold", sets:3, reps:"15-30s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_upper", tier:"medium"},
-    {id:"fcp_mtn", en:"Mountain Climbers", sets:3, reps:"30s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", tier:"medium"},
+    {id:"fcp_hollow", en:"Hollow Body Hold", sets:3, reps:"15-30s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium"},
+    {id:"fcp_mtn", en:"Mountain Climbers", sets:3, reps:"30s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium"},
   ]},
   { id:"fc_legs", label:"Legs", muscles:"Legs & Cardio", exercises:[
     {id:"fcl_squat", en:"Bodyweight Squats", sets:3, reps:"20-30", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy"},
     {id:"fcl_lunge", en:"Reverse Lunges", sets:3, reps:"10-14/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy"},
     {id:"fcl_bridge", en:"Glute Bridge", sets:3, reps:"15-20", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"fcl_jump", en:"Squat Jumps", sets:3, reps:"8-12", rest:45, vid:"dX9bNPQeQa8", shape:"quads", tier:"hard"},
+    {id:"fcl_jump", en:"Squat Jumps", sets:3, reps:"8-12", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard"},
     {id:"fcl_calf", en:"Standing Calf Raise", sets:3, reps:"20-25", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"fcl_burpee", en:"Burpees", sets:3, reps:"6-10", rest:60, vid:"DNHWxCUp8MY", shape:"core_lower", tier:"hard"},
+    {id:"fcl_burpee", en:"Burpees", sets:3, reps:"6-10", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard"},
   ]},
   { id:"fc_pull", label:"Pull", muscles:"Pull & Total Body", exercises:[
     {id:"fcx_row", en:"Inverted Row (under a table)", sets:3, reps:"6-12", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
     {id:"fcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
     {id:"fcx_superman", en:"Superman", sets:3, reps:"12-15", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
     {id:"fcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"fcx_flutter", en:"Flutter Kicks", sets:3, reps:"30s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", tier:"easy"},
-    {id:"fcx_bear", en:"Bear Crawl", sets:3, reps:"20s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", tier:"medium"},
+    {id:"fcx_flutter", en:"Flutter Kicks", sets:3, reps:"30s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy"},
+    {id:"fcx_bear", en:"Bear Crawl", sets:3, reps:"20s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium"},
   ]},
 ];
 
@@ -325,6 +325,33 @@ window.GymExerciseVideo = function(name){
   const keys = Object.keys(EX_VID);
   let hit = keys.find(k => k.length >= 6 && (n.indexOf(k) !== -1 || k.indexOf(n) !== -1));
   return hit ? EX_VID[hit] : "";
+};
+// ---- exercise-name -> muscle tags (AI-coach plans, and plans saved before they carried tags) ----
+// Exact normalised name (English or Arabic) or an EX_ALIASES alias, never a
+// contains-match: a wrong muscle lit up is worse than no picture.
+// _normEx drops non-latin letters, which would collapse every Arabic name to ""; keep them here.
+function _shapeKey(s){ return String(s||"").toLowerCase().replace(/\(.*?\)/g," ").replace(/[^a-z0-9\u0600-\u06FF]+/g," ").trim(); }
+const EX_SHAPE_SKIP = { "side plank":1 }; // reuses the Plank video, but trains the obliques
+const EX_SHAPE = (function(){
+  const m = {};
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+    set.forEach(d=> d.exercises.forEach(ex=>{
+      if(!ex.shape) return;
+      const tags = ex.shape2 ? {shape:ex.shape, shape2:ex.shape2} : {shape:ex.shape};
+      if(!m[_shapeKey(ex.en)]) m[_shapeKey(ex.en)] = tags;
+      const ar = AR_EX[ex.en]; if(ar && !m[_shapeKey(ar)]) m[_shapeKey(ar)] = tags;
+    }));
+  });
+  Object.keys(EX_ALIASES).forEach(alias=>{
+    const tags = m[_shapeKey(EX_ALIASES[alias])];
+    if(tags && !EX_SHAPE_SKIP[alias] && !m[_shapeKey(alias)]) m[_shapeKey(alias)] = tags;
+  });
+  return m;
+})();
+window.GymExerciseShape = function(name){
+  const k = _shapeKey(name);
+  const t = k ? EX_SHAPE[k] : null;
+  return t ? Object.assign({}, t) : null;
 };
 const T = {
   appTitle:["Etqadem","اتقدم"],
@@ -958,6 +985,9 @@ let DAYS = pickDays();
 // Read-only accessor for calendar.js — DAYS is otherwise module-private, and
 // the calendar needs a day's exercise list to compute done===total locally.
 window.GymApp = window.GymApp || {};
+// Read-only views for the muscle-art specs (and the Plan tab's tile/close-up code).
+window.GymApp.muscleShapes = MUSCLE_SHAPES;
+window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL]; };
 window.GymApp.dayExercises = function(dayId){
   const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
   return day ? day.exercises : [];
