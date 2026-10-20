@@ -44,7 +44,7 @@
   // 200 x 436). Tight enough that the lit part fills a 64-72px thumbnail.
   var CROP = {
     Chest: [0.16, 100], Back: [0.2, 100, 1], Shoulders: [0.9, 78], Biceps: [0.6, 78], Triceps: [0.6, 78],
-    Quads: [0.2, 92, 1], Hamstrings: [0.2, 92, 1], Glutes: [0.25, 86], Calves: [0.25, 84, 1], Core: [0.25, 90]
+    Quads: [0.45, 120, 1], Hamstrings: [0.45, 120, 1], Glutes: [0.4, 110], Calves: [0.4, 110, 1], Core: [0.25, 90]
   };
   // Group tiles lean on one view; the first region of the group decides.
   var VIEWS = { front: {}, back: {} };
@@ -419,7 +419,9 @@
     var view = viewOf(id);
     if (!view) return "";
     var sex = sexOf(o), lit = {}, sec = o && o.secondary;
-    if (sec && sec !== id && viewOf(sec) === view) lit[sec] = "ma-hi2";
+    // Both heads of one two-part muscle are the whole muscle: lit alike, not primary + lighter.
+    var whole = sec && GROUP[sec] === GROUP[id] && REGIONS.filter(function (r) { return GROUP[r] === GROUP[id]; }).length === 2;
+    if (sec && sec !== id && viewOf(sec) === view) lit[sec] = whole ? "ma-hi" : "ma-hi2";
     lit[id] = "ma-hi";
     var crop = cropFor(sex, view, [id], GROUP[id]);
     // Frame the secondary muscle too, unless it is far enough away to shrink the primary.
