@@ -331,7 +331,8 @@
       }
       lastRefresh = Date.now();
       return readAll(ok).then(function (r) {
-        var vals = toVals(r.raw, cached && cached.vals);
+        // Carry the last weight over only while weight is still allowed (a revoked type must not come back from the cache).
+        var vals = toVals(r.raw, ok.indexOf("weight") >= 0 && cached ? cached.vals : null);
         if (r.tried && r.failed === r.tried) return { status: "error", vals: last.vals, denied: denied, at: last.at };
         var status = stripEmpty(vals) ? "empty" : (denied.length ? "partial" : "ok");
         return { status: status, vals: vals, denied: denied, at: Date.now(), fresh: true };

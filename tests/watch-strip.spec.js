@@ -127,6 +127,22 @@ test("revoked for some types: their cached values disappear on the next resume, 
   await context.close();
 });
 
+test("weight revoked: a fresh read after the throttle does not bring the old cached weight back", async ({ browser }) => {
+  const { context, page } = await connected(browser);
+  await expect(cells(page).nth(0)).toContainText("8,214");
+  expect(JSON.parse(await lsGet(page, "etqwatch_cache")).vals.weightKg).toBe(78.4);
+  await page.evaluate(() => { window.__health.cfg.authorized = ["steps", "calories", "heartRate", "restingHeartRate", "sleep"]; });
+  await page.clock.fastForward(61000);
+  const reads = async () => (await callsOf(page, "queryAggregated")).length;
+  const r0 = await reads();
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect.poll(reads).toBeGreaterThan(r0);
+  await expect.poll(async () => JSON.parse(await lsGet(page, "etqwatch_cache")).at).toBeGreaterThan(0);
+  await expect.poll(async () => JSON.parse(await lsGet(page, "etqwatch_cache")).denied).toContain("weight");
+  expect(JSON.parse(await lsGet(page, "etqwatch_cache")).vals.weightKg ?? null).toBeNull();
+  await context.close();
+});
+
 test("revoked entirely while the app was away: cache cleared, 'access removed' shown, Connect offered", async ({ browser }) => {
   const { context, page } = await connected(browser);
   await expect(cells(page).nth(0)).toContainText("8,214");
