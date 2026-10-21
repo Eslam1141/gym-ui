@@ -146,30 +146,18 @@ test("reduced motion: working indicator is static", async ({ browser }) => {
 });
 
 // ---------------- bottom nav stays solid through tab transitions ----------------
-// Before the fix #appNav sat in the root snapshot, underneath the sliding
-// screen groups, so the outgoing screen painted over it mid-transition.
-test("nav, top bar and prefs are own view-transition groups without animation", async ({ browser }) => {
+// Only the incoming screen animates; the nav, top bar and prefs are never animated.
+test("nav, top bar and prefs do not animate during a tab switch", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true, theme: "light" });
-  const names = await page.evaluate(() => ["appNav", "topBar", "topPrefs"].map((id) => getComputedStyle(document.getElementById(id)).viewTransitionName));
-  expect(names).toEqual(["app-nav", "app-topbar", "app-topprefs"]);
-  await page.evaluate(() => {
-    const orig = document.startViewTransition;
-    document.startViewTransition = function (cb) { window.__vt = orig.call(document, cb); return window.__vt; };
-  });
+  await page.evaluate(() => window.__nav = true);
   await tab(page, "food");
-  await page.evaluate(() => window.__vt.ready);
-  const info = await page.evaluate(() => {
-    const cs = (p) => getComputedStyle(document.documentElement, p);
-    return {
-      group: cs("::view-transition-group(app-nav)").animationName,
-      fresh: cs("::view-transition-new(app-nav)").animationName,
-      old: cs("::view-transition-old(app-nav)").display,
-      screen: cs("::view-transition-old(screen-plan)").animationName
-    };
-  });
-  expect(info).toEqual({ group: "none", fresh: "none", old: "none", screen: expect.not.stringMatching(/^none$/) });
+  const info = await page.evaluate(() => ["appNav", "topBar", "topPrefs"].map((id) => {
+    const e = document.getElementById(id);
+    return { id, anims: document.getAnimations().filter((a) => a.effect && a.effect.target && e.contains(a.effect.target) && a.animationName).length, vt: getComputedStyle(e).viewTransitionName };
+  }));
+  info.forEach((i) => { expect(i.anims, i.id).toBe(0); expect(i.vt, i.id).toBe("none"); });
   if (SHOTS) {
-    // frame frozen mid-slide: the nav must stay readable above the sliding screens
+    // frame frozen mid-slide: the nav must stay readable beside the sliding screen
     await page.evaluate(() => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = 60; }));
     fs.mkdirSync(SHOTS, { recursive: true });
     await page.screenshot({ path: path.join(SHOTS, "after-nav-mid-transition.png"), clip: await page.locator("#appNav").boundingBox() });

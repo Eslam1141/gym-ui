@@ -133,9 +133,8 @@ test.describe("review fixes", () => {
     await context.close();
   });
 
-  test("without View Transitions the entrance stagger starts only after the screen is revealed", async ({ browser }) => {
+  test("the entrance stagger starts with the swap and runs its full length", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true });
-    await page.evaluate(() => { document.startViewTransition = undefined; });
     const r = await page.evaluate(() => new Promise((resolve) => {
       const scr = document.getElementById("screen-coach");
       const t0 = Date.now();
@@ -151,7 +150,7 @@ test.describe("review fixes", () => {
       }, 20);
       GymUI.navigate("coach");
     }));
-    expect(r.lead).toBeGreaterThan(100);        // the fallback swap really is delayed
+    expect(r.lead).toBeLessThan(100);           // the swap is immediate, nothing is held back
     expect(r.enterFor).toBeGreaterThan(450);    // and the stagger runs its full length after the reveal
     await context.close();
   });

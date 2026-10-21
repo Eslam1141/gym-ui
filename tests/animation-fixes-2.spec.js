@@ -217,38 +217,24 @@ test.describe("11 - skeleton shimmer follows reading direction", () => {
 });
 
 test.describe("12 - tab transition matches the nav axis", () => {
-  const vtNames = async (page, to) => {
-    await page.evaluate(() => {
-      const orig = document.startViewTransition.bind(document);
-      document.startViewTransition = function (cb) { window.__vt = orig(cb); return window.__vt; };
-    });
+  const slide = async (page, to) => {
     await tab(page, to);
-    await page.evaluate(() => window.__vt.ready);
-    return page.evaluate((t) => {
-      const cs = (p) => getComputedStyle(document.documentElement, p).animationName;
-      const kf = document.getAnimations().filter((a) => a.effect && /view-transition-new\(screen-/.test(a.effect.pseudoElement || ""))
-        .map((a) => a.effect.getKeyframes().map((k) => k.transform).filter(Boolean).join("|"));
-      return { oldName: cs("::view-transition-old(screen-" + t + ")"), newName: cs("::view-transition-new(screen-" + t + ")"), kf };
-    }, to);
+    return page.evaluate(() => {
+      const a = document.getAnimations().filter((x) => x.effect && x.effect.target && x.effect.target.classList.contains("screen-slide-in"));
+      return { name: a.map((x) => x.animationName).join(), tf: a.flatMap((x) => x.effect.getKeyframes().map((k) => k.transform).filter(Boolean)) };
+    });
   };
   test("at 1280px the sidebar tabs swap with a vertical move, not a horizontal slide", async ({ browser }) => {
     const { context, page } = await open(browser, { viewport: DESKTOP });
-    const hasVt = await page.evaluate(() => typeof document.startViewTransition === "function");
-    test.skip(!hasVt, "View Transitions unavailable in this browser");
-    const r = await vtNames(page, "food");
-    expect(r.newName).not.toMatch(/^m-slide/);
-    expect(r.oldName).not.toMatch(/^m-slide/);
-    expect(r.newName).not.toBe("none");
-    // every translate in the keyframes has no horizontal part
-    r.kf.join("|").split("|").filter(Boolean).forEach((t) => expect(t).toMatch(/translate3d\(0(px)?, [-\d.]+px, 0(px)?\)|none/));
+    const r = await slide(page, "food");
+    expect(r.name).toBe("m-nav-in");
+    r.tf.forEach((t) => expect(t).toMatch(/translate3d\(0(px)?, [-\d.]+px, 0(px)?\)|none/));
     await context.close();
   });
   test("on the phone's bottom bar it is still the horizontal slide", async ({ browser }) => {
     const { context, page } = await open(browser);
-    const hasVt = await page.evaluate(() => typeof document.startViewTransition === "function");
-    test.skip(!hasVt, "View Transitions unavailable in this browser");
-    const r = await vtNames(page, "food");
-    expect(r.newName).toBe("m-slide-in");
+    const r = await slide(page, "food");
+    expect(r.name).toBe("m-slide-in");
     await context.close();
   });
 });

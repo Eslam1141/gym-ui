@@ -15,9 +15,6 @@
   40%{ transform:scale(1.14); }
   100%{ transform:scale(1); }
 }
-@keyframes m-slide-out{
-  to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--nav-sign) * var(--m-dist) * -1.2), 0, 0); }
-}
 @keyframes m-slide-in{
   from{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--nav-sign) * var(--m-dist) * 1.2), 0, 0); }
 }
@@ -35,60 +32,20 @@
 /* ---- completion pop (GymMotion.pop) ---- */
 .m-pop{ animation:m-pop var(--dur-med) var(--ease-spring); }
 
-/* ---- screen / view transitions ----
-   Every screen is its own view-transition group, so a tab swap is a short
-   directional slide + fade instead of one flat root cross-dissolve. The
-   direction (--nav-sign) is set by ui.js navigate(): moving forward along
-   the tab order slides in from the inline-end edge. */
-@media (prefers-reduced-motion:no-preference){
-  #screen-plan{ view-transition-name:screen-plan; }
-  #screen-coach{ view-transition-name:screen-coach; }
-  #screen-food{ view-transition-name:screen-food; }
-  #screen-more{ view-transition-name:screen-more; }
-  #screen-profile{ view-transition-name:screen-profile; }
-  /* Persistent chrome gets its own groups so the sliding screen groups cannot paint over it
-     (it used to live in the root snapshot, underneath them, and blinked). The old image is
-     dropped and the live element stays solid for the whole transition. Groups paint in
-     document order, and the chrome precedes the screens, so z-index lifts its groups above
-     the sliding screens (without it the sliding content showed through the nav). */
-  #appNav{ view-transition-name:app-nav; }
-  #topBar{ view-transition-name:app-topbar; }
-  #topPrefs{ view-transition-name:app-topprefs; }
-  ::view-transition-group(app-nav), ::view-transition-group(app-topbar), ::view-transition-group(app-topprefs){ z-index:1; }
-  ::view-transition-group(app-nav), ::view-transition-group(app-topbar), ::view-transition-group(app-topprefs),
-  ::view-transition-new(app-nav), ::view-transition-new(app-topbar), ::view-transition-new(app-topprefs){ animation:none; }
-  ::view-transition-old(app-nav), ::view-transition-old(app-topbar), ::view-transition-old(app-topprefs){ display:none; }
-  ::view-transition-old(root), ::view-transition-new(root){ animation:none; }
-  ::view-transition-old(screen-plan), ::view-transition-old(screen-coach), ::view-transition-old(screen-food),
-  ::view-transition-old(screen-more), ::view-transition-old(screen-profile){
-    animation:var(--dur-fast) var(--ease) both m-slide-out;
-  }
-  ::view-transition-new(screen-plan), ::view-transition-new(screen-coach), ::view-transition-new(screen-food),
-  ::view-transition-new(screen-more), ::view-transition-new(screen-profile){
-    animation:var(--dur-med) var(--ease-out) both m-slide-in;
-  }
-  .screen-fade-out-fallback{ animation:var(--dur-fast) var(--ease) both m-slide-out; }
-  .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease-out) both m-slide-in; }
-}
-/* The sidebar (>= 900px, see styles.css) stacks the tabs vertically, so a tab swap moves along the same
-   axis: forward along the tab order enters from below. Vertical is not mirrored in RTL (no --m-dir). */
-@keyframes m-nav-out{
-  to{ opacity:0; transform:translate3d(0, calc(var(--nav-sign) * var(--m-dist) * -1.2), 0); }
-}
+/* ---- tab swap (ui.js navigate) ----
+   The outgoing screen is hidden at once; only the incoming screen slides in (transform +
+   opacity, compositor-only). The direction (--nav-sign) is set by navigate(): moving forward
+   along the tab order slides in from the inline-end edge, mirrored in RTL via --m-dir. The
+   sidebar (>= 900px, see styles.css) stacks the tabs vertically, so there the move is
+   vertical (forward enters from below) and is not mirrored in RTL. */
 @keyframes m-nav-in{
   from{ opacity:0; transform:translate3d(0, calc(var(--nav-sign) * var(--m-dist) * 1.2), 0); }
 }
+@media (prefers-reduced-motion:no-preference){
+  .screen-slide-in{ animation:var(--dur-med) var(--ease-out) backwards m-slide-in; }
+}
 @media (prefers-reduced-motion:no-preference) and (min-width:900px){
-  ::view-transition-old(screen-plan), ::view-transition-old(screen-coach), ::view-transition-old(screen-food),
-  ::view-transition-old(screen-more), ::view-transition-old(screen-profile){
-    animation:var(--dur-fast) var(--ease) both m-nav-out;
-  }
-  ::view-transition-new(screen-plan), ::view-transition-new(screen-coach), ::view-transition-new(screen-food),
-  ::view-transition-new(screen-more), ::view-transition-new(screen-profile){
-    animation:var(--dur-med) var(--ease-out) both m-nav-in;
-  }
-  .screen-fade-out-fallback{ animation:var(--dur-fast) var(--ease) both m-nav-out; }
-  .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease-out) both m-nav-in; }
+  .screen-slide-in{ animation-name:m-nav-in; }
 }
 
 /* ---- buttons: one press/hover language for every button ----
@@ -433,6 +390,4 @@ html[data-reduce-motion="1"] .celebrate-ring{ display:none; }
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after{
   animation:none !important; transition:none !important; scroll-behavior:auto !important;
 }
-/* separate rule: an engine without view transitions would drop the whole list */
-html[data-reduce-motion="1"]::view-transition-group(*), html[data-reduce-motion="1"]::view-transition-old(*), html[data-reduce-motion="1"]::view-transition-new(*){ animation:none !important; }
 /* <<< reduce-motion mirror */

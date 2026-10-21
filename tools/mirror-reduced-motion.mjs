@@ -82,8 +82,6 @@ function generate() {
 ${P} *, ${P} *::before, ${P} *::after{
   animation:none !important; transition:none !important; scroll-behavior:auto !important;
 }
-/* separate rule: an engine without view transitions would drop the whole list */
-${P}::view-transition-group(*), ${P}::view-transition-old(*), ${P}::view-transition-new(*){ animation:none !important; }
 `;
   return out;
 }
