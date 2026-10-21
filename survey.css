@@ -134,6 +134,9 @@ html[lang="ar"] .svy-q{ line-height:1.45; }
   font:inherit; font-size:var(--text-base); font-weight:700; color:var(--paper);
 }
 .svy-note{ margin:0 0 6px; text-align:center; font-size:var(--text-xs); color:var(--paper-dim); }
+.svy-note-start{ text-align:start; margin:0; }
+.svy-field input[aria-invalid="true"]{ border-color:var(--danger, #ff6b6b); }
+.svy-form .svy-ghost{ margin-top:0; }
 
 /* saving / done */
 .svy-center{ align-items:center; justify-content:center; text-align:center; gap:14px; }

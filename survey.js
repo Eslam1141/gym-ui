@@ -93,6 +93,19 @@
     whyRam: ["We'll time meals and training around iftar.", "سنرتّب الوجبات والتمرين حول الإفطار."],
     yes: ["Yes", "نعم"],
     no: ["No", "لا"],
+    // inbody (optional)
+    qIb: ["Have InBody results?", "عندك نتيجة InBody؟"],
+    whyIb: ["Optional. Makes your calories more accurate.", "اختياري. يجعل حساب سعراتك أدق."],
+    ibFat: ["Body fat", "نسبة الدهون"],
+    ibSmm: ["Muscle mass", "الكتلة العضلية"],
+    ibVisc: ["Visceral fat level", "مستوى الدهون الحشوية"],
+    ibBmr: ["BMR", "معدل الأيض"],
+    pct: ["%", "%"],
+    kcal: ["kcal", "سعرة"],
+    level: ["level", "مستوى"],
+    ibPhoto: ["You can also read them from a photo later in Coach.", "تقدر كمان تقراها من صورة لاحقاً في المدرب."],
+    skip: ["Skip", "تخطي"],
+    errIb: ["Check the highlighted number.", "راجع الرقم المحدد."],
     // save + done
     saving: ["Saving your answers…", "جارٍ حفظ إجاباتك…"],
     saveErr: ["Couldn't save. Check your connection and try again.", "تعذّر الحفظ. تحقّق من الاتصال وحاول مجدداً."],
@@ -172,8 +185,16 @@
       { key: "diet", kind: "form", q: "qDiet", why: "whyDiet" }
     ];
     if (nearRamadan()) list.push(choice("ramadan", "qRam", "whyRam", "ramadan", [true, false], "", { yesNo: true }));
+    list.push({ key: "inbody", kind: "form", q: "qIb", why: "whyIb" });
     return list;
   }
+  // Same bounds as the coach form (coach.js FIELDS) and gym-assistant.
+  var IB = [
+    { k: "bodyFatPct", label: "ibFat", unit: "pct", min: 3, max: 60 },
+    { k: "skeletalMuscleMassKg", label: "ibSmm", unit: "kg", min: 10, max: 80 },
+    { k: "visceralFatLevel", label: "ibVisc", unit: "level", min: 1, max: 30, int: true },
+    { k: "bmrKcal", label: "ibBmr", unit: "kcal", min: 500, max: 5000, int: true }
+  ];
   var DIETS = ["balanced", "high_protein", "low_carb", "keto", "mediterranean", "vegetarian", "vegan", "halal"];
 
   // ---------------- state ----------------
@@ -324,6 +345,25 @@
         state.a.weightKg = Math.round(wk * 10) / 10;
         return "";
       };
+    } else if (st.key === "inbody") {
+      var ib = state.a.inbody || {};
+      IB.forEach(function (f) { form.appendChild(numField("svyIb_" + f.k, f.label, f.unit, ib[f.k], f.min, f.max)); });
+      form.appendChild(h("p", { class: "svy-note svy-note-start" }, s("ibPhoto")));
+      check = function () {
+        var out = {}, bad = "";
+        IB.forEach(function (f) {
+          var input = form.querySelector("#svyIb_" + f.k);
+          input.removeAttribute("aria-invalid");
+          var raw = input.value.trim();
+          if (raw === "") return;
+          var v = parseFloat(raw);
+          if (!(v >= f.min && v <= f.max)) { input.setAttribute("aria-invalid", "true"); bad = bad || s("errIb"); return; }
+          out[f.k] = f.int ? Math.round(v) : Math.round(v * 10) / 10;
+        });
+        if (bad) return bad;
+        state.a.inbody = out;
+        return "";
+      };
     } else if (st.key === "diet") {
       var chips = h("div", { class: "svy-chips", role: "radiogroup", "aria-labelledby": "svyQ" });
       DIETS.forEach(function (d) {
@@ -351,6 +391,13 @@
     }
     form.appendChild(err);
     form.appendChild(h("button", { type: "submit", class: "svy-next" }, s("next")));
+    if (st.key === "inbody") {
+      form.appendChild(h("button", { type: "button", class: "svy-ghost", on: { click: function () {
+        state.a.inbody = {};
+        saveDraft();
+        go(1);
+      } } }, s("skip")));
+    }
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var msg = check();
@@ -399,7 +446,7 @@
       if (!res.ok) throw new Error("onboarding " + res.status);
       return res.json();
     }).then(function () {
-      applyLocally(body);
+      applyLocally(body, state.a.inbody);
       lsDel(DRAFT_KEY);
       if (window.GymHeader && GymHeader.setMe) GymHeader.setMe({ onboardingCompleted: true });
       renderDone(body);
@@ -415,9 +462,10 @@
   function styleFor(eq) { return eq === "full_gym" ? "gym" : "cal"; }
 
   // Starter plan + coach form, so both are ready before the user leaves.
-  function applyLocally(a) {
+  // InBody numbers go to the coach form only; gym-be's survey record doesn't hold them.
+  function applyLocally(a, inbody) {
     try { if (window.GymSetPlan) GymSetPlan(a.sex, styleFor(a.equipment)); } catch (e) {}
-    try { if (window.GymCoach && GymCoach.applySurvey) GymCoach.applySurvey(a); } catch (e) {}
+    try { if (window.GymCoach && GymCoach.applySurvey) GymCoach.applySurvey(a, inbody); } catch (e) {}
   }
 
   function renderDone(a) {

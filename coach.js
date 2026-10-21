@@ -1715,7 +1715,7 @@
 
   // Onboarding survey (survey.js): copy its answers into the coach form so
   // the user isn't asked twice, and run the first plan from them.
-  function applySurvey(a) {
+  function applySurvey(a, inbody) {
     var st = loadState();
     st.want = "both";
     st.age = String(a.age);
@@ -1732,6 +1732,13 @@
     st.allergies = Array.isArray(a.allergies) ? a.allergies.slice(0, 10) : [];
     st.experience = a.experience || "";
     if (a.ramadan === true) { st.ramadan = true; st.ramadanManual = true; }
+    if (inbody && typeof inbody === "object") {
+      var any = false;
+      ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
+        if (typeof inbody[k] === "number" && isFinite(inbody[k])) { st[k] = String(inbody[k]); any = true; }
+      });
+      if (any) st.inbodyOpen = true;
+    }
     delete st._ramadanSuggested;
     saveSynced(FORM_KEY, st);
   }
