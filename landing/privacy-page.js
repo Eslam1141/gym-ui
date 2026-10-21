@@ -103,6 +103,8 @@
 
   apply(lang);
   toHash();
+  // Web fonts change the text height after the first jump; land on the section again once they are in.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(toHash);
   window.addEventListener("hashchange", toHash);
   document.getElementById("langBtn").addEventListener("click", function () {
     apply(lang === "ar" ? "en" : "ar");
