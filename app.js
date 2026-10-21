@@ -434,6 +434,7 @@ const T = {
   hdrBlocked:["This account has been disabled. Contact support if you think this is a mistake.","تم تعطيل هذا الحساب. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."],
   hdrRemoved:["This account was removed. Contact support if you think this is a mistake.","تمت إزالة هذا الحساب. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."],
   hdrSignOut:["Sign out","تسجيل الخروج"],
+  hdrTips:["Replay tips","إعادة عرض النصائح"],
   notifBell:["Notifications","الإشعارات"],
   notifBellUnread:["Notifications, {n} unread","الإشعارات، {n} غير مقروءة"],
   notifTitle:["Notifications","الإشعارات"],
