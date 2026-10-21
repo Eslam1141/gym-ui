@@ -55,7 +55,7 @@
   --accent-tint:var(--primary-text); --accent-2:var(--secondary); --accent-3:var(--highlight);
 
   /* Fixed brand-mark palette (logo/wordmark reference only; constant across
-     persona and theme). Matches icons/logo-etq.svg. */
+     persona and theme). Matches icons/logo-etq2.svg. */
   --brand-teal:#0B7A75; --brand-teal-tint:#3CC2B8; --brand-ink:#14161B;
   --brand-surface-paper:#F3F0E8;
 

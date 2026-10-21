@@ -627,7 +627,7 @@
       doneEl.setAttribute("aria-labelledby", "pvDoneT");
       doneEl.innerHTML =
         '<div class="pv-done-in">' +
-          '<img src="icons/logo-etq.svg" width="56" height="56" alt="">' +
+          '<img src="icons/logo-etq2.svg" width="56" height="56" alt="">' +
           '<h2 id="pvDoneT" data-pk="doneTitle" tabindex="-1"></h2>' +
           '<p data-pk="doneBody"></p>' +
           '<button type="button" class="pv-btn pv-btn-fill" id="pvDoneBtn" data-pk="doneBtn"></button>' +

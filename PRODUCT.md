@@ -41,7 +41,7 @@ Open decision: the roadmap also plans a paid Premium tier (Paymob payments, high
 ## Brand Commitments
 
 - Name: **Etqadem** (Latin) / **اتقدم** (Arabic), renamed 2026-10-01 from RepVane (earlier Athlex). No "RepVane" or "Athlex" in user-visible copy; the repvane.cloider.app domain and repvane.gym mailbox stay until a new domain is bought.
-- Logo: the Etqadem stair-climber mark (`icons/logo-etq.svg`, cream tile, ink figure, teal head). Old Dial Vane files (`*-dv`) are kept for cache safety but unreferenced. Generators: `tools/icons/gen-etq-svgs.py` + `render-pngs-etq.mjs`. The accent is teal, picked partly because ElCoach uses orange; do not drift back to orange.
+- Logo: the Etqadem "lifter's rank" mark (`icons/logo-etq2.svg`, cream tile): two level-up chevrons stacked on a barbell, the lower chevron and bar in ink, the top chevron and plates in teal. Up reads the same in Arabic and English. Older sets (`*-etq` stair-climber, `*-dv` Dial Vane) are kept for cache safety but unreferenced. Generators: `tools/icons/gen-etq2-svgs.py` + `render-pngs-etq2.mjs`. The accent is teal, picked partly because ElCoach uses orange; do not drift back to orange.
 
 ## Evidence on Hand
 

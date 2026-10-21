@@ -30,9 +30,9 @@ RUN cd /usr/share/nginx/html/app && \
     HASH=$(cat index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js \
         auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css \
         celebrate.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js toast.js dom.js config.js manifest.json \
-        icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \
-        icons/icon-maskable-192-etq.png icons/icon-maskable-512-etq.png \
-        icons/apple-touch-icon-etq.png icons/favicon-32-etq.png icons/favicon-16-etq.png \
+        icons/logo-etq2.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq2.png icons/icon-512-etq2.png \
+        icons/icon-maskable-192-etq2.png icons/icon-maskable-512-etq2.png \
+        icons/apple-touch-icon-etq2.png icons/favicon-32-etq2.png icons/favicon-16-etq2.png \
         fonts/readex-pro-var.woff2 | sha256sum | cut -c1-12) && \
     sed "/^const CACHE_NAME/s/__CACHE_HASH__/${HASH}/" service-worker.js > /tmp/service-worker.js.tmp && \
     cat /tmp/service-worker.js.tmp > service-worker.js && \
