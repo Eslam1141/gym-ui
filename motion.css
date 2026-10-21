@@ -10,7 +10,6 @@
 @keyframes m-rise{
   from{ opacity:0; transform:translate3d(0, var(--m-dist), 0); }
 }
-@keyframes m-fill{ from{ transform:scaleX(0); } }
 @keyframes m-pop{
   0%{ transform:scale(1); }
   40%{ transform:scale(1.14); }
@@ -23,8 +22,8 @@
   from{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--nav-sign) * var(--m-dist) * 1.2), 0, 0); }
 }
 @keyframes m-sweep{
-  from{ transform:translate3d(-120%, 0, 0) skewX(-18deg); }
-  to{ transform:translate3d(320%, 0, 0) skewX(-18deg); }
+  from{ transform:translate3d(calc(var(--m-dir) * -120%), 0, 0) skewX(calc(var(--m-dir) * -18deg)); }
+  to{ transform:translate3d(calc(var(--m-dir) * 320%), 0, 0) skewX(calc(var(--m-dir) * -18deg)); }
 }
 
 /* ---- staggered entrance (GymMotion.enter) ---- */
@@ -71,6 +70,26 @@
   .screen-fade-out-fallback{ animation:var(--dur-fast) var(--ease) both m-slide-out; }
   .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease-out) both m-slide-in; }
 }
+/* The sidebar (>= 900px, see styles.css) stacks the tabs vertically, so a tab swap moves along the same
+   axis: forward along the tab order enters from below. Vertical is not mirrored in RTL (no --m-dir). */
+@keyframes m-nav-out{
+  to{ opacity:0; transform:translate3d(0, calc(var(--nav-sign) * var(--m-dist) * -1.2), 0); }
+}
+@keyframes m-nav-in{
+  from{ opacity:0; transform:translate3d(0, calc(var(--nav-sign) * var(--m-dist) * 1.2), 0); }
+}
+@media (prefers-reduced-motion:no-preference) and (min-width:900px){
+  ::view-transition-old(screen-plan), ::view-transition-old(screen-coach), ::view-transition-old(screen-food),
+  ::view-transition-old(screen-more), ::view-transition-old(screen-profile){
+    animation:var(--dur-fast) var(--ease) both m-nav-out;
+  }
+  ::view-transition-new(screen-plan), ::view-transition-new(screen-coach), ::view-transition-new(screen-food),
+  ::view-transition-new(screen-more), ::view-transition-new(screen-profile){
+    animation:var(--dur-med) var(--ease-out) both m-nav-in;
+  }
+  .screen-fade-out-fallback{ animation:var(--dur-fast) var(--ease) both m-nav-out; }
+  .screen-fade-in-fallback{ animation:var(--dur-med) var(--ease-out) both m-nav-in; }
+}
 
 /* ---- buttons: one press/hover language for every button ----
    :where() keeps specificity at zero, so any component that already defines
@@ -94,7 +113,7 @@
 .session-btn:not(.stop)::after, .coach-primary::after, .ob-start-btn::after, .ae-submit::after{
   content:""; position:absolute; inset-block:0; inset-inline-start:0; width:30%; z-index:-1; pointer-events:none;
   background:linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
-  transform:translate3d(-120%, 0, 0) skewX(-18deg); opacity:0;
+  transform:translate3d(calc(var(--m-dir) * -120%), 0, 0) skewX(calc(var(--m-dir) * -18deg)); opacity:0;
 }
 @media (hover:hover) and (pointer:fine){
   .session-btn:not(.stop):hover::after, .coach-primary:hover::after, .ob-start-btn:hover::after, .ae-submit:hover::after{
@@ -107,6 +126,9 @@
 
 /* ---- toast: rises from the bottom edge with a springy settle ---- */
 .gym-toast{
+  transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);   /* leaves without the overshoot */
+}
+.gym-toast.show{
   transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease-spring);
 }
 
@@ -163,12 +185,10 @@
 /* Review sheet: slides up over a fading scrim; the script waits for -out */
 @keyframes wb-sheet-up{ from{ transform:translate3d(0, 100%, 0); } to{ transform:none; } }
 @keyframes wb-sheet-down{ to{ transform:translate3d(0, 100%, 0); } }
-@keyframes wb-fade-in{ from{ opacity:0; } to{ opacity:1; } }
-@keyframes wb-fade-out{ to{ opacity:0; } }
 .wb-sheet.wb-sheet-in{ animation:wb-sheet-up var(--dur-med) var(--ease-out) backwards; }
 .wb-sheet.wb-sheet-out{ animation:wb-sheet-down var(--dur-med) var(--ease-out) forwards; pointer-events:none; }
-.wb-scrim.wb-sheet-in{ animation:wb-fade-in var(--dur-med) var(--ease-out) backwards; }
-.wb-scrim.wb-sheet-out{ animation:wb-fade-out var(--dur-med) var(--ease-out) forwards; }
+.wb-scrim.wb-sheet-in{ animation:m-fade-in var(--dur-med) var(--ease-out) backwards; }
+.wb-scrim.wb-sheet-out{ animation:m-fade-out var(--dur-med) var(--ease-out) forwards; }
 
 /* ---- show/hide (GymMotion.show / GymMotion.hide) ----
    .m-ovl   full-screen overlay: the scrim fades, and its .m-ovl-card child
@@ -216,6 +236,8 @@
   to{ opacity:0; transform:translate3d(calc(var(--m-dir) * var(--m-dist) * 1.2), 0, 0) scale(.97); }
 }
 .m-row-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
+/* a day's content slides in from the side the date moved to (food.js sets --nav-sign: +1 next, -1 previous) */
+.m-day-in{ animation:m-slide-in var(--dur-med) var(--ease-out) backwards; }
 .m-row-out{ animation:m-row-out var(--dur-med) var(--ease) forwards; pointer-events:none; }
 
 /* ---- press feedback for tappable cards and rows (touch-first) ----
@@ -235,7 +257,7 @@
 @media (prefers-reduced-motion:reduce){
   .m-enter > *, .m-pop{ animation:none; }
   .m-ovl.m-in, .m-ovl.m-out, .m-ovl.m-in > .m-ovl-card, .m-ovl.m-out > .m-ovl-card,
-  .m-menu.m-in, .m-menu.m-out, .tb-bell.m-swing svg, .m-row-in, .m-row-out{ animation:none; }
+  .m-menu.m-in, .m-menu.m-out, .tb-bell.m-swing svg, .m-row-in, .m-row-out, .m-day-in{ animation:none; }
   :where(.notif-item, .cal-grid-cell, .tb-menu button, .food-result-row):active{ transform:none; }
   .wb-in, .wb-out, .wb-shake, .wb-picked, .wb-added-row .wb-add,
   .wb-sheet.wb-sheet-in, .wb-sheet.wb-sheet-out, .wb-scrim.wb-sheet-in, .wb-scrim.wb-sheet-out{ animation:none; }
@@ -288,7 +310,6 @@
   .celebrate-card.show.is-day .celebrate-ring{ animation:celeb-ring 1.2s var(--ease-out) .6s 1 both; }
   /* Rest: eyes close, slow breathing, one soft halo. */
   .celebrate-card.show.is-rest .celebrate-mascot{ animation:celeb-breathe 3.2s ease-in-out .2s 1 both; }
-  .celebrate-card.show.is-rest .m-eye{ transform-box:fill-box; transform-origin:center; animation:celeb-sleepy .6s var(--ease) .5s 1 both; }
   .celebrate-card.show.is-rest .celebrate-ring{ animation:celeb-halo 3s ease-in-out .2s 1 both; }
 }
 @media (prefers-reduced-motion:reduce){
@@ -312,7 +333,6 @@
 @keyframes celeb-pop{ 0%{ opacity:0; transform:translateY(18px) scale(.82); } 100%{ opacity:1; transform:none; } }
 @keyframes celeb-ring{ 0%{ opacity:1; transform:scale(.6); } 100%{ opacity:0; transform:scale(2.2); } }
 @keyframes celeb-breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.07); } }
-@keyframes celeb-sleepy{ to{ transform:scaleY(.15); } }
 @keyframes celeb-halo{ 0%,100%{ opacity:0; transform:scale(.8); } 50%{ opacity:1; transform:scale(1.25); } }
 
 /* ---- Plan muscle pictures: one-time settle when a card first renders (app.js .mus-settle) ----

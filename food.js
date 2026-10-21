@@ -161,6 +161,7 @@
     draftMealType: null
   };
   var lastLoadedDate = null;
+  var softEnter = false;   // set by reload(): the next render() rises in instead of appearing
   var lastUserSub = null;
   var lastKnownToday = todayStr(0);
   var searchTimer = null;
@@ -499,6 +500,25 @@
     if (host) host.focus();
   }
 
+  // A day's content (date, totals, meals) slides in from the side the date moved to; delta 0 is a plain
+  // refresh of the same day and just rises. The class is dropped afterwards so showing the tab again
+  // cannot replay it. Nothing runs under reduced motion.
+  function enterDay(delta) {
+    if (!window.GymMotion || GymMotion.reduced()) return;
+    var cls = delta ? "m-day-in" : "m-row-in";
+    [document.querySelector(".food-date-label"), document.getElementById("foodTotalsHost"), document.getElementById("foodMealsHost")].forEach(function (el) {
+      if (!el) return;
+      if (delta) el.style.setProperty("--nav-sign", delta > 0 ? 1 : -1);
+      GymMotion.play(el, cls);
+      el.addEventListener("animationend", function done(e) {
+        if (e.target !== el) return;
+        el.removeEventListener("animationend", done);
+        el.classList.remove(cls);
+        el.style.removeProperty("--nav-sign");
+      });
+    });
+  }
+
   function shiftDate(delta) {
     var d = new Date(state.date + "T00:00:00");
     d.setDate(d.getDate() + delta);
@@ -513,6 +533,7 @@
     state.draftGrams = null;
     state.draftMealType = null;
     render();
+    enterDay(delta);
     loadMeals();
   }
 
@@ -887,6 +908,7 @@
     paintTotals();
     paintSearch();
     paintMeals();
+    if (softEnter) { softEnter = false; enterDay(0); }
   }
 
   // ---------------- entry ----------------
@@ -926,6 +948,7 @@
   function reload() {
     if (!document.getElementById("foodBody") || !(window.GymUI && GymUI.isAuthed && GymUI.isAuthed())) return;
     lastLoadedDate = null;
+    softEnter = true;
     refresh();
   }
 

@@ -53,8 +53,7 @@
   border-radius:var(--radius-lg) var(--radius-lg) 0 0; box-shadow:var(--elev-2);
 }
 .pv-sheet::backdrop{ background:var(--scrim); }
-.pv-sheet[open]{ animation:pv-up var(--dur-med) var(--ease); }
-@keyframes pv-up{ from{ transform:translateY(24px); opacity:0; } }
+.pv-sheet[open]{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
 @media (min-width:600px){
   .pv-sheet{ margin:auto; border-radius:var(--radius-lg); padding-bottom:var(--space-5); }
 }

@@ -386,7 +386,7 @@
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
     chat.classList.remove("show");
     fab.setAttribute("aria-expanded", "false");
-    setTimeout(function () { if (!open) chat.hidden = true; }, 220);
+    setTimeout(function () { if (!open) chat.hidden = true; }, 320);   // after the panel's --dur-med slide-out
     refreshFabVisibility();
     // Hiding the panel would drop focus to <body>; hand it back to the opener.
     var ae = document.activeElement;

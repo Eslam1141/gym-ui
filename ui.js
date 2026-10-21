@@ -424,7 +424,11 @@
     var why = el("obWhy");
     if (whyToggle && why) {
       whyToggle.addEventListener("click", function () {
-        var open = why.classList.toggle("open");
+        var open = !why.classList.contains("open") || why.classList.contains("m-reveal-out");   // a tap mid-close reopens
+        // The list opens in the page flow: the card re-lays out at once and GymMotion slides what sits below.
+        if (!window.GymMotion) why.classList.toggle("open", open);
+        else if (open) GymMotion.expand(why, function () { why.classList.add("open"); });
+        else GymMotion.collapse(why, function () { why.classList.remove("open"); });
         whyToggle.setAttribute("aria-expanded", open ? "true" : "false");
       });
     }
