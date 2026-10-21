@@ -1077,6 +1077,18 @@
     refreshValidity();          // dim submit + show hints on first paint
   }
 
+  // gym-assistant rejects unknown fields ("malformed JSON body", 400). Until
+  // it knows `experience` (gym-assistant#42), a request carrying it fails, so
+  // retry once without it and stop sending it for this session.
+  var expUnsupported = false;
+  function retryWithoutExperience(r, payload) {
+    var msg = r && r.status === 400 && r.body && r.body.error && r.body.error.message;
+    if (msg !== "malformed JSON body" || !payload || !payload.profile || !payload.profile.experience) return null;
+    expUnsupported = true;
+    var copy = JSON.parse(JSON.stringify(payload));
+    delete copy.profile.experience;
+    return copy;
+  }
   function buildProfile(st) {
     var n = function (x) { return x === "" || x == null ? undefined : Number(x); };
     var profile = {
@@ -1093,7 +1105,7 @@
     if (st.allergies && st.allergies.length) profile.allergies = st.allergies;
     if (st.dislikes && st.dislikes.length) profile.dislikes = st.dislikes;
     if (st.notes) profile.notes = st.notes;
-    if (st.experience) profile.experience = st.experience;
+    if (st.experience && !expUnsupported) profile.experience = st.experience;
     var ib = {};
     ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
       if (st[k] !== "" && st[k] != null) ib[k] = n(st[k]);
@@ -1211,6 +1223,14 @@
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     var url = ASSIST_BASE + "/assessment" + (strong ? "?model=strong" : "");
     function post() {
+      return postOnce().then(function (r) {
+        var retry = retryWithoutExperience(r, reqBody);
+        if (!retry) return r;
+        reqBody = retry;
+        return postOnce();
+      });
+    }
+    function postOnce() {
       return fetchTimeout(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
@@ -1721,7 +1741,7 @@
     runAssessment(buildRequest(st), false);
   }
 
-  window.GymCoach = { applySurvey: applySurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
+  window.GymCoach = { retryWithoutExperience: retryWithoutExperience, applySurvey: applySurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
