@@ -1586,8 +1586,10 @@
   // built-in exercises, else none (no picture rather than a wrong one).
   function muscleTags(e) {
     var ids = window.GymMuscleArt ? window.GymMuscleArt.REGIONS : [];
-    if (ids.indexOf(e.shape) !== -1) {
-      return { shape: e.shape, shape2: ids.indexOf(e.shape2) !== -1 && e.shape2 !== e.shape ? e.shape2 : "" };
+    var id = function (v) { return String(v || "").trim().toLowerCase().replace(/[\s-]+/g, "_"); };
+    var s1 = id(e.shape), s2 = id(e.shape2);
+    if (ids.indexOf(s1) !== -1) {
+      return { shape: s1, shape2: ids.indexOf(s2) !== -1 && s2 !== s1 ? s2 : "" };
     }
     return window.GymExerciseShape ? window.GymExerciseShape(e.name) : null;
   }
