@@ -75,11 +75,10 @@ test("the users list refreshes itself too", async ({ browser }) => {
 test("the signups chart explains itself", async ({ browser }) => {
   const { context, page } = await openAdmin(browser);
   const sec = page.locator(".adm-section").first();
-  await expect(sec.locator("h2")).toHaveText("New sign-ups per day — last 90 days");
-  await expect(sec).toContainText("Each bar is one day");
+  await expect(sec.locator("h2")).toHaveText("New sign-ups per week — last 90 days");
+  await expect(sec).toContainText("one bar per week");
   await expect(sec).toContainText("16 sign-ups in total");
   await expect(sec).toContainText("Busiest day: 2026-10-07 (9)");
-  await expect(sec).toContainText("2026-10-06");
-  await expect(sec).toContainText("2026-10-08");
+  await expect(sec.locator(".adm-col")).toHaveCount(1);
   await context.close();
 });

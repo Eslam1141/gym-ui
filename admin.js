@@ -29,20 +29,24 @@
     cA7: ["Active · 7 days", "نشطون · 7 أيام"],
     cA30: ["Active · 30 days", "نشطون · 30 يومًا"],
     cBlocked: ["Blocked", "محظورون"],
-    chartTitle: ["New sign-ups per day — last 90 days", "الحسابات الجديدة يوميًا — آخر 90 يومًا"],
-    chartHint: ["Each bar is one day: how many new accounts were created that day. Hover or tap a bar for its date and count.",
-      "كل عمود يمثل يومًا واحدًا: عدد الحسابات الجديدة التي أُنشئت في ذلك اليوم. مرّر أو اضغط على العمود لرؤية التاريخ والعدد."],
+    chartTitleW: ["New sign-ups per week — last 90 days", "الحسابات الجديدة أسبوعيًا — آخر 90 يومًا"],
+    chartTitleD: ["New sign-ups per day — last 90 days", "الحسابات الجديدة يوميًا — آخر 90 يومًا"],
+    chartHintW: ["Across is time, one bar per week; the date under a bar is that week's first day. Height is the number of new accounts. Tap a bar for its dates and count.",
+      "الاتجاه الأفقي هو الزمن، وكل عمود يمثل أسبوعًا؛ التاريخ تحت العمود هو أول يوم في الأسبوع. الارتفاع هو عدد الحسابات الجديدة. اضغط على العمود لرؤية التواريخ والعدد."],
+    chartHintD: ["Across is time, one bar per day, with the month marked underneath. Height is the number of new accounts. Tap a bar for its date and count.",
+      "الاتجاه الأفقي هو الزمن، وكل عمود يمثل يومًا مع تسمية الشهر تحته. الارتفاع هو عدد الحسابات الجديدة. اضغط على العمود لرؤية التاريخ والعدد."],
+    chartWeekly: ["Weekly", "أسبوعي"],
+    chartDaily: ["Daily", "يومي"],
+    chartView: ["Chart view", "عرض الرسم"],
+    chartTip: ["{d}: {n}", "{d}: {n}"],
     chartSum: ["{n} sign-ups in total · Busiest day: {d} ({m}) · Today: {t}", "{n} تسجيلًا إجمالًا · أكثر يوم: {d} ({m}) · اليوم: {t}"],
     updated: ["Live · updated {t}", "مباشر · آخر تحديث {t}"],
     chartAlt: ["{n} signups in the last 90 days; busiest day {d} with {m}.", "{n} تسجيلًا في آخر 90 يومًا؛ أكثر يوم {d} بعدد {m}."],
     provTitle: ["Sign-in methods", "طرق تسجيل الدخول"],
     pGoogle: ["Google", "Google"],
-    pPassword: ["Email & password", "البريد وكلمة المرور"],
+    pPassword: ["E-mail", "البريد الإلكتروني"],
+    pApple: ["Apple", "Apple"],
     pBoth: ["Both", "كلاهما"],
-    pTotal: ["Total users", "إجمالي المستخدمين"],
-    pCanGoogle: ["Can use Google", "يمكنهم استخدام Google"],
-    pCanEmail: ["Can use email", "يمكنهم استخدام البريد"],
-    pLinked: ["Both linked", "ربطوا الاثنين"],
     dWeek: ["+{n} this week", "+{n} هذا الأسبوع"],
     dAvg: ["{p} vs weekly average", "{p} مقارنة بمتوسط الأسبوع"],
     dShare: ["{p} of all users", "{p} من كل المستخدمين"],
@@ -264,16 +268,23 @@
       var series = st.signupsPerDay || [];
       var sum = series.reduce(function (a, d) { return a + d.count; }, 0);
       var peak = series.reduce(function (b, d) { return d.count > (b ? b.count : -1) ? d : b; }, null);
-      var chartTile = el("section", { class: "adm-tile adm-section adm-t-chart" }, [
-        el("h2", { text: s("chartTitle") }),
-        el("p", { class: "adm-hint", text: s("chartHint") }),
-        el("p", { class: "adm-sum", text: s("chartSum", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? fmtNum(peak.count) : 0, t: fmtNum(st.newUsers.today) }) }),
-        chart(series),
-        series.length ? el("div", { class: "adm-axis" }, [el("span", { text: series[0].date }), el("span", { text: series[series.length - 1].date })]) : null
-      ]);
+      var chartTile = el("section", { class: "adm-tile adm-section adm-t-chart" });
+      var drawChart = function (mode) {
+        chartTile.textContent = "";
+        var weekly = mode === "week";
+        [
+          el("h2", { text: s(weekly ? "chartTitleW" : "chartTitleD") }),
+          viewToggle(mode, drawChart),
+          el("p", { class: "adm-hint", text: s(weekly ? "chartHintW" : "chartHintD") }),
+          el("p", { class: "adm-sum", text: s("chartSum", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? fmtNum(peak.count) : 0, t: fmtNum(st.newUsers.today) }) }),
+          chart(series, mode)
+        ].forEach(function (n) { chartTile.appendChild(n); });
+      };
+      drawChart(chartMode());
       chartTile.style.setProperty("--i", cards.length);
       var p = st.providers, base = tot || (p.google + p.password + p.both) || 1;
-      var provRows = [["pTotal", base], ["pCanGoogle", p.google + p.both], ["pCanEmail", p.password + p.both], ["pLinked", p.both]];
+      var provRows = [["pPassword", p.password + p.both], ["pGoogle", p.google + p.both], ["pBoth", p.both]];
+      if (typeof p.apple === "number") provRows.splice(2, 0, ["pApple", p.apple]);
       var provTile = el("section", { class: "adm-tile adm-section adm-t-prov" }, [
         el("h2", { text: s("provTitle") }),
         el("div", { class: "adm-bars" }, provRows.map(function (x) {
@@ -309,38 +320,107 @@
     else if (state.tab === "users") loadList(true);
     loadFbBadge();
   }
-  function chart(series) {
-    var W = 900, H = 180, pad = 22, n = series.length || 1;
-    var max = series.reduce(function (m, d) { return Math.max(m, d.count); }, 0);
+  // ---- sign-ups chart: HTML columns (labels stay readable at 375 px and RTL
+  // just mirrors the flex row). "week" groups 7 days ending on the last day
+  // of the series; "day" shows every day.
+  function chartMode() {
+    try { return localStorage.getItem("adm_chart_mode") === "day" ? "day" : "week"; } catch (e) { return "week"; }
+  }
+  function viewToggle(mode, redraw) {
+    var box = el("div", { class: "adm-seg", role: "group", "aria-label": s("chartView") });
+    [["week", "chartWeekly"], ["day", "chartDaily"]].forEach(function (o) {
+      box.appendChild(el("button", {
+        type: "button", "aria-pressed": o[0] === mode ? "true" : "false", text: s(o[1]),
+        onclick: function () {
+          try { localStorage.setItem("adm_chart_mode", o[0]); } catch (e) {}
+          redraw(o[0]);
+        }
+      }));
+    });
+    return box;
+  }
+  function fmtShort(iso, monthOnly) {
+    var a = String(iso).split("-"), d = new Date(Date.UTC(+a[0], +a[1] - 1, +a[2]));
+    if (isNaN(d)) return iso;
+    try { return d.toLocaleDateString(AR ? "ar" : "en", monthOnly ? { month: "short", timeZone: "UTC" } : { month: "short", day: "numeric", timeZone: "UTC" }); }
+    catch (e) { return iso; }
+  }
+  // buckets of 7 days, the last ending on the final day of the series
+  function weekBuckets(series) {
+    var out = [];
+    for (var end = series.length; end > 0; end -= 7) {
+      var start = Math.max(0, end - 7), c = 0;
+      for (var i = start; i < end; i++) c += series[i].count;
+      out.unshift({ from: series[start].date, to: series[end - 1].date, count: c });
+    }
+    return out;
+  }
+  // integer ticks 0..top, at most 4 intervals
+  function niceTicks(max) {
+    var step = 1;
+    outer: for (var mag = 1; ; mag *= 10) {
+      for (var k = 0; k < 3; k++) {
+        step = [1, 2, 5][k] * mag;
+        if (max / step <= 4) break outer;
+      }
+    }
+    var top = Math.max(Math.ceil(max / step) * step, step * 2), ticks = [];
+    for (var v = 0; v <= top; v += step) ticks.push(v);
+    return ticks;
+  }
+  function chart(series, mode) {
+    var weekly = mode === "week";
+    var bars = weekly ? weekBuckets(series) : series.map(function (d) { return { from: d.date, to: d.date, count: d.count }; });
+    var max = bars.reduce(function (m, b) { return Math.max(m, b.count); }, 0);
     var sum = series.reduce(function (a, d) { return a + d.count; }, 0);
     var peak = series.reduce(function (b, d) { return d.count > (b ? b.count : -1) ? d : b; }, null);
-    var NS = "http://www.w3.org/2000/svg";
-    var svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-    svg.setAttribute("class", "adm-chart");
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", s("chartAlt", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? peak.count : 0 }));
-    if (AR) svg.setAttribute("transform", "scale(-1,1)"); // oldest on the right in RTL
-    var bw = (W - pad * 2) / n;
-    series.forEach(function (d, i) {
-      var h = max ? Math.max(d.count ? 2 : 0, (H - pad * 2) * d.count / max) : 0;
-      var r = document.createElementNS(NS, "rect");
-      r.setAttribute("class", "bar");
-      r.setAttribute("x", pad + i * bw + 1);
-      r.setAttribute("y", H - pad - h);
-      r.setAttribute("width", Math.max(1, bw - 2));
-      r.setAttribute("height", h);
-      r.style.setProperty("--i", i);
-      var t = document.createElementNS(NS, "title");
-      t.textContent = d.date + ": " + d.count;
-      r.appendChild(t);
-      svg.appendChild(r);
+    var ticks = niceTicks(max), top = ticks[ticks.length - 1], n = bars.length;
+    var wrap = el("div", { class: "adm-chart " + (weekly ? "is-week" : "is-day"), role: "img",
+      "aria-label": s("chartAlt", { n: fmtNum(sum), d: peak ? peak.date : "—", m: peak ? fmtNum(peak.count) : 0 }) });
+    var read = el("p", { class: "adm-read", "aria-hidden": "true" });
+    var yax = el("div", { class: "adm-y" });
+    var plot = el("div", { class: "adm-plot" });
+    ticks.forEach(function (v) {
+      var pos = (100 * v / top) + "%";
+      var lab = el("span", { text: fmtNum(v) }); lab.style.bottom = pos; yax.appendChild(lab);
+      var g = el("i", { class: "adm-gl" + (v === 0 ? " base" : "") }); g.style.bottom = pos; plot.appendChild(g);
     });
-    var lbl = document.createElementNS(NS, "text");
-    lbl.setAttribute("x", pad); lbl.setAttribute("y", 14);
-    lbl.textContent = "max " + max;
-    if (!AR) svg.appendChild(lbl);
-    return svg;
+    var cols = el("div", { class: "adm-cols" });
+    var xrow = el("div", { class: "adm-xrow" });
+    var nonzero = bars.filter(function (b) { return b.count > 0; }).length;
+    var peakBar = bars.reduce(function (b, d) { return d.count > (b ? b.count : -1) ? d : b; }, null);
+    var firstMonth = -1, lastVal = -9;
+    bars.forEach(function (b, i) {
+      var range = b.from === b.to ? fmtShort(b.from) : fmtShort(b.from) + " – " + fmtShort(b.to);
+      var tip = s("chartTip", { d: range, n: fmtNum(b.count) });
+      var col = el("div", { class: "adm-col", title: tip, onclick: function () { read.textContent = tip; } });
+      col.addEventListener("mouseenter", function () { read.textContent = tip; });
+      var bar = el("i", { class: "bar" + (b.count ? "" : " zero") });
+      if (b.count) bar.style.height = (100 * b.count / top) + "%";
+      bar.style.setProperty("--i", i);
+      col.appendChild(bar);
+      if (b.count > 0 && (weekly || (nonzero <= 20 && i - lastVal >= 4) || b === peakBar)) {
+        lastVal = i;
+        var val = el("span", { class: "adm-val", text: fmtNum(b.count) });
+        val.style.bottom = "calc(" + (100 * b.count / top) + "% + 3px)";
+        col.appendChild(val);
+      }
+      cols.appendChild(col);
+      var x = el("span", { class: "adm-xcell" });
+      if (weekly) {
+        x.appendChild(el("b", { class: "adm-x" + ((n - 1 - i) % 2 ? " alt" : "") + ((n - 1 - i) % 3 ? " alt3" : ""), text: fmtShort(b.from) }));
+      } else if (b.from.slice(8) === "01" && n - i > 5) {
+        x.appendChild(el("b", { class: "adm-x start", text: fmtShort(b.from, true) }));
+        if (firstMonth < 0) firstMonth = i;
+      }
+      xrow.appendChild(x);
+    });
+    if (!weekly && firstMonth > 12) // first month start is far away: also label the opening day
+      xrow.firstChild.appendChild(el("b", { class: "adm-x start", text: fmtShort(bars[0].from) }));
+    plot.appendChild(cols);
+    wrap.appendChild(el("div", { class: "adm-chart-body", "aria-hidden": "true" }, [yax, el("div", { class: "adm-chart-main" }, [plot, xrow])]));
+    wrap.appendChild(read);
+    return wrap;
   }
 
   // ---- users: shared helpers ----
@@ -357,7 +437,7 @@
       default: return s("eGeneric");
     }
   }
-  function provLabel(p) { return s(p === "google" ? "pGoogle" : p === "both" ? "pBoth" : "pPassword"); }
+  function provLabel(p) { return s(p === "google" ? "pGoogle" : p === "apple" ? "pApple" : p === "both" ? "pBoth" : "pPassword"); }
   var DEFAULT_AV = "icons/avatar-default.svg";
   function avatar(u, big) {
     var img = el("img", { class: "adm-av", alt: "", width: big ? 64 : 36, height: big ? 64 : 36, referrerpolicy: "no-referrer", loading: "lazy" });
