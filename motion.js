@@ -11,7 +11,11 @@
   "use strict";
 
   var mq = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-  function reduced() { return !!(mq && mq.matches); }
+  // The Android shell sets html[data-reduce-motion="1"] when the phone has
+  // "Remove animations" on (the WebView does not map that to the media query).
+  function reduced() {
+    return !!(mq && mq.matches) || document.documentElement.getAttribute("data-reduce-motion") === "1";
+  }
 
   function cssMs(name, fallback) {
     try {

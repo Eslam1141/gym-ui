@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.widget.Toast;
 
@@ -34,6 +36,44 @@ public class MainActivity extends BridgeActivity {
     // run. Handle it natively with the same pattern and copy.
     private static final long EXIT_WINDOW_MS = 2000;
     private long exitArmedAt = 0;
+
+    /**
+     * Android "Remove animations" (Developer options / Accessibility) sets the
+     * animator and transition animation scales to 0, but the WebView does not
+     * turn that into prefers-reduced-motion. The web app keys off
+     * html[data-reduce-motion="1"] instead (motion.js, motion.css).
+     */
+    static boolean animationsRemoved(Context ctx) {
+        try {
+            android.content.ContentResolver cr = ctx.getContentResolver();
+            return Settings.Global.getFloat(cr, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+                || Settings.Global.getFloat(cr, Settings.Global.TRANSITION_ANIMATION_SCALE, 1f) == 0f;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** Synchronous read for native-shell.js, so the first paint is already still. */
+    private static final class MotionBridge {
+        private final Context ctx;
+        MotionBridge(Context ctx) { this.ctx = ctx; }
+        @JavascriptInterface
+        public boolean reduced() { return animationsRemoved(ctx); }
+    }
+
+    /** Set or clear the attribute on the live page (page load, resume). */
+    private void pushMotion() {
+        if (getBridge() == null) return;
+        final WebView wv = getBridge().getWebView();
+        if (wv == null) return;
+        final String js = animationsRemoved(this)
+            ? "document.documentElement.setAttribute('data-reduce-motion','1')"
+            : "document.documentElement.removeAttribute('data-reduce-motion')";
+        wv.post(new Runnable() {
+            @Override
+            public void run() { wv.evaluateJavascript(js, null); }
+        });
+    }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
@@ -79,6 +119,7 @@ public class MainActivity extends BridgeActivity {
         vaultSync = new SessionVaultPlugin.Sync(this, getBridge().getWebView(), getBridge().getServerUrl());
         vaultSync.lastUrl = getBridge().getServerUrl();
         getBridge().getWebView().addJavascriptInterface(vaultSync, "EtqSessionVault");
+        getBridge().getWebView().addJavascriptInterface(new MotionBridge(this), "EtqMotion");
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
             public void onPageStarted(WebView webView) {
@@ -92,11 +133,13 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageCommitVisible(WebView webView, String url) {
                 disarm();
+                pushMotion();
             }
 
             @Override
             public void onPageLoaded(WebView webView) {
                 disarm();
+                pushMotion();
             }
 
             @Override
@@ -139,6 +182,8 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         foreground = true;
+        // The user can flip "Remove animations" while the app is in the background.
+        pushMotion();
         // Back in the app: stop a still-ringing timer notification (a pending
         // alarm, if the timer is still running, stays scheduled).
         ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).cancel(4242);

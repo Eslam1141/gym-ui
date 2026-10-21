@@ -129,8 +129,8 @@
     updateNavHighlight(tab);
     document.body.setAttribute("data-tab", tab);
 
-    var reduce = window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var reduce = (window.GymMotion && GymMotion.reduced()) ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var incoming = screenEl(tab);
     if (!opts.instant && !reduce && incoming) {
       slidingIn = incoming;

@@ -549,7 +549,7 @@
   // One node survives every repaint (paintTotals rebuilds its host) so the
   // fill slides and the number counts from what was on screen, not from 0.
   var progressEl = null;
-  function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function reduceMotion() { return !!((window.GymMotion && GymMotion.reduced()) || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)); }
 
   function progressState(ratio) {
     return ratio > 1 ? "over" : ratio >= 0.9 ? "near" : "under";

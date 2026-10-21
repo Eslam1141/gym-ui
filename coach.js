@@ -1301,7 +1301,7 @@
     var svg = svgEl("svg", { viewBox: "0 0 120 120", class: "coach-ring", role: "img",
       "aria-label": msg(["ringLabel", { p: pct(sh.p), c: pct(sh.c), f: pct(sh.f) }]) });
     svg.appendChild(svgEl("circle", { cx: 60, cy: 60, r: R, class: "coach-ring-track" }));
-    var reduce = still || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var reduce = still || (window.GymMotion && GymMotion.reduced()) || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var start = 0, arcs = [];
     ["p", "c", "f"].forEach(function (k) {
       var len = Math.max(0, sh[k] * C - GAP);

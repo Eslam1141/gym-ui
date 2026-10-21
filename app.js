@@ -1668,7 +1668,7 @@ const timerTime = document.getElementById("timerTime");
 const timerLabel = document.getElementById("timerLabel");
 const timerFill = document.getElementById("timerFill");
 const timerLive = document.getElementById("timerLive");
-const reduceMotionMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+const reduceMotionMQ = { get matches(){ return window.GymMotion ? GymMotion.reduced() : window.matchMedia("(prefers-reduced-motion: reduce)").matches; } };
 const timerAddBtn = document.getElementById("timerAdd");
 const timerSkipBtn = document.getElementById("timerSkip");
 const REST_ADD_SECONDS = 15, REST_ENDING_SECONDS = 5, EX_READY_SECONDS = 3;
