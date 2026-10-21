@@ -17,6 +17,7 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/splash-screen": "^8.0.2",
+    "@capgo/capacitor-health": "8.11.12",
     "@capgo/capacitor-social-login": "^8.5.13"
   },
   "devDependencies": {
