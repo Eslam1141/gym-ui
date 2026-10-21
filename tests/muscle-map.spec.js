@@ -222,3 +222,19 @@ for (const theme of ["dark", "light"]) {
     await context.close();
   });
 }
+
+test("the women's plan draws the female figure, the men's plan the male one", async ({ browser }) => {
+  const shape = async (plan) => {
+    const { context, page } = await app(browser, { plan, signedIn: true, checks: { "2026-10-01_m_upper": { mua_bench: true } } });
+    const card = page.locator("#weekMap");
+    await card.locator("summary").click();
+    const svg = card.locator("svg.ma-svg").first();
+    const out = [await svg.getAttribute("class"), await card.locator('[data-region="chest_mid"] .ma-sh').first().getAttribute("d")];
+    await context.close();
+    return out;
+  };
+  const [mc, md] = await shape("male"), [fc, fd] = await shape("female");
+  expect(mc).not.toContain("ma-female");
+  expect(fc).toContain("ma-female");
+  expect(fd).not.toBe(md);
+});

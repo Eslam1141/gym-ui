@@ -335,9 +335,11 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 :root[data-theme="light"] .wm{
   --mus-hi2-a:color-mix(in srgb, var(--primary) 50%, var(--mus-m-hi)); --mus-hi2-b:color-mix(in srgb, var(--primary) 52%, var(--mus-m-lo));
   --mus-hi2-edge:color-mix(in srgb, var(--primary) 70%, var(--mus-edge));
+  --wm-glow:drop-shadow(0 0 1px var(--surface-2)) drop-shadow(0 0 3px var(--primary)) drop-shadow(0 0 3px var(--primary)) drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 6px var(--primary));
 }
 /* The chest and other slivers are thin, so an outline reads as stray lines: glow the silhouette instead. */
-.wm .wm-sel{ filter:drop-shadow(0 0 1.5px var(--paper)) drop-shadow(0 0 3px var(--primary-text)); }
+.wm{ --wm-glow:drop-shadow(0 0 1px var(--paper)) drop-shadow(0 0 2px var(--paper)) drop-shadow(0 0 5px var(--primary-text)); }
+.wm .wm-sel{ filter:var(--wm-glow); }
 .wm-name{ min-height:2.9em; margin:12px 0 8px; text-align:center; font-size:var(--text-sm); font-weight:var(--fw-medium); color:var(--paper); line-height:1.45; }
 .wm-legend{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px 20px; margin:0; padding:0; list-style:none; font-size:var(--text-xs); color:var(--paper-dim); }
 .wm-legend li{ display:inline-flex; align-items:center; gap:8px; }
