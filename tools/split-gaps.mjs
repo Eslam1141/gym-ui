@@ -27,6 +27,18 @@ const AR_EX = Object.fromEntries([...arBlock.matchAll(/"([^"]+)":"([^"]+)"/g)].m
 const MUSCLE_TAGS = [...src.slice(src.indexOf("const MUSCLE_SHAPES")).matchAll(/\{ id:"([a-z_]+)", group:"([^"]+)"/g)].map((m) => m[1]).slice(0, 20);
 if (MUSCLE_TAGS.length !== 20) throw new Error("expected 20 muscle tags, got " + MUSCLE_TAGS.length);
 
+// ---------- splits.js cross-check ----------
+// splits.js (the real builder) carries its own copy of the exercises it schedules; it must
+// agree with the tags above, or the report and the generated plans would drift apart.
+import { createRequire } from "node:module";
+const Splits = createRequire(import.meta.url)(join(root, "splits.js"));
+for (const [id, m] of Object.entries(Splits.library)) {
+  const e = lib.get(id);
+  if (!e || e.en !== m.en || e.shape !== m.shape || (e.shape2 || null) !== (m.shape2 || null) || e.tools.join() !== m.tools.join()) {
+    throw new Error(`splits.js exercise ${id} disagrees with app.js`);
+  }
+}
+
 // ---------- toolsets, sexes, splits ----------
 const HOME = ["none", "dumbbell", "band", "bench", "table", "pullup_bar", "kettlebell", "jump_rope"];
 const TOOLSETS = [
