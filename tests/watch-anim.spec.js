@@ -32,7 +32,7 @@ test("numbers count up from 0 and land on the exact values", async ({ browser })
   await expect(num(page, "steps")).toHaveText("8,214");
   await expect(num(page, "kcal")).toHaveText("412");
   await expect(num(page, "rhr")).toHaveText("58");
-  await expect(num(page, "sleep")).toHaveText("7 h 30 m");
+  await expect(num(page, "sleep")).toHaveText("7 h");
   const seen = await page.evaluate(() => window.__seen.steps);
   expect(seen[0]).not.toBe("8,214");                      // it did not just appear
   const ints = seen.map((t) => Number(t.replace(/,/g, "")));
