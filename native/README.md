@@ -82,3 +82,23 @@ Never commit a keystore. Release signing uses `C:\Users\L\keys\etqadem-upload.ke
 - `native-shell.js` (web) wires `@capacitor/app`: hardware Back closes the top sheet / ringing banner,
   then goes back, then exits; `window.GYM_APP_VERSION` = versionName (sent as `context.appVersion` in
   feedback); deletes the old `rest-timer` channel at startup.
+
+## Health Connect (watch data, read-only)
+
+`@capgo/capacitor-health` (pinned) is registered as `window.Capacitor.Plugins.Health`. Android 14+ has
+Health Connect built in; Android 9-13 needs the Play app. minSdk is 26 because the plugin requires it.
+
+- The plugin's manifest declares READ+WRITE for ~25 record types. `src/main/AndroidManifest.xml` strips
+  everything except six READ permissions (steps, active calories, heart rate, resting heart rate, sleep,
+  weight) with `tools:node="remove"`. After `./gradlew processReleaseMainManifest processDebugMainManifest`,
+  `node tools/check-manifest.mjs` asserts the merged manifests.
+- `src/debug/AndroidManifest.xml` adds the six matching WRITE permissions to **debug builds only**, so the
+  emulator can be seeded with the plugin's own `saveSample()`. Release builds merge `src/main` only and have
+  no WRITE permissions. Never move them into `src/main`.
+- The rationale activity, the Android 14 permission-usage alias and the `<queries>` entry come from the
+  plugin; the privacy link is `health_connect_privacy_policy_url` in `strings.xml`.
+- Brand compatibility: `../docs/watch-compatibility.md`.
+
+Emulator test (API 34+ Google Play image): install the debug APK, forward the WebView debug port
+(`adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>`) and drive `Capacitor.Plugins.Health`
+over the DevTools protocol. In a debug build, call `requestAuthorization({write:[...]})` then `saveSample()` to seed.

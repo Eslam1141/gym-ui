@@ -4,4 +4,6 @@
     <string name="title_activity_main">Etqadem</string>
     <string name="package_name">com.etqadem.app</string>
     <string name="custom_url_scheme">com.etqadem.app</string>
+    <!-- Health Connect "Privacy policy" link; read by @capgo/capacitor-health's PermissionsRationaleActivity. -->
+    <string name="health_connect_privacy_policy_url">https://etqadem.cloider.app/privacy</string>
 </resources>
