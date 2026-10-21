@@ -77,55 +77,18 @@
     });
   }
 
-  // Reads --dur-med (e.g. ".28s" or "280ms") off the root element so the
-  // fallback's setTimeout stays in lockstep with the CSS animation-duration
-  // actually applied by .screen-fade-out-fallback, instead of a hardcoded
-  // value that could drift from the token. Falls back to 280ms (the
-  // current --dur-med value) if the property can't be read/parsed.
-  function fallbackDurMs() {
-    try {
-      var raw = getComputedStyle(document.documentElement)
-        .getPropertyValue("--dur-med").trim();
-      var ms = raw.indexOf("ms") !== -1 ? parseFloat(raw) : parseFloat(raw) * 1000;
-      if (!isNaN(ms) && ms > 0) return ms;
-    } catch (e) {}
-    return 280;
-  }
-
-  // In-flight state for the CSS-class fallback (setTimeout-based swap, used
-  // when document.startViewTransition isn't available). Native View
-  // Transitions auto-supersede a still-running transition when a new one
-  // starts; the fallback needs to replicate that explicitly, or two nav
-  // calls landing within one --dur-med window (e.g. two rapid taps) can (a)
-  // let the FIRST call's stale scheduled swap fire and briefly show a
-  // screen nobody asked for, and (b) leave a fade-in class stuck forever on
-  // a screen that gets hidden (which cancels its animation without firing
-  // `animationend`) before its fade-in finishes.
-  var pendingFallbackTimer = null;
-  var pendingFallbackIncoming = null;
-  var pendingFallbackIncomingCleanup = null;
-
-  // Cancels any scheduled-but-not-yet-fired fallback swap, and if a
-  // previous fallback swap already fired and is still mid-fade-in, finishes
-  // it synchronously (removes the class + detaches its animationend
-  // listener) so nothing about a superseded navigate() call remains
-  // visible or attached. Safe to call unconditionally at the top of every
-  // navigate(), whether or not a fallback is actually pending.
-  function cancelPendingFallback() {
-    if (pendingFallbackTimer !== null) {
-      clearTimeout(pendingFallbackTimer);
-      pendingFallbackTimer = null;
-    }
-    if (pendingFallbackIncoming) {
-      pendingFallbackIncoming.classList.remove("screen-fade-in-fallback");
-      if (pendingFallbackIncomingCleanup) {
-        pendingFallbackIncoming.removeEventListener("animationend", pendingFallbackIncomingCleanup);
-      }
-      pendingFallbackIncoming = null;
-      pendingFallbackIncomingCleanup = null;
-    }
-    var stillFadingOut = document.querySelector(".screen-fade-out-fallback");
-    if (stillFadingOut) stillFadingOut.classList.remove("screen-fade-out-fallback");
+  // The tab swap is one cheap step: the outgoing screen is hidden at once and only the
+  // incoming screen plays a transform/opacity slide (.screen-slide-in, motion.css). It used
+  // to be a View Transition, whose snapshot capture cost >1 s a frame on low-end phones.
+  // A superseded slide is cut short so a quick second tap leaves no class behind: hiding
+  // a screen cancels its animation without firing `animationend`.
+  var slidingIn = null;
+  function onSlideEnd(e) { if (e.target === slidingIn) endSlide(); }
+  function endSlide() {
+    if (!slidingIn) return;
+    slidingIn.classList.remove("screen-slide-in");
+    slidingIn.removeEventListener("animationend", onSlideEnd);
+    slidingIn = null;
   }
 
   // Returns false (and does nothing at all: no re-render, no refetch, no
@@ -157,52 +120,22 @@
     }
     curTab = tab;
     set("gym_tab", tab);
-    cancelPendingFallback();
+    endSlide();
 
-    var swap = function () {
-      TABS.forEach(function (name) {
-        var s = screenEl(name);
-        if (s) s.hidden = (name !== tab);
-      });
-      updateNavHighlight(tab);
-      document.body.setAttribute("data-tab", tab);
-      // Fallback path: the screen only becomes visible here, so the entrance
-      // stagger (and its cleanup timer) must start now, not at navigate() time.
-      if (inSwap && window.GymMotion) GymMotion.enter(screenEl(tab));
-    };
-    var inSwap = false;
+    TABS.forEach(function (name) {
+      var s = screenEl(name);
+      if (s) s.hidden = (name !== tab);
+    });
+    updateNavHighlight(tab);
+    document.body.setAttribute("data-tab", tab);
 
     var reduce = window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!opts.instant && !reduce && document.startViewTransition) {
-      document.startViewTransition(swap);
-    } else if (!opts.instant && !reduce) {
-      // Fallback for browsers without the View Transitions API (Firefox/
-      // Safari): fade the outgoing screen out, swap the DOM once it's
-      // invisible, then fade the incoming screen in. swap() itself is
-      // synchronous (just toggles `hidden`), so old/new are never both
-      // visible at once — no overlap/double-render mid-transition.
-      var outgoing = document.querySelector(".screen:not([hidden])");
-      if (outgoing) outgoing.classList.add("screen-fade-out-fallback");
-      pendingFallbackTimer = setTimeout(function () {
-        pendingFallbackTimer = null;
-        inSwap = true;
-        swap();
-        var incoming = document.querySelector(".screen:not([hidden])");
-        if (incoming) {
-          incoming.classList.add("screen-fade-in-fallback");
-          pendingFallbackIncoming = incoming;
-          pendingFallbackIncomingCleanup = function () {
-            incoming.classList.remove("screen-fade-in-fallback");
-            pendingFallbackIncoming = null;
-            pendingFallbackIncomingCleanup = null;
-          };
-          incoming.addEventListener("animationend", pendingFallbackIncomingCleanup, { once: true });
-        }
-        if (outgoing) outgoing.classList.remove("screen-fade-out-fallback");
-      }, fallbackDurMs());
-    } else {
-      swap();
+    var incoming = screenEl(tab);
+    if (!opts.instant && !reduce && incoming) {
+      slidingIn = incoming;
+      incoming.classList.add("screen-slide-in");
+      incoming.addEventListener("animationend", onSlideEnd);
     }
 
     if (!opts.keepScroll) { try { window.scrollTo(0, 0); } catch (e) {} }
@@ -212,8 +145,7 @@
     if (tab === "food" && window.GymFood && typeof GymFood.refresh === "function") {
       try { GymFood.refresh(); } catch (e) { if (window.console) console.warn("food refresh failed", e); }
     }
-    // Fallback transition enters from inside swap() once the screen is revealed.
-    if (window.GymMotion && !opts.instant && (reduce || document.startViewTransition)) GymMotion.enter(screenEl(tab));
+    if (window.GymMotion && !opts.instant) GymMotion.enter(screenEl(tab));
     return true;
   }
 

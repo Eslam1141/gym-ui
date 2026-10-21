@@ -3,17 +3,14 @@ const { openApp } = require("./helpers");
 
 test.setTimeout(60000);
 
-// The bottom nav must stay solid while a tab switch runs the screen View Transition.
-// Regression: the nav's view-transition group painted underneath the sliding screen
-// groups (groups stack in document order), so screen content showed through the bar.
+// The bottom nav must stay solid while a tab switch slides the incoming screen in.
+// Regression (from the View Transition days): sliding screen content showed through the bar.
 test.describe("bottom nav during a tab switch", () => {
   test("items are the same nodes and the bar never shows screen content through it", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true });
     // The active-tab pill slides on purpose; freeze it so only unwanted change is measured.
     await page.addStyleTag({ content: "#appNav button, #appNav button::before{ transition:none !important; }" });
     await page.waitForTimeout(800);
-    const hasVt = await page.evaluate(() => typeof document.startViewTransition === "function");
-    test.skip(!hasVt, "View Transitions unavailable in this browser");
 
     await page.evaluate(() => { window.__navNodes = Array.from(document.querySelectorAll("#appNav button")); });
     const box = await page.locator("#appNav").boundingBox();
@@ -49,22 +46,6 @@ test.describe("bottom nav during a tab switch", () => {
       return now.length === window.__navNodes.length && now.every((b, i) => b === window.__navNodes[i]);
     });
     expect(same).toBe(true);
-    await context.close();
-  });
-
-  test("the nav's transition groups are stacked above the screen groups", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true });
-    const hasVt = await page.evaluate(() => typeof document.startViewTransition === "function");
-    test.skip(!hasVt, "View Transitions unavailable in this browser");
-    const z = await page.evaluate(async () => {
-      const t = document.startViewTransition(() => GymUI.navigate("more", { instant: true }));
-      await t.ready;
-      const g = (n) => getComputedStyle(document.documentElement, "::view-transition-group(" + n + ")").zIndex;
-      const out = { nav: g("app-nav"), top: g("app-topbar"), prefs: g("app-topprefs") };
-      await t.finished;
-      return out;
-    });
-    expect(z).toEqual({ nav: "1", top: "1", prefs: "1" });
     await context.close();
   });
 });
