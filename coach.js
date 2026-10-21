@@ -204,12 +204,26 @@
   };
   var s = GymDom.makeT(STR);
 
-  function mount(el) {
+  // Swaps the Coach view. A change of view (form > loading > result > history)
+  // rises in as one block. It stays still when the tab itself is being entered
+  // (the screen transition already moves it, and a second entrance would
+  // double up) and when the very same result is painted again (`key`, e.g.
+  // coming back to the tab or switching language): nothing replays.
+  var shownKey = null;
+  var navEntry = false;
+  function mount(el, key) {
     var body = document.getElementById("coachBody");
     if (!body) return;
+    var same = !!key && key === shownKey;
+    shownKey = key || null;
     body.innerHTML = "";
     body.appendChild(el);
+    if (same) return;
     try { window.scrollTo(0, 0); } catch (e) {}
+    if (navEntry || !window.GymMotion || GymMotion.reduced()) return;
+    el.classList.add("coach-in");
+    // a CSS animation restarts whenever its screen is shown again, so drop the class once it has played
+    el.addEventListener("animationend", function (e) { if (e.target === el) el.classList.remove("coach-in"); });
   }
 
   // Sub-screens register where Back returns to (GymUI's in-app Back stack,
@@ -1010,8 +1024,9 @@
     var ibToggle = h("button", {
       type: "button", class: "coach-ib-toggle", "aria-expanded": st.inbodyOpen ? "true" : "false",
       on: { click: function () {
-        st.inbodyOpen = ibBody.hidden;
-        ibBody.hidden = !ibBody.hidden;
+        st.inbodyOpen = !st.inbodyOpen;
+        if (st.inbodyOpen) GymMotion.expand(ibBody, function () { ibBody.hidden = false; });
+        else GymMotion.collapse(ibBody, function () { ibBody.hidden = true; });
         ibToggle.setAttribute("aria-expanded", st.inbodyOpen ? "true" : "false");
         persist();
       } }
@@ -1280,13 +1295,13 @@
     if (!(tot > 0)) return null;
     return { p: kc.p / tot, c: kc.c / tot, f: kc.f / tot };
   }
-  function macroRing(sh) {
+  function macroRing(sh, still) {
     var R = 46, C = 2 * Math.PI * R, GAP = 3.5;
     var pct = function (x) { return Math.round(x * 100); };
     var svg = svgEl("svg", { viewBox: "0 0 120 120", class: "coach-ring", role: "img",
       "aria-label": msg(["ringLabel", { p: pct(sh.p), c: pct(sh.c), f: pct(sh.f) }]) });
     svg.appendChild(svgEl("circle", { cx: 60, cy: 60, r: R, class: "coach-ring-track" }));
-    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var reduce = still || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var start = 0, arcs = [];
     ["p", "c", "f"].forEach(function (k) {
       var len = Math.max(0, sh[k] * C - GAP);
@@ -1366,7 +1381,9 @@
     var c = r.computed || {};
     var sh = macroShares(c);
     var pct = function (k) { return sh ? Math.round(sh[k] * 100) + "%" : ""; };
-    var ring = sh ? macroRing(sh) : null;
+    // the same result painted again (tab re-entry, language switch) must not sweep its rings again
+    var key = "res:" + (r.id || r.createdAt || "") + ":" + JSON.stringify(c);
+    var ring = sh ? macroRing(sh, key === shownKey) : null;
     var kcalTile = statTile("target", Math.round(c.targetKcal || 0), s("kcal") + s("perDay"), "targetExplain", "coach-stat--kcal");
     if (ring) kcalTile.insertBefore(h("div", { class: "coach-ring-wrap" }, ring), kcalTile.firstChild);
     var hero = h("div", { class: "coach-hero" },
@@ -1451,7 +1468,7 @@
 
     sections.push(actions);
     sections.push(links);
-    mount(h.apply(null, ["div", { class: "coach-result" }].concat(sections)));
+    mount(h.apply(null, ["div", { class: "coach-result" }].concat(sections)), key);
   }
 
   function wantKey(want) { return want === "diet" ? "wantDiet" : want === "workout" ? "wantWorkout" : "wantBoth"; }
@@ -1658,8 +1675,12 @@
   function round(v, n) { var p = Math.pow(10, n || 0); return Math.round((parseFloat(v) || 0) * p) / p; }
 
   // ---------------- entry ----------------
-  function refresh() {
+  function refresh(opts) {
     if (!document.getElementById("coachBody")) return;
+    navEntry = !!(opts && opts.nav === true);
+    try { paint(); } finally { navEntry = false; }
+  }
+  function paint() {
     var authed = window.GymUI && GymUI.isAuthed && GymUI.isAuthed();
     if (!authed) { deferred = null; renderTeaser(); return; }
     if (inflight) { renderLoading(); return; }

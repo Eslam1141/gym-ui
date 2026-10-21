@@ -1183,7 +1183,7 @@ function wireExpandBtn(btn, ex){
 function closeInlineVideo(id){
   const wrap  = document.getElementById("vwrap-" + id);
   const frame = document.getElementById("vframe-" + id);
-  if(wrap)  wrap.classList.remove("open");
+  if(wrap)  GymMotion.collapse(wrap, ()=>wrap.classList.remove("open"));
   if(frame) frame.innerHTML = "";
   const btn = document.querySelector(`[data-video="${id}"]`);
   if(btn){ btn.classList.remove("on"); btn.innerHTML = videoBtnInner(false); }
@@ -1282,7 +1282,12 @@ function renderExercises(){
     const isOpen = openVideoId === ex.id;
     const card = document.createElement("div");
     card.className = "ex-card" + (done ? " done" : "") + (play ? " anim-in" : "");
-    if(play) card.style.animationDelay = (i * 45) + "ms";
+    if(play){
+      card.style.setProperty("--ci", Math.min(i, 8));   // stagger capped so a long list never delays its tail
+      // A CSS animation restarts whenever its screen is shown again (display:none > block), which
+      // replayed the cards on every return to Plan: drop the class once it has played.
+      card.addEventListener("animationend", (e)=>{ if(e.target === card) card.classList.remove("anim-in"); });
+    }
 
     const last = lastLog(ex.id);
     const esc = GymUI.esc;
@@ -1474,7 +1479,7 @@ function renderExercises(){
         const wrap  = document.getElementById("vwrap-" + id);
         const frame = document.getElementById("vframe-" + id);
         frame.innerHTML = videoFrameInner(ex);
-        wrap.classList.add("open");
+        GymMotion.expand(wrap, ()=>wrap.classList.add("open"));
         btn.classList.add("on");
         btn.innerHTML = videoBtnInner(true);
         wireExpandBtn(frame.querySelector("[data-expand]"), ex);
@@ -1633,11 +1638,13 @@ function openVideoModal(ex){
   if(openVideoId){ closeInlineVideo(openVideoId); openVideoId = null; }
   modalTitle.textContent = exName(ex);
   modalFrame.innerHTML = `<iframe src="${GymUI.esc(ytEmbedSrc(ex.vid,true))}" allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-  videoModal.classList.add("show");
+  videoModal.classList.add("show");   // .show only hides the top bar (styles.css); GymMotion drives the visibility
+  GymMotion.show(videoModal);
 }
 function closeVideoModal(){
   modalFrame.innerHTML = ""; // stop playback
   videoModal.classList.remove("show");
+  GymMotion.hide(videoModal);
 }
 document.getElementById("modalClose").onclick = closeVideoModal;
 videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeVideoModal(); });
@@ -2029,11 +2036,11 @@ async function offerPreciseAlerts(){
 function openPreciseSheet(ln){
   const opener = document.activeElement;
   const el = document.createElement("div");
-  el.className = "syd";
+  el.className = "syd m-ovl";
   el.id = "preciseSheet";
   el.innerHTML =
     '<div class="syd-backdrop"></div>' +
-    '<div class="syd-panel" role="dialog" aria-modal="true" aria-labelledby="preTitle" aria-describedby="preBody">' +
+    '<div class="syd-panel m-ovl-card" role="dialog" aria-modal="true" aria-labelledby="preTitle" aria-describedby="preBody">' +
     '<h2 id="preTitle" class="syd-title"></h2>' +
     '<p id="preBody" class="syd-body"></p>' +
     '<div class="syd-actions"><button type="button" class="syd-yes"></button><button type="button" class="syd-no"></button></div></div>';
@@ -2045,7 +2052,7 @@ function openPreciseSheet(ln){
   function close(answer){
     document.removeEventListener("keydown", onKey, true);
     preciseRemember(answer);
-    el.remove();
+    GymMotion.hide(el, ()=>el.remove());
     preciseSheet = null;
     if(opener && opener.focus) try{ opener.focus(); }catch(e){}
   }
@@ -2063,6 +2070,7 @@ function openPreciseSheet(ln){
     try{ Promise.resolve(ln.changeExactNotificationSetting()).catch(() => {}); }catch(e){}
   };
   document.body.appendChild(el);
+  GymMotion.show(el);
   preciseSheet = el;
   document.addEventListener("keydown", onKey, true);
   yes.focus();
@@ -2244,8 +2252,9 @@ if(warmupBtn){
   warmupBtn.onclick = ()=>{
     const wrap = document.getElementById("warmupWrap");
     const frame = document.getElementById("warmupFrame");
-    const open = !wrap.classList.contains("open");
-    wrap.classList.toggle("open", open);
+    const open = !wrap.classList.contains("open") || wrap.classList.contains("m-reveal-out"); // a tap mid-close reopens
+    if(open) GymMotion.expand(wrap, ()=>wrap.classList.add("open"));
+    else GymMotion.collapse(wrap, ()=>wrap.classList.remove("open"));
     warmupBtn.classList.toggle("on", open);
     frame.innerHTML = open
       ? `<iframe src="${ytEmbedSrc('gDSRFzs6k_s', false)}" allow="accelerometer; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>`

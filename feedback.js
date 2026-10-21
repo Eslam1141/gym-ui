@@ -115,10 +115,10 @@
     var busy = false;
     var done = false;
 
-    var root = node("div", "syd fb");
+    var root = node("div", "syd fb m-ovl");
     root.id = "feedbackSheet";
     var backdrop = node("div", "syd-backdrop");
-    var panel = node("div", "syd-panel fb-panel");
+    var panel = node("div", "syd-panel fb-panel m-ovl-card");
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
     panel.setAttribute("aria-labelledby", "fbTitle");
@@ -248,7 +248,7 @@
 
     function close() {
       document.removeEventListener("keydown", onKey, true);
-      root.remove();
+      GymMotion.hide(root, function () { root.remove(); });
       sheet = null;
       if (opener && opener.focus) try { opener.focus(); } catch (e) {}
     }
@@ -339,6 +339,7 @@
     paintCount();
     sheet = root;
     document.body.appendChild(root);
+    GymMotion.show(root);
     document.addEventListener("keydown", onKey, true);
     msg.focus();
   }

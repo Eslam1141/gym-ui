@@ -315,6 +315,7 @@
     var loc = lang() === "ar" ? "ar-EG" : "en-US";
     var label = new Date(dateKey + "T00:00:00").toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
     dayDetail.hidden = false;
+    if (window.GymMotion) GymMotion.play(dayDetail, "m-row-in");
     var controls = function (e) { if (window.GymRest) GymRest.renderDetailControls(dayDetail, dateKey, e); };
 
     if (!entry || ((entry.rest || entry.pending) && !entry.dayId)) {

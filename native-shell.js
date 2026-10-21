@@ -105,7 +105,7 @@
   // Layers Back may dismiss, topmost first. Sheets handle Escape themselves
   // (focus trap, remembered answers), so reuse that rather than removing nodes.
   function openLayers() {
-    var n = document.querySelectorAll(".syd").length;
+    var n = document.querySelectorAll(".syd:not(.m-out)").length;   // a sheet fading out is already closed
     var banner = document.getElementById("alarmBanner");
     if (banner && !banner.hidden) n++;
     return n;
@@ -116,7 +116,7 @@
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     if (openLayers() < before) return true;
     // A sheet without an Escape handler: its backdrop tap closes it.
-    var sheets = document.querySelectorAll(".syd");
+    var sheets = document.querySelectorAll(".syd:not(.m-out)");
     var top = sheets[sheets.length - 1];
     var backdrop = top && top.querySelector(".syd-backdrop");
     if (backdrop) backdrop.click();
