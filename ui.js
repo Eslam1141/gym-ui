@@ -286,7 +286,16 @@
       if (offsetDays) d.setDate(d.getDate() + offsetDays);
       var m = d.getMonth() + 1, day = d.getDate();
       return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
-    }
+    },
+    // First day (Saturday) of the Saturday-Friday week containing a YYYY-MM-DD key,
+    // the same week the rest days and the calendar strip use. Pure date arithmetic.
+    weekStart: function (key) {
+      var p = key.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+      d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 1) % 7));
+      return d.toISOString().slice(0, 10);
+    },
+    // The current week's key, recomputed on every call like key().
+    weekKey: function (offsetDays) { return this.weekStart(this.key(offsetDays)); }
   };
 
   // HTML-escape for template strings that reach innerHTML (plan/AI/server text).

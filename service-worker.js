@@ -21,6 +21,7 @@ const ASSETS = [
   "./boot-loader.js",
   "./app.js",
   "./muscle-art.js",
+  "./muscle-map.js",
   "./ui.js",
   "./mascot.js",
   "./coach-consent.js",
