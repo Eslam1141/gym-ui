@@ -233,7 +233,7 @@
   // Keeps device/UI-only prefs. Called on sign-out and on an account switch,
   // synchronously before any rest-queue flush can run under the new token, so
   // the non-gym_ prefixes (gymrest_pending is a completion queue) go too.
-  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_"];
+  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_", "etqwatch_"];
   function clearUserData() {
     clearCachedSession(); // don't let a stale cached token restore the old account
     var keep = { gym_onboarded: 1, gym_lang: 1, gym_tab: 1, gym_anon: 1, gym_terms_ok: 1 };
