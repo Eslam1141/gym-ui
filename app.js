@@ -205,6 +205,18 @@ const DAYS_FEMALE_CAL = [
   ]},
 ];
 
+// ---- No-equipment moves for biceps, triceps and hamstrings (added 2026-10-22 for the training splits).
+// Library-only: no plan lists this "day". There is no video yet (vid is empty on purpose, the card
+// shows "Video coming soon" until the owner supplies a clip); never put a guessed video id here. ----
+const DAYS_EXTRA = [
+  { id:"x_library", label:"Library", muscles:"No-equipment biceps, triceps, hamstrings", exercises:[
+    {id:"nb_towelcurl", en:"Towel Door Curl", sets:3, reps:"12-15", rest:45, vid:"", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["none"]},
+    {id:"nb_diamond", en:"Diamond Push-ups", sets:3, reps:"8-12", rest:60, vid:"", shape:"triceps_lateral", tier:"medium", tools:["none"]},
+    {id:"nb_hinge1", en:"Single-Leg Hip Hinge", sets:3, reps:"8-12/leg", rest:45, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
+    {id:"nb_slidecurl", en:"Towel Sliding Hamstring Curl", sets:3, reps:"8-12", rest:60, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
+  ]},
+];
+
 // ---- muscle "shapes" (sub-regions) for the custom workout builder ----
 // id is referenced by every exercise's shape/shape2 field below.
 const MUSCLE_SHAPES = [
@@ -252,7 +264,9 @@ const AR_EX = {
   "Push-ups":"تمرين الضغط","Pike Push-ups":"ضغط بايك (كتف)","Bench Dips":"غطس على مقعد (ترايسبس)","Hollow Body Hold":"ثبات الجسم المجوف",
   "Mountain Climbers":"تسلق الجبل","Bodyweight Squats":"سكوات بوزن الجسم","Reverse Lunges":"طعن خلفي","Glute Bridge":"جسر الألوية",
   "Squat Jumps":"قفز سكوات","Burpees":"بيربي","Inverted Row (under a table)":"تجديف مقلوب (تحت طاولة)","Superman":"سوبرمان (أسفل الظهر)",
-  "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب"
+  "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب",
+  "Towel Door Curl":"مرجحة بايسبس بمنشفة على الباب","Diamond Push-ups":"ضغط الماس (ترايسبس)","Single-Leg Hip Hinge":"ثني الورك برجل واحدة (خلفية الفخذ)",
+  "Towel Sliding Hamstring Curl":"ثني الرجلين بالانزلاق على منشفة (خلفية الفخذ)"
 };
 const AR_DAY = {"Push":"دفع","Pull":"سحب","Legs":"أرجل","Upper":"علوي","Lower":"سفلي","Lower A":"سفلي أ","Upper A":"علوي أ","Lower B":"سفلي ب","Upper B":"علوي ب","Full-Body Starter":"تمرين شامل للمبتدئين",
   "Back + Biceps + Calves":"ظهر + بايسبس + سمانة","Chest + Triceps":"صدر + ترايسبس","Chest & Triceps A":"صدر وترايسبس أ","Back & Biceps A":"ظهر وبايسبس أ","Chest & Triceps B":"صدر وترايسبس ب","Back & Biceps B":"ظهر وبايسبس ب"};
@@ -306,7 +320,7 @@ const EX_ALIASES = {
 };
 const EX_VID = (function(){
   const m = {};
-  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.vid) return;
       m[_shapeKey(ex.en)] = ex.vid;
@@ -344,7 +358,7 @@ const EX_GENERIC = {
 };
 const EX_SHAPE = (function(){
   const m = {};
-  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.shape) return;
       const tags = ex.shape2 ? {shape:ex.shape, shape2:ex.shape2} : {shape:ex.shape};
@@ -1004,7 +1018,7 @@ let DAYS = pickDays();
 window.GymApp = window.GymApp || {};
 // Read-only views for the muscle-art specs (and the Plan tab's tile/close-up code).
 window.GymApp.muscleShapes = MUSCLE_SHAPES;
-window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL]; };
+window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA]; };
 window.GymApp.dayExercises = function(dayId){
   const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
   return day ? day.exercises : [];
