@@ -2623,10 +2623,13 @@ function renderTitle(){
     return;
   }
   const planWord  = t(activePlan === "female" ? "female" : "male");
-  const styleWord = t(activeStyle === "cal" ? "styleCal" : "styleGym");
+  // An active split replaces the program word: "4 days · Home" (Classic keeps Gym / In-House).
+  const styleWord = splitChoice.days
+    ? t("splitDaysN").replace("{n}", splitChoice.days).replace(" ", " ") + " · " + t(splitChoice.where === "home" ? "splitHome" : "splitGym")
+    : t(activeStyle === "cal" ? "styleCal" : "styleGym");
   const full = t("appTitle") + " · " + planWord + " · " + styleWord;
   document.getElementById("appTitleEl").textContent = full;
-  document.title = t("appTitle") + " · " + planWord + " · " + styleWord;
+  document.title = full;
 }
 
 // Plan (Male/Female) and program (Gym/In-House) are switched from the More
