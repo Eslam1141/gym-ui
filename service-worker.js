@@ -46,6 +46,8 @@ const ASSETS = [
   "./native-shell.js",
   "./notifications.js",
   "./profile.js",
+  "./watch.js",
+  "./watch.css",
   "./toast.js",
   "./dom.js",
   "./config.js",

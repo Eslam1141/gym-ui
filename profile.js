@@ -134,6 +134,7 @@
       '      <p class="cal-more-hint" id="profStreakHint" hidden></p>' +
       '    </div>' +
       '  </div>' +
+      '  <div id="profWatchMount" hidden></div>' +
       '</div>'
     );
   }
