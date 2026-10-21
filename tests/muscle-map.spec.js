@@ -191,3 +191,34 @@ test("with motion allowed, a region that just rose pulses once (control for the 
   expect(name).toBe("wm-rise");
   await context.close();
 });
+
+for (const theme of ["dark", "light"]) {
+  test(`${theme}: selecting a region glows its silhouette (no stroke) and the legend swatches use the map's fill colours`, async ({ browser }) => {
+    const { context, page } = await app(browser, { theme, checks: { "2026-10-01_m_upper": { mua_bench: true } } });
+    const card = page.locator("#weekMap");
+    await card.locator("summary").click();
+    const mid = card.locator('[data-region="chest_mid"]');
+    const before = await mid.locator(".ma-sh").first().evaluate((e) => getComputedStyle(e).strokeWidth + "|" + getComputedStyle(e).stroke);
+    await mid.locator(".ma-sh").first().click();
+    const after = await mid.locator(".ma-sh").first().evaluate((e) => getComputedStyle(e).strokeWidth + "|" + getComputedStyle(e).stroke);
+    expect(after).toBe(before);   // an outline on this thin muscle read as stray white lines
+    expect(await mid.evaluate((e) => getComputedStyle(e).filter)).toContain("drop-shadow");
+    const stops = await page.evaluate(() => {
+      const wm = document.querySelector("#weekMap .wm"), probe = document.createElement("i");
+      wm.appendChild(probe);
+      const col = (v) => { probe.style.backgroundColor = "var(" + v + ")"; return getComputedStyle(probe).backgroundColor; };
+      const out = { hi2a: col("--mus-hi2-a"), hi2b: col("--mus-hi2-b"), hia: col("--mus-hi-a"), hib: col("--mus-hi-b"), mhi: col("--mus-m-hi") };
+      probe.remove();
+      out.sw1 = getComputedStyle(document.querySelector(".wm-sw1")).backgroundImage;
+      out.sw2 = getComputedStyle(document.querySelector(".wm-sw2")).backgroundImage;
+      return out;
+    });
+    expect(stops.sw1).toContain(stops.hi2a);
+    expect(stops.sw1).toContain(stops.hi2b);
+    expect(stops.sw2).toContain(stops.hia);
+    expect(stops.sw2).toContain(stops.hib);
+    expect(stops.hi2a).not.toBe(stops.hia);
+    expect(stops.hi2a).not.toBe(stops.mhi);
+    await context.close();
+  });
+}

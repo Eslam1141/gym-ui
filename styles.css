@@ -308,10 +308,10 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 
 /* weekly muscle map (muscle-map.js): a collapsible card above the session timer.
    Closed it is one summary row; open it shows front and back with the legend. */
-/* Half = a faint wash of the lit colour, so one session and two read apart at a glance. */
+/* Half = a mid teal between the grey (0) and the lit colour (2): three clearly separate steps in both themes. */
 .wm{
-  --mus-hi2-a:color-mix(in srgb, var(--primary-text) 30%, var(--mus-m-hi)); --mus-hi2-b:color-mix(in srgb, var(--primary) 22%, var(--mus-m-lo));
-  --mus-hi2-edge:color-mix(in srgb, var(--primary-text) 45%, var(--mus-edge));
+  --mus-hi2-a:color-mix(in srgb, var(--primary-text) 55%, var(--mus-m-lo)); --mus-hi2-b:color-mix(in srgb, var(--primary) 50%, var(--mus-m-lo));
+  --mus-hi2-edge:color-mix(in srgb, var(--primary-text) 75%, var(--mus-edge));
   background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin:14px 0 4px; box-shadow:var(--elev-1); }
 .wm-sum{
   display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 10px; min-height:56px; padding:10px 16px;
@@ -331,7 +331,13 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 .wm-fig figcaption{ margin-top:6px; text-align:center; font-size:var(--text-xs); font-weight:var(--fw-medium); color:var(--paper-dim); }
 .wm-r{ cursor:pointer; outline-offset:1px; }
 .wm-r:focus-visible{ outline:2px solid var(--primary-text); }
-.wm .wm-sel .ma-sh{ stroke:var(--paper); stroke-width:2px; }
+/* Light: the lit colour is mid-dark, so one session is a pale teal wash that stays clear of the cream grey. */
+:root[data-theme="light"] .wm{
+  --mus-hi2-a:color-mix(in srgb, var(--primary) 50%, var(--mus-m-hi)); --mus-hi2-b:color-mix(in srgb, var(--primary) 52%, var(--mus-m-lo));
+  --mus-hi2-edge:color-mix(in srgb, var(--primary) 70%, var(--mus-edge));
+}
+/* The chest and other slivers are thin, so an outline reads as stray lines: glow the silhouette instead. */
+.wm .wm-sel{ filter:drop-shadow(0 0 1.5px var(--paper)) drop-shadow(0 0 3px var(--primary-text)); }
 .wm-name{ min-height:2.9em; margin:12px 0 8px; text-align:center; font-size:var(--text-sm); font-weight:var(--fw-medium); color:var(--paper); line-height:1.45; }
 .wm-legend{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px 20px; margin:0; padding:0; list-style:none; font-size:var(--text-xs); color:var(--paper-dim); }
 .wm-legend li{ display:inline-flex; align-items:center; gap:8px; }
