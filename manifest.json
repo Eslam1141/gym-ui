@@ -12,10 +12,10 @@
   "dir": "ltr",
   "lang": "en",
   "icons": [
-    { "src": "icons/logo-etq.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icons/icon-192-etq.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512-etq.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-192-etq.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/icon-maskable-512-etq.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icons/logo-etq2.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192-etq2.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-etq2.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192-etq2.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512-etq2.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

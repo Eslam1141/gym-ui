@@ -59,7 +59,7 @@ shipping a release build.
 
 ## Icons and splash
 
-Source PNGs live in `assets/` (rendered from `../icons/logo-etq-*.svg`). The
+Source PNGs live in `assets/` (rendered from `../icons/logo-etq2-*.svg`). The
 Android 12+ splash icon is `android/app/src/main/res/drawable/splash_logo.xml`
 (the reversed mark on `#10171f`, matching the web loader). Regenerate icons:
 

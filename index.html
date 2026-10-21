@@ -6,12 +6,12 @@
 <title>Etqadem</title>
 
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="icons/logo-etq.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-etq.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16-etq.png">
-<link rel="shortcut icon" href="icons/favicon-etq.ico">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon-etq.png">
-<link rel="mask-icon" href="icons/logo-etq-mono.svg" color="#0B7A75">
+<link rel="icon" type="image/svg+xml" href="icons/logo-etq2.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-etq2.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16-etq2.png">
+<link rel="shortcut icon" href="icons/favicon-etq2.ico">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-etq2.png">
+<link rel="mask-icon" href="icons/logo-etq2-mono.svg" color="#0B7A75">
 <meta name="theme-color" content="#10171f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,12 +34,14 @@
   #bootLoader .bl-part{position:absolute;inset:0;width:100%;height:100%;overflow:visible;will-change:transform,opacity}
   #bootLoader .bl-below{position:absolute;top:calc(50% + 86px);left:0;right:0;display:flex;
     flex-direction:column;align-items:center;gap:18px}
-  /* Steps grow up from their shared baseline (y=90 of 96). */
-  #bootLoader .bl-step{transform-origin:50% 93.75%}
-  #bootLoader.bl-play .bl-step{animation:bl-rise .42s cubic-bezier(.2,.8,.2,1) var(--d) both}
-  #bootLoader.bl-play .bl-body{animation:bl-body .4s ease-out .3s both}
-  #bootLoader.bl-play .bl-headwrap{animation:bl-drop .5s cubic-bezier(.3,1.5,.5,1) .5s both}
-  #bootLoader.bl-play .bl-head{animation:bl-bob 1.3s ease-in-out 1.1s infinite}
+  /* The bar slides out from its centre (y=70 of 96), the plates drop on,
+     then the two chevrons level up in turn; the teal one bobs while loading. */
+  #bootLoader .bl-bar{transform-origin:50% 72.92%}
+  #bootLoader.bl-play .bl-bar{animation:bl-grow .4s cubic-bezier(.2,.8,.2,1) both}
+  #bootLoader.bl-play .bl-plates{animation:bl-drop .45s cubic-bezier(.3,1.5,.5,1) .25s both}
+  #bootLoader.bl-play .bl-low{animation:bl-hop .4s cubic-bezier(.3,1.5,.5,1) .5s both}
+  #bootLoader.bl-play .bl-topwrap{animation:bl-hop .4s cubic-bezier(.3,1.5,.5,1) .68s both}
+  #bootLoader.bl-play .bl-top{animation:bl-bob 1.3s ease-in-out 1.1s infinite}
   #bootLoader .bl-track{position:relative;width:96px;height:3px;border-radius:3px;overflow:hidden;
     background:rgba(243,240,232,.12);opacity:0}
   #bootLoader.bl-play .bl-track{animation:bl-fade .3s ease 1.2s both}
@@ -47,15 +49,15 @@
     background:#3CC2B8;animation:bl-sweep 1.1s ease-in-out infinite}
   #bootLoader .bl-caption{min-height:1.4em;margin:0;color:rgba(243,240,232,.72);
     font:500 15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
-  @keyframes bl-rise{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}
-  @keyframes bl-body{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes bl-grow{from{transform:scaleX(0);opacity:0}to{transform:scaleX(1);opacity:1}}
+  @keyframes bl-hop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
   @keyframes bl-drop{from{transform:translateY(-34px);opacity:0}to{transform:none;opacity:1}}
   @keyframes bl-bob{0%,100%{transform:none}50%{transform:translateY(-4px)}}
   @keyframes bl-fade{from{opacity:0}to{opacity:1}}
   @keyframes bl-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
   [dir="rtl"] #bootLoader .bl-track::after{animation-direction:reverse}
   @media (prefers-reduced-motion: reduce){
-    #bootLoader.bl-play .bl-step,#bootLoader.bl-play .bl-body,#bootLoader.bl-play .bl-headwrap,#bootLoader.bl-play .bl-head{animation:none}
+    #bootLoader.bl-play .bl-bar,#bootLoader.bl-play .bl-plates,#bootLoader.bl-play .bl-low,#bootLoader.bl-play .bl-topwrap,#bootLoader.bl-play .bl-top{animation:none}
     #bootLoader .bl-track::after{animation:none;width:100%;opacity:.5}
     #bootLoader.bl-play .bl-track{animation-delay:.4s}
   }
@@ -69,23 +71,15 @@
 <body>
 
 <div id="bootLoader" role="status" aria-live="polite" aria-busy="true">
-  <!-- One layer per part of the mark (shared 96x96 viewBox, stacked), so each
+  <!-- One layer per part of the mark (shared viewBox, stacked), so each
        animates with transform/opacity on its own HTML layer: those run on the
        compositor and keep moving while the app's scripts load. -->
   <div class="bl-logo" aria-hidden="true">
-    <svg class="bl-part bl-step" style="--d:0s" viewBox="0 0 96 96" focusable="false"><rect x="4" y="78" width="27" height="12" rx="5" fill="#F3F0E8"/></svg>
-    <svg class="bl-part bl-step" style="--d:.12s" viewBox="0 0 96 96" focusable="false"><rect x="34" y="68" width="27" height="22" rx="5" fill="#F3F0E8"/></svg>
-    <svg class="bl-part bl-step" style="--d:.24s" viewBox="0 0 96 96" focusable="false"><rect x="64" y="58" width="27" height="32" rx="5" fill="#F3F0E8"/></svg>
-    <svg class="bl-part bl-body" viewBox="0 0 96 96" focusable="false">
-      <g fill="none" stroke="#F3F0E8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M43 30L36 51" stroke-width="10"/>
-        <path d="M36 51L52 54L50 65" stroke-width="9"/>
-        <path d="M36 51L28 65L21 75.5" stroke-width="9"/>
-        <path d="M43 30L55 36L63 28" stroke-width="8"/>
-        <path d="M43 30L33 39L27 47" stroke-width="8"/>
-      </g>
-    </svg>
-    <div class="bl-part bl-headwrap"><svg class="bl-part bl-head" viewBox="0 0 96 96" focusable="false"><circle cx="48" cy="14.5" r="8.5" fill="#3CC2B8"/></svg></div>
+    <!-- Same geometry as icons/logo-etq2-ondark.svg (tools/icons/gen-etq2-svgs.py). -->
+    <svg class="bl-part bl-bar" viewBox="0 0 96 96" focusable="false"><rect x="10" y="66.5" width="76" height="7" rx="3.5" fill="#F3F0E8"/></svg>
+    <svg class="bl-part bl-plates" viewBox="0 0 96 96" focusable="false"><rect x="14" y="56" width="9" height="28" rx="4.5" fill="#3CC2B8"/><rect x="73" y="56" width="9" height="28" rx="4.5" fill="#3CC2B8"/></svg>
+    <svg class="bl-part bl-low" viewBox="0 0 96 96" focusable="false"><path d="M24 52L48 36L72 52" stroke="#F3F0E8" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="bl-part bl-topwrap"><svg class="bl-part bl-top" viewBox="0 0 96 96" focusable="false"><path d="M24 32L48 16L72 32" stroke="#3CC2B8" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
   </div>
   <div class="bl-below">
     <div class="bl-track" aria-hidden="true"></div>
@@ -113,7 +107,7 @@
   </div>
   <div class="ob-inner">
     <div class="ob-fx" aria-hidden="true"></div>
-    <a class="home-link home-link-ob" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="ob-logo" src="icons/logo-etq.svg" alt="" width="96" height="96"></a>
+    <a class="home-link home-link-ob" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="ob-logo" src="icons/logo-etq2.svg" alt="" width="96" height="96"></a>
     <h1 class="ob-title" data-i18n="obTitle">One step forward, every day.</h1>
     <p class="ob-sub" data-i18n="obSub">Everything you need to train: a plan that fits you, an AI coach that understands your InBody, form videos, a rest timer, and progress that follows you from phone to laptop.</p>
     <div class="ob-step-stack">
@@ -184,7 +178,7 @@
 <div id="screen-plan" class="screen">
   <div class="wrap">
     <header class="hero">
-      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
+      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq2.svg" alt="" width="46" height="46"></a>
       <h1 id="appTitleEl">Etqadem</h1>
       <div class="sub" id="todayLabel"></div>
     </header>
@@ -257,7 +251,7 @@
 <div id="screen-coach" class="screen" hidden>
   <div class="wrap">
     <header class="hero">
-      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
+      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq2.svg" alt="" width="46" height="46"></a>
       <h1 data-i18n="coachTitle">AI Coach</h1>
       <div class="sub" data-i18n="coachSub">A diet &amp; training plan built from your numbers</div>
     </header>
@@ -269,7 +263,7 @@
 <div id="screen-food" class="screen" hidden>
   <div class="wrap">
     <header class="hero">
-      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
+      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq2.svg" alt="" width="46" height="46"></a>
       <h1 data-i18n="foodTitle">Food</h1>
       <div class="sub" data-i18n="foodSub">Log your meals and see today's totals</div>
     </header>
@@ -281,7 +275,7 @@
 <div id="screen-more" class="screen" hidden>
   <div class="wrap">
     <header class="hero">
-      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
+      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq2.svg" alt="" width="46" height="46"></a>
       <h1 data-i18n="navMore">More</h1>
     </header>
 
