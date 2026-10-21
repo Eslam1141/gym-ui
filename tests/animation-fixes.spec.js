@@ -475,3 +475,95 @@ test.describe("reduced motion: nothing is left running after each action", () =>
     await context.close();
   });
 });
+
+// A closed sheet must leave nothing behind: not visible, no exit class, and it must not catch a click.
+test.describe("closed overlays leave nothing behind (clean page, no patching)", () => {
+  const under = (page) => page.evaluate(() => {
+    const out = [];
+    for (const [x, y] of [[180, 200], [180, 400], [180, 600], [180, 740]]) {
+      const el = document.elementFromPoint(x, y);
+      out.push(!!(el && el.closest(".syd, .m-ovl:not([hidden]), dialog[open], .m-out")));
+    }
+    return out;
+  });
+  const clean = async (page) => {
+    await page.waitForTimeout(700);
+    expect(await under(page)).toEqual([false, false, false, false]);
+    expect(await page.evaluate(() => document.querySelectorAll(".syd, .m-out, .m-in, dialog[open]").length)).toBe(0);
+  };
+  for (const how of ["cancel", "backdrop", "escape"]) {
+    test("feedback sheet closed by " + how + " is gone and clicks reach the page", async ({ browser }) => {
+      const { context, page } = await open(browser);
+      await page.evaluate(() => GymFeedback.open());
+      await expect(page.locator("#feedbackSheet")).toBeVisible(T);
+      await page.waitForTimeout(500);
+      if (how === "cancel") await page.click(".fb-cancel");
+      else if (how === "backdrop") await page.mouse.click(180, 20);
+      else await page.keyboard.press("Escape");
+      await expect(page.locator("#feedbackSheet")).toHaveCount(0, T);
+      await clean(page);
+      await page.click("#dayTabs .day-chip >> nth=1");              // a real click reaches the page beneath
+      await context.close();
+    });
+  }
+  test("video modal closed by button, scrim and a second open/close ends hidden and inert to clicks", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    for (const how of ["button", "scrim"]) {
+      await showVideoModal(page);
+      await page.waitForTimeout(500);
+      if (how === "button") await page.click("#modalClose"); else await page.mouse.click(4, 4);
+      await page.waitForTimeout(700);
+      const s = await page.evaluate(() => { const m = document.getElementById("videoModal"); return { hidden: m.hidden, cls: m.className, vis: m.getBoundingClientRect().width > 0 }; });
+      expect(s).toEqual({ hidden: true, cls: "m-ovl", vis: false });
+      await clean(page);
+    }
+    await context.close();
+  });
+  test("pv-sheet dialog closed by Cancel, backdrop and Escape is closed and not stuck inert", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    await page.evaluate(() => GymUI.navigate("more", { instant: true }));
+    await page.locator("#pvDelete").scrollIntoViewIfNeeded();
+    for (const how of ["cancel", "backdrop", "escape"]) {
+      await page.click("#pvDelete");
+      await expect(page.locator("dialog.pv-sheet")).toBeVisible(T);
+      await page.waitForTimeout(500);
+      if (how === "cancel") await page.click("#pvCancel");
+      else if (how === "backdrop") await page.mouse.click(180, 20);
+      else await page.keyboard.press("Escape");
+      await page.waitForTimeout(700);
+      const s = await page.evaluate(() => { const d = document.querySelector("dialog.pv-sheet"); return { open: d.open, cls: d.className, inert: d.inert }; });
+      expect(s).toEqual({ open: false, cls: "pv-sheet", inert: false });
+      await clean(page);
+    }
+    await context.close();
+  });
+  test("quick toggles: open > close > open within 100ms ends open; open > close while entering ends closed", async ({ browser }) => {
+    const { context, page } = await open(browser);
+    // video modal
+    await page.evaluate(() => { openVideoModal(DAYS[0].exercises.find((e) => e.vid)); closeVideoModal(); openVideoModal(DAYS[0].exercises.find((e) => e.vid)); });
+    await page.waitForTimeout(700);
+    let s = await page.evaluate(() => { const m = document.getElementById("videoModal"); return { hidden: m.hidden, out: m.classList.contains("m-out") }; });
+    expect(s).toEqual({ hidden: false, out: false });
+    await page.evaluate(() => closeVideoModal());
+    await page.waitForTimeout(80);                                  // close while it is still entering ...
+    await page.waitForTimeout(700);
+    expect(await page.evaluate(() => document.getElementById("videoModal").hidden)).toBe(true);
+    await page.evaluate(() => { openVideoModal(DAYS[0].exercises.find((e) => e.vid)); setTimeout(() => closeVideoModal(), 60); });
+    await page.waitForTimeout(900);
+    expect(await page.evaluate(() => document.getElementById("videoModal").hidden)).toBe(true);
+    await clean(page);
+    // feedback sheet: open > close > open
+    await page.evaluate(() => { GymFeedback.open(); document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); setTimeout(() => GymFeedback.open(), 50); });
+    await page.waitForTimeout(900);
+    expect(await page.evaluate(() => document.querySelectorAll("#feedbackSheet").length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelector("#feedbackSheet").classList.contains("m-out"))).toBe(false);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".syd")).toHaveCount(0, T);
+    await clean(page);
+    // feedback: close while the enter animation is still running
+    await page.evaluate(() => { GymFeedback.open(); setTimeout(() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })), 60); });
+    await expect(page.locator(".syd")).toHaveCount(0, T);
+    await clean(page);
+    await context.close();
+  });
+});
