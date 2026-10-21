@@ -562,13 +562,13 @@ const T = {
 };
 const NOTES = {
   male_gym:{ en:[
-    "<b>Week:</b> Upper · Lower · rest · Back + Biceps · Chest + Triceps · rest · rest.",
+    "<b>Week:</b> Upper · Lower · rest · Back + Biceps + Calves · Chest + Triceps · rest · rest.",
     "<b>Progress:</b> hit the top of the rep range, then add weight.",
     "<b>Effort:</b> stop compound sets 1–3 reps short of failure.",
     "<b>Recover:</b> 7–9 h sleep; deload every 5–8 weeks.",
     "<b>Protein:</b> 1.6–2.2 g per kg body weight a day."
   ], ar:[
-    "<b>الأسبوع:</b> علوي · سفلي · راحة · ظهر + بايسبس · صدر + ترايسبس · راحة · راحة.",
+    "<b>الأسبوع:</b> علوي · سفلي · راحة · ظهر + بايسبس + سمانة · صدر + ترايسبس · راحة · راحة.",
     "<b>التدرّج:</b> عند بلوغ أعلى نطاق التكرار، زِد الوزن.",
     "<b>الجهد:</b> أوقف التمارين المركّبة قبل الفشل بـ1–3 تكرارات.",
     "<b>الاستشفاء:</b> نوم 7–9 ساعات؛ أسبوع تخفيف كل 5–8 أسابيع.",
