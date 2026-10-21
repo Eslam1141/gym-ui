@@ -5,22 +5,29 @@
  *   Profile     "Watch & Health Connect" row: connect / manage / disconnect.
  *
  * Gate: the native Capacitor shell AND window.Capacitor.Plugins.Health (the
- * @capgo/capacitor-health plugin). On the web, or in an APK without the plugin,
- * nothing is rendered and nothing is stored. Every plugin call can reject; a
- * failure shows a calm message and never breaks the page.
+ * @capgo/capacitor-health plugin) AND Android 9+ AND a usable Health Connect.
+ * On the web, in an APK without the plugin, or on Android 8 and below nothing
+ * is rendered and nothing is stored. Every plugin call can reject; a failure
+ * shows a calm message and never breaks the page.
  *
  * Privacy: watch data is read on demand, kept only in this phone's localStorage
- * and never sent anywhere (not gym-be, not the AI coach). The keys are
- * deliberately NOT gym_-prefixed: sync.js uploads every gym_* key. sync.js's
- * clearUserData() wipes the "etqwatch_" prefix on sign-out / account switch,
- * and privacy.js wipes all local data on account delete.
+ * and never sent anywhere (not gym-be, not the AI coach, not feedback or logs).
+ * The keys are deliberately NOT gym_-prefixed: sync.js uploads every gym_* key.
+ * sync.js's clearUserData() wipes the "etqwatch_" prefix on sign-out / account
+ * switch, and privacy.js wipes all local data on account delete.
  *
  *   etqwatch_ask    "yes" | "no" | "later:<ms>"   the ask-card answer
  *   etqwatch_on     "1"                            connected and reading
  *   etqwatch_cache  {day, at, vals, denied}        last values shown
  *
- * All user-facing copy is the STR table below. The block marked LEGAL COPY is
- * the disclosure the lawyer's final wording replaces; keep the keys. */
+ * Revocation: there is no callback when the user removes access in Health
+ * Connect, so on every resume and Plan-tab show checkAuthorization() runs; values
+ * for types no longer allowed are dropped, and if none is left the whole cache
+ * goes. The cache also expires after 30 days without a refresh.
+ *
+ * All user-facing copy is the STR table below (the lawyer's Part B text; keys
+ * match watch-legal-text.md). **bold** and <span dir="ltr"> in a string are
+ * rendered as elements by rich(); never as HTML. */
 (function () {
   "use strict";
 
@@ -29,111 +36,122 @@
 
   var KEY_ASK = "etqwatch_ask", KEY_ON = "etqwatch_on", KEY_CACHE = "etqwatch_cache";
   var TYPES = ["steps", "calories", "heartRate", "restingHeartRate", "sleep", "weight"];
+  // which cached value each Health Connect type feeds
+  var VAL_OF = { steps: "steps", calories: "kcal", heartRate: "avgHr", restingHeartRate: "rhr", sleep: "sleepMin", weight: "weightKg" };
   var ASK_AGAIN_MS = 7 * 24 * 3600 * 1000;
+  var CACHE_MAX_MS = 30 * 24 * 3600 * 1000;
   var THROTTLE_MS = 60 * 1000;
   var PLAY_URL = "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata";
 
   var STR = {
-    // ---- ask card ----
-    askTitle: ["Do you have a smartwatch?", "هل عندك ساعة ذكية؟"],
-    askBody: ["Connect it to see today's steps, calories and sleep next to your plan.",
-      "اربطها لتشاهد خطواتك وسعراتك ونومك اليوم بجانب خطتك."],
-    askYes: ["Yes, connect it", "نعم، اربطها"],
+    // ---- ask card (B1) ----
+    askTitle: ["Do you have a smartwatch?", "عندك ساعة ذكية؟"],
+    askBody: ["Connect it to see your steps, sleep and heart rate next to your plan. It stays on your phone.",
+      "اربطها لتشوف خطواتك ونومك ونبضك بجانب خطتك. وكل شيء يبقى على هاتفك."],
+    askYes: ["Yes", "نعم"],
     askLater: ["Not now", "ليس الآن"],
-    askNo: ["No watch", "لا أملك ساعة"],
+    askNo: ["No", "لا"],
 
-    // ---- LEGAL COPY: disclosure shown before the Health Connect permission sheet ----
-    discTitle: ["Connect your watch", "ربط ساعتك"],
-    discLead: ["Etqadem can read your activity from Health Connect, the Android app your watch app syncs to.",
-      "يمكن لاتقدم قراءة نشاطك من Health Connect، وهو تطبيق أندرويد الذي تتزامن معه تطبيقات الساعات."],
-    discWhatLabel: ["What we read (read only)", "ما نقرؤه (قراءة فقط)"],
-    discTypes: [["Steps", "Active calories", "Heart rate", "Resting heart rate", "Sleep", "Weight"],
-      ["الخطوات", "السعرات النشطة", "معدل ضربات القلب", "معدل ضربات القلب أثناء الراحة", "النوم", "الوزن"]],
-    discWhy: ["Why: to show today's steps, active calories, heart rate and last night's sleep next to your plan, and your latest weight in Profile.",
-      "السبب: لعرض خطواتك وسعراتك النشطة ونبضك ونومك الليلة الماضية بجانب خطتك، وآخر وزن لك في الملف الشخصي."],
-    discStays: ["This data stays on this phone. It is not sent to our servers or to the AI coach, and Etqadem never writes to Health Connect.",
-      "تبقى هذه البيانات على هذا الهاتف. لا تُرسل إلى خوادمنا ولا إلى المدرّب الذكي، ولا تكتب اتقدم أي شيء في Health Connect."],
-    discChange: ["You can disconnect any time in Profile, or remove access in Health Connect.",
-      "يمكنك إيقاف الربط في أي وقت من الملف الشخصي، أو إزالة الصلاحيات من Health Connect."],
-    discPolicy: ["Privacy Policy", "سياسة الخصوصية"],
-    // ---- end LEGAL COPY ----
-    discGo: ["Continue", "متابعة"],
-    discLater: ["Not now", "ليس الآن"],
+    // ---- prominent disclosure, shown BEFORE the Android permission screen (B2) ----
+    discTitle: ["Show your watch data in Etqadem", "اعرض بيانات ساعتك في اتقدم"],
+    discIntro: ["Etqadem can read some data from Health Connect, where your watch app saves it.",
+      "يستطيع اتقدم قراءة بعض البيانات من <span dir=\"ltr\">Health Connect</span>، حيث يحفظها تطبيق ساعتك."],
+    discB1: ["**What we read (read-only):** steps, active calories, heart rate, resting heart rate, sleep and weight.",
+      "**ما نقرؤه (للقراءة فقط):** الخطوات، والسعرات النشطة، ونبض القلب، ونبض الراحة، والنوم، والوزن."],
+    discB2: ["**Why:** to show your activity next to your plan. We don't use it to change your plan.",
+      "**لماذا:** لنعرض نشاطك بجانب خطتك. ولا نستخدمها لتغيير خطتك."],
+    discB3: ["**It stays on this phone.** We don't send it to our servers, the AI coach or anyone else. We never sell it or use it for ads.",
+      "**تبقى على هذا الهاتف.** لا نرسلها إلى خوادمنا ولا إلى المدرّب الذكي ولا إلى أي جهة أخرى. ولا نبيعها ولا نستخدمها في الإعلانات."],
+    discB4: ["**You're in control.** Next, Android will ask you to allow each type. Change or disconnect any time in Profile → Watch & Health Connect, or in Health Connect.",
+      "**القرار قرارك.** بعد ذلك سيطلب منك أندرويد السماح بكل نوع على حدة. ويمكنك التغيير أو الفصل في أي وقت من الملف الشخصي ← الساعة الذكية و<span dir=\"ltr\">Health Connect</span>، أو من <span dir=\"ltr\">Health Connect</span>."],
+    discNote: ["Watch numbers are estimates, not medical advice.", "أرقام الساعة تقديرية وليست نصيحة طبية."],
+    discContinue: ["Continue", "متابعة"],
+    discNotNow: ["Not now", "ليس الآن"],
+    discPrivacyLink: ["Read the privacy policy", "اقرأ سياسة الخصوصية"],
 
-    // ---- Health Connect missing ----
-    instTitle: ["Install Health Connect", "تثبيت Health Connect"],
-    instBody: ["Your watch app shares data through Health Connect, and it isn't on this phone yet. Install it, then come back and tap Connect.",
-      "تشارك تطبيقات الساعات بياناتها عبر Health Connect وهو غير مثبّت على هذا الهاتف. ثبّته ثم عُد واضغط ربط."],
-    instGo: ["Open Google Play", "فتح Google Play"],
-    instLater: ["Not now", "ليس الآن"],
+    // ---- Profile row (B3) ----
+    rowTitle: ["Watch & Health Connect", "الساعة الذكية و<span dir=\"ltr\">Health Connect</span>"],
+    rowOff: ["Not connected", "غير متصلة"],
+    rowOn: ["Connected. Last updated {time}", "متصلة. آخر تحديث {time}"],
+    rowOnNow: ["Connected", "متصلة"],
+    rowConnect: ["Connect", "ربط"],
+    rowManage: ["Manage permissions", "إدارة الأذونات"],
+    rowDisconnect: ["Disconnect", "فصل الساعة"],
+    disconnectConfirmTitle: ["Disconnect your watch?", "فصل الساعة؟"],
+    disconnectConfirmBody: ["We'll stop reading and delete the watch values saved on this phone. To remove the permission completely, open Health Connect.",
+      "سنتوقف عن القراءة ونحذف قيم الساعة المحفوظة على هذا الهاتف. ولإزالة الإذن تمامًا افتح <span dir=\"ltr\">Health Connect</span>."],
+    cancel: ["Cancel", "إلغاء"],
+    disconnected: ["Watch disconnected", "تم فصل الساعة"],
+    latestWeight: ["Latest weight from your watch: {kg} kg", "آخر وزن من ساعتك: {kg} كجم"],
 
-    // ---- today strip ----
-    stripTitle: ["From your watch", "من ساعتك"],
-    updated: ["Updated {t}", "آخر تحديث {t}"],
+    // ---- today strip, empty states and errors (B4) ----
+    stripTitle: ["From your watch today", "من ساعتك اليوم"],
+    updated: ["Updated {time}", "آخر تحديث {time}"],
+    stepsLbl: ["Steps", "الخطوات"],
+    kcalLbl: ["Active kcal", "السعرات النشطة"],
+    restHrLbl: ["Resting heart rate", "نبض الراحة"],
+    sleepLbl: ["Last night's sleep", "نوم الليلة الماضية"],
+    hrNote: ["Estimate from your watch. Not medical advice.", "تقدير من ساعتك. وليس نصيحة طبية."],
+    noData: ["No data from your watch yet. Open your watch app to sync.", "لا توجد بيانات من ساعتك بعد. افتح تطبيق ساعتك للمزامنة."],
+    partial: ["Some types are off. Turn them on in Manage permissions to see them.", "بعض الأنواع غير مفعّلة. فعّلها من «إدارة الأذونات» لتظهر هنا."],
+    installHC: ["Install or update Health Connect", "تثبيت أو تحديث <span dir=\"ltr\">Health Connect</span>"],
+    installHCBody: ["Your watch app saves data in Health Connect. Install it from Google Play, or update it if it's already there, then come back.",
+      "يحفظ تطبيق ساعتك بياناته في <span dir=\"ltr\">Health Connect</span>. ثبّته من <span dir=\"ltr\">Google Play</span>، أو حدّثه إن كان مثبّتًا، ثم ارجع إلينا."],
+    notGranted: ["No permission was given, so nothing will be read. You can connect later in Profile.", "لم تُمنح أي أذونات، لذلك لن نقرأ شيئًا. يمكنك الربط لاحقًا من الملف الشخصي."],
+    accessRemoved: ["Access was removed in Health Connect, so we deleted the saved watch values. Connect again any time in Profile.",
+      "أُزيل الإذن من <span dir=\"ltr\">Health Connect</span>، فحذفنا قيم الساعة المحفوظة. يمكنك الربط مجددًا في أي وقت من الملف الشخصي."],
+    readError: ["Couldn't read your watch data. Try again in a moment.", "تعذّرت قراءة بيانات ساعتك. حاول مرة أخرى بعد قليل."],
+    openSettings: ["Open Health Connect settings", "فتح إعدادات <span dir=\"ltr\">Health Connect</span>"],
+
+    // ---- not in the lawyer's tables ----
+    installGo: ["Open Google Play", "فتح Google Play"],
+    checkAgain: ["Check again", "تحقق مرة أخرى"],
+    tryAgain: ["Try again", "حاول مرة أخرى"],
     loading: ["Reading your watch data...", "جارٍ قراءة بيانات ساعتك..."],
-    steps: ["Steps", "الخطوات"],
-    kcal: ["Active kcal", "السعرات النشطة"],
-    heart: ["Resting heart rate", "نبض الراحة"],
-    sleep: ["Last night's sleep", "نوم الليلة الماضية"],
     bpm: ["bpm", "نبضة/د"],
     avgHr: ["avg {n} today", "المتوسط {n} اليوم"],
-    noData: ["No data", "لا توجد بيانات"],
-    offCell: ["Not allowed", "غير مسموح"],
+    cellNoData: ["No data", "لا توجد بيانات"],
+    cellOff: ["Not allowed", "غير مسموح"],
     hr: ["h", "س"],
     min: ["m", "د"],
-    emptyMsg: ["No data from your watch yet. Open your watch app so it can sync, then check again.",
-      "لا توجد بيانات من ساعتك بعد. افتح تطبيق الساعة ليتزامن، ثم أعد التحقق."],
-    checkAgain: ["Check again", "تحقق مرة أخرى"],
-    deniedMsg: ["Etqadem doesn't have permission to read your watch data. Allow it in Health Connect.",
-      "ليس لدى اتقدم إذن لقراءة بيانات ساعتك. اسمح بذلك من Health Connect."],
-    partialMsg: ["Some data types are turned off.", "بعض أنواع البيانات متوقفة."],
-    openHc: ["Open Health Connect", "فتح Health Connect"],
-    errMsg: ["Couldn't read Health Connect. Try again in a moment.", "تعذّرت القراءة من Health Connect. حاول بعد قليل."],
-    tryAgain: ["Try again", "حاول مرة أخرى"],
-
-    // ---- Profile row ----
-    rowTitle: ["Watch & Health Connect", "الساعة و Health Connect"],
-    rowOff: ["Not connected. Show your watch's steps, calories and sleep next to your plan.",
-      "غير مربوطة. اعرض خطوات ساعتك وسعراتها ونومها بجانب خطتك."],
-    rowOn: ["Connected. Data stays on this phone.", "مربوطة. تبقى البيانات على هذا الهاتف."],
-    rowDenied: ["Connected, but permission is off. Allow it in Health Connect.",
-      "مربوطة، لكن الإذن متوقف. اسمح به من Health Connect."],
-    rowWeight: ["Latest weight from your watch: {w} kg", "آخر وزن من ساعتك: {w} كجم"],
-    connect: ["Connect", "ربط"],
-    manage: ["Manage permissions", "إدارة الأذونات"],
-    disconnect: ["Disconnect", "إيقاف الربط"],
-    disconnected: ["Disconnected. Etqadem stopped reading and removed the saved values from this phone. To remove its access completely, open Health Connect.",
-      "تم إيقاف الربط. توقفت اتقدم عن القراءة وحذفت القيم المحفوظة من هذا الهاتف. لإزالة صلاحياتها بالكامل افتح Health Connect."],
-
-    // ---- toasts ----
     connected: ["Watch connected", "تم ربط الساعة"],
-    notGranted: ["No access was given. You can connect any time from Profile.",
-      "لم يُمنح أي إذن. يمكنك الربط في أي وقت من الملف الشخصي."],
-    connectErr: ["Couldn't connect to Health Connect. Try again in a moment.",
-      "تعذّر الاتصال بـ Health Connect. حاول بعد قليل."],
-    openErr: ["Couldn't open Health Connect. Open it from your phone's settings.",
-      "تعذّر فتح Health Connect. افتحه من إعدادات هاتفك."],
-    close: ["Close", "إغلاق"]
+    connectErr: ["Couldn't connect to Health Connect. Try again in a moment.", "تعذّر الاتصال بـ Health Connect. حاول بعد قليل."],
+    openErr: ["Couldn't open Health Connect. Open it from your phone's settings.", "تعذّر فتح Health Connect. افتحه من إعدادات هاتفك."]
   };
 
-  var AR_LANG = 1;
-  function li() { return GymDom.lang() === "ar" ? AR_LANG : 0; }
-  function s(key, params) {
+  function li() { return GymDom.lang() === "ar" ? 1 : 0; }
+  function raw(key, params) {
     var e = STR[key];
     var v = e ? e[li()] : key;
     if (params) v = v.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? String(params[k]) : ""; });
     return v;
   }
+  // plain text (toasts, labels)
+  function s(key, params) { return raw(key, params).replace(/\*\*/g, "").replace(/<\/?span[^>]*>/g, ""); }
+  // **bold** and <span dir="ltr">…</span> to elements
+  function rich(v) {
+    var out = [], re = /\*\*(.+?)\*\*|<span dir="ltr">(.+?)<\/span>/g, at = 0, m;
+    while ((m = re.exec(v))) {
+      if (m.index > at) out.push(v.slice(at, m.index));
+      out.push(m[1] != null ? h("strong", {}, rich(m[1])) : h("span", { dir: "ltr" }, m[2]));
+      at = re.lastIndex;
+    }
+    if (at < v.length) out.push(v.slice(at));
+    return out;
+  }
+  function R(key, params) { return rich(raw(key, params)); }
 
   // ---------------- device-local storage ----------------
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  // Older than 30 days (or unreadable): gone.
   function readCache() {
-    try {
-      var c = JSON.parse(lsGet(KEY_CACHE));
-      return c && typeof c === "object" && c.vals ? c : null;
-    } catch (e) { return null; }
+    var c = null;
+    try { c = JSON.parse(lsGet(KEY_CACHE)); } catch (e) {}
+    if (!c || typeof c !== "object" || !c.vals) { if (lsGet(KEY_CACHE) !== null) lsDel(KEY_CACHE); return null; }
+    if (c.at && Date.now() - c.at > CACHE_MAX_MS) { lsDel(KEY_CACHE); return null; }
+    return c;
   }
   function isOn() { return lsGet(KEY_ON) === "1"; }
   function askDue() {
@@ -145,7 +163,17 @@
   function clearAll() {
     gen++;
     lsDel(KEY_ASK); lsDel(KEY_ON); lsDel(KEY_CACHE);
-    last = null; lastRefresh = 0; inflight = null; discMsg = false;
+    last = null; lastRefresh = 0; inflight = null;
+  }
+  // Drop what was cached for types that are no longer allowed.
+  function purgeDenied(denied) {
+    if (!denied.length) return;
+    var c = readCache();
+    denied.forEach(function (t) {
+      if (c) delete c.vals[VAL_OF[t]];
+      if (last && last.vals) delete last.vals[VAL_OF[t]];
+    });
+    if (c) lsSet(KEY_CACHE, JSON.stringify(c));
   }
 
   // ---------------- plugin ----------------
@@ -163,14 +191,24 @@
     try { return Promise.resolve(p[name](arg)); } catch (e) { return Promise.reject(e); }
   }
 
-  // "ok" | "install" (Health Connect missing/outdated) | "none" (hide the feature)
+  function androidMajor() {
+    var m = /Android\s+(\d+)/i.exec((navigator && navigator.userAgent) || "");
+    return m ? Number(m[1]) : 0;   // 0 = unknown
+  }
+
+  // "ok" | "install" (Health Connect missing or needs an update) | "none" (hide the feature).
+  // The plugin's "unavailable" covers both not-installed (Android 9-13) and
+  // unsupported, so the Android version in the user agent decides.
   var availP = null;
   function checkAvail(force) {
     if (availP && !force) return availP;
+    var major = androidMajor();
+    if (major && major < 9) { availP = Promise.resolve("none"); return availP; }
     availP = call("isAvailable").then(function (r) {
-      if (r && r.available) return "ok";
       if (r && r.platform && r.platform !== "android") return "none";
-      var why = String((r && r.reason) || "");
+      if (r && r.available) return "ok";
+      if (major) return "install";
+      var why = String((r && r.reason) || "");           // unknown version: fall back to the reason text
       if (/unsupported|not supported|sdk|android version/i.test(why) && !/install|update|provider|missing|not found/i.test(why)) return "none";
       return "install";
     }, function () { return "none"; });
@@ -184,7 +222,6 @@
   var lastRefresh = 0;
   var inflight = null;
   var connecting = false;
-  var discMsg = false;    // Profile shows the "disconnected" explanation
   var sheet = null;
   var wired = false;
 
@@ -198,7 +235,6 @@
   function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
   function sumSamples(r) {
     var list = (r && r.samples) || [];
-    if (!list.length) return null;
     var t = 0, any = false;
     list.forEach(function (x) { var n = num(x && x.value); if (n != null) { t += n; any = true; } });
     return any ? t : null;
@@ -212,6 +248,8 @@
     var x = r && r.samples && r.samples[0];
     return x ? num(x.value) : null;
   }
+  // Last night = sessions that ended after yesterday 18:00 (the read window);
+  // the plugin has no sleep aggregation, so this sums the sessions' minutes.
   function sleepMinutes(r) {
     var total = 0, any = false;
     ((r && r.samples) || []).forEach(function (x) {
@@ -223,8 +261,7 @@
     return any ? total : null;
   }
 
-  // Each read is independent: one failing or denied type leaves the rest intact.
-  // Resolves { ok, v }.
+  // Each read is independent: one failing type leaves the rest intact. Resolves { ok, v }.
   function attempt(p) { return p.then(function (v) { return { ok: true, v: v }; }, function () { return { ok: false, v: null }; }); }
 
   function readAll(authorized) {
@@ -269,11 +306,12 @@
     return v.steps == null && v.kcal == null && v.rhr == null && v.avgHr == null && v.sleepMin == null;
   }
 
+  // Always re-checks what Health Connect still allows (cheap, and the only way
+  // to notice a revoked permission). The data reads run when forced, or when
+  // the last one is older than THROTTLE_MS.
   function refresh(force) {
     if (!active() || !isOn()) return Promise.resolve();
     if (inflight) return inflight;
-    if (!force && Date.now() - lastRefresh < THROTTLE_MS) return Promise.resolve();
-    lastRefresh = Date.now();
     var myGen = gen;
     var cached = readCache();
     var dayKey = GymDate.key();
@@ -284,21 +322,26 @@
     inflight = call("checkAuthorization", { read: TYPES }).then(function (a) {
       var ok = (a && a.readAuthorized) || [];
       var denied = TYPES.filter(function (t) { return ok.indexOf(t) < 0; });
-      if (!ok.length) return { status: "denied", vals: {}, denied: denied };
+      if (!ok.length) { lsDel(KEY_CACHE); return { status: "denied", vals: {}, denied: denied, at: 0, fresh: true }; }
+      purgeDenied(denied);
+      var due = force || Date.now() - lastRefresh >= THROTTLE_MS || /^(denied|error|loading)$/.test(last.status);
+      if (!due) {
+        var st = denied.length ? (stripEmpty(last.vals) ? "empty" : "partial") : (last.status === "partial" ? "ok" : last.status);
+        return { status: st, vals: last.vals, denied: denied, at: last.at };
+      }
+      lastRefresh = Date.now();
       return readAll(ok).then(function (r) {
         var vals = toVals(r.raw, cached && cached.vals);
-        if (r.tried && r.failed === r.tried) return { status: "error", vals: last ? last.vals : {}, denied: denied, keep: true };
+        if (r.tried && r.failed === r.tried) return { status: "error", vals: last.vals, denied: denied, at: last.at };
         var status = stripEmpty(vals) ? "empty" : (denied.length ? "partial" : "ok");
-        return { status: status, vals: vals, denied: denied };
+        return { status: status, vals: vals, denied: denied, at: Date.now(), fresh: true };
       });
     }).catch(function () {
-      return { status: "error", vals: last ? last.vals : {}, denied: [], keep: true };
+      return { status: "error", vals: last ? last.vals : {}, denied: [], at: last ? last.at : 0 };
     }).then(function (res) {
       if (myGen !== gen) return;
-      res.at = Date.now();
-      if (res.keep) res.at = last ? last.at : 0;
       last = res;
-      if (!res.keep) lsSet(KEY_CACHE, JSON.stringify({ day: dayKey, at: res.at, vals: res.vals, denied: res.denied }));
+      if (res.fresh && res.status !== "denied") lsSet(KEY_CACHE, JSON.stringify({ day: dayKey, at: res.at, vals: res.vals, denied: res.denied }));
     }).then(function () {
       inflight = null;
       renderAll();
@@ -309,6 +352,9 @@
   // ---------------- connect flow ----------------
   function toast(key) { if (window.GymToast) GymToast.show({ message: s(key) }); }
 
+  // The only way to the Android permission screen: the disclosure sheet first,
+  // from the ask card and from Profile alike. Not now / Back / outside tap /
+  // Escape all resolve false and never reach requestAuthorization.
   function connect() {
     if (connecting) return Promise.resolve();
     connecting = true;
@@ -331,9 +377,9 @@
       if (r && Array.isArray(r.readAuthorized)) return r.readAuthorized;
       return call("checkAuthorization", { read: TYPES }).then(function (a) { return (a && a.readAuthorized) || []; });
     }).then(function (ok) {
-      if (!ok.length) { lsSet(KEY_ASK, "later:" + Date.now()); toast("notGranted"); return; }
+      if (!ok.length) { if (!isOn()) lsSet(KEY_ASK, "later:" + Date.now()); toast("notGranted"); return; }
       lsSet(KEY_ON, "1"); lsSet(KEY_ASK, "yes");
-      discMsg = false; last = null;
+      last = null;
       toast("connected");
       return refresh(true);
     }, function () { toast("connectErr"); });
@@ -342,8 +388,9 @@
   function disconnect() {
     gen++;
     lsDel(KEY_ON); lsDel(KEY_CACHE); lsSet(KEY_ASK, "no");
-    last = null; lastRefresh = 0; inflight = null; discMsg = true;
+    last = null; lastRefresh = 0; inflight = null;
     renderAll();
+    toast("disconnected");
   }
 
   function manage() {
@@ -351,31 +398,32 @@
   }
 
   // ---------------- sheet (the shared .syd bottom sheet) ----------------
+  // kind: "disclose" (Continue resolves true), "install" and "confirm" (Disconnect resolves true)
   function openSheet(kind) {
     if (sheet) return Promise.resolve(false);
     return new Promise(function (resolve) {
       var opener = document.activeElement;
-      var disclose = kind === "disclose";
-      var title = h("h2", { class: "syd-title", id: "wtTitle", tabindex: "-1" }, s(disclose ? "discTitle" : "instTitle"));
-      var body = [];
-      var go;
-      if (disclose) {
-        var types = STR.discTypes[li()];
-        body.push(
-          h("p", { class: "syd-body wt-p" }, s("discLead")),
-          h("div", { class: "wt-what" },
-            h("div", { class: "wt-what-l" }, s("discWhatLabel")),
-            h("ul", {}, types.map(function (t) { return h("li", {}, t); }))),
-          h("p", { class: "syd-body wt-p" }, s("discWhy")),
-          h("p", { class: "syd-body wt-p wt-strong" }, s("discStays")),
-          h("p", { class: "syd-body wt-p" }, s("discChange")),
-          h("p", { class: "pol-line" }, GymDom.policyLink(null, s("discPolicy"), true)));
-        go = h("button", { type: "button", class: "syd-yes", id: "wtGo" }, s("discGo"));
+      var title = h("h2", { class: "syd-title", id: "wtTitle", tabindex: "-1" },
+        R(kind === "disclose" ? "discTitle" : kind === "install" ? "installHC" : "disconnectConfirmTitle"));
+      var body, go, later;
+      if (kind === "disclose") {
+        body = [
+          h("p", { class: "syd-body wt-p" }, R("discIntro")),
+          h("ul", { class: "wt-pts" }, ["discB1", "discB2", "discB3", "discB4"].map(function (k) { return h("li", {}, R(k)); })),
+          h("p", { class: "syd-body wt-p wt-fine" }, R("discNote")),
+          h("p", { class: "pol-line" }, GymDom.policyLink(li() ? "ar-health-connect" : "health-connect", s("discPrivacyLink"), true))
+        ];
+        go = h("button", { type: "button", class: "syd-yes", id: "wtGo" }, R("discContinue"));
+        later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, R("discNotNow"));
+      } else if (kind === "install") {
+        body = [h("p", { class: "syd-body" }, R("installHCBody"))];
+        go = h("a", { class: "syd-yes wt-a", id: "wtGo", href: PLAY_URL, target: "_blank", rel: "noopener" }, R("installGo"));
+        later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, R("discNotNow"));
       } else {
-        body.push(h("p", { class: "syd-body" }, s("instBody")));
-        go = h("a", { class: "syd-yes wt-a", id: "wtGo", href: PLAY_URL, target: "_blank", rel: "noopener" }, s("instGo"));
+        body = [h("p", { class: "syd-body" }, R("disconnectConfirmBody"))];
+        go = h("button", { type: "button", class: "syd-yes", id: "wtGo" }, R("rowDisconnect"));
+        later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, R("cancel"));
       }
-      var later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, s(disclose ? "discLater" : "instLater"));
       var panel = h("div", { class: "syd-panel wt-panel m-ovl-card", role: "dialog", "aria-modal": "true", "aria-labelledby": "wtTitle" },
         title, body, h("div", { class: "syd-actions" }, go, later));
       var backdrop = h("div", { class: "syd-backdrop" });
@@ -400,8 +448,7 @@
         if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { e.preventDefault(); lastEl.focus(); }
         else if (!e.shiftKey && (document.activeElement === lastEl || !panel.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
       }
-      if (disclose) go.addEventListener("click", function () { close(true); });
-      else go.addEventListener("click", function () { close(false); });
+      go.addEventListener("click", function () { close(kind !== "install"); });
       later.addEventListener("click", function () { close(false); });
       backdrop.addEventListener("click", function () { close(false); });
       document.addEventListener("keydown", onKey, true);
@@ -474,8 +521,8 @@
       h("div", { class: "wt-ask-head" },
         h("span", { class: "wt-badge" }, icon("watch", "wt-ic wt-ic-lg")),
         h("div", {},
-          h("h3", { class: "wt-title", id: "wtAskT" }, s("askTitle")),
-          h("p", { class: "wt-text" }, s("askBody")))),
+          h("h3", { class: "wt-title", id: "wtAskT" }, R("askTitle")),
+          h("p", { class: "wt-text" }, R("askBody")))),
       h("div", { class: "wt-actions" },
         btn(s("askYes"), "wt-btn-primary", connect, "wtAskYes"),
         btn(s("askLater"), "wt-btn-line", function () { lsSet(KEY_ASK, "later:" + Date.now()); renderAll(); }, "wtAskLater"),
@@ -485,37 +532,40 @@
   function stripNode() {
     var st = last;
     var card = h("section", { class: "wt-card wt-strip", "aria-labelledby": "wtStripT" });
-    var meta = st && st.at && st.status !== "loading" ? s("updated", { t: fmtTime(st.at) }) : (st && st.status === "loading" && !st.at ? s("loading") : (st && st.at ? s("updated", { t: fmtTime(st.at) }) : ""));
+    var meta = st && st.at && st.status !== "denied" ? s("updated", { time: fmtTime(st.at) }) : (!st || st.status === "loading" ? s("loading") : "");
     card.appendChild(h("div", { class: "wt-strip-head" },
-      h("h3", { class: "wt-title", id: "wtStripT" }, s("stripTitle")),
+      h("h3", { class: "wt-title", id: "wtStripT" }, R("stripTitle")),
       h("span", { class: "wt-meta", role: "status", "aria-live": "polite" }, meta)));
     if (!st || (st.status === "loading" && !st.at)) {
       card.appendChild(h("div", { class: "wt-grid wt-skel", "aria-hidden": "true" }, [0, 1, 2, 3].map(function () { return h("div", { class: "wt-cell wt-skel-cell" }); })));
       return card;
     }
     if (st.status === "denied") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, s("deniedMsg")));
-      card.appendChild(h("div", { class: "wt-actions" }, btn(s("openHc"), "wt-btn-line", manage, "wtOpenHc")));
+      card.appendChild(h("p", { class: "wt-text wt-note", role: "status" }, R("accessRemoved")));
+      card.appendChild(h("div", { class: "wt-actions" },
+        btn(s("rowConnect"), "wt-btn-primary", connect, "wtReconnect"),
+        btn(s("openSettings"), "wt-btn-line", manage, "wtOpenHc")));
       return card;
     }
     var v = st.vals || {};
     var off = function (t) { return st.denied.indexOf(t) >= 0; };
-    var sub = function (t, hasValue) { return off(t) ? s("offCell") : (hasValue ? null : s("noData")); };
+    var sub = function (t, hasValue) { return off(t) ? s("cellOff") : (hasValue ? null : s("cellNoData")); };
     var heartOff = off("restingHeartRate");
     card.appendChild(h("div", { class: "wt-grid" },
-      cell("steps", s("steps"), v.steps != null ? fmtInt(v.steps) : null, null, sub("steps", v.steps != null)),
-      cell("kcal", s("kcal"), v.kcal != null ? fmtInt(v.kcal) : null, null, sub("calories", v.kcal != null)),
-      cell("heart", s("heart"), v.rhr != null ? String(v.rhr) : null, s("bpm"),
-        heartOff ? s("offCell") : (v.avgHr != null && !off("heartRate") ? s("avgHr", { n: v.avgHr }) : (v.rhr != null ? null : s("noData")))),
-      cell("sleep", s("sleep"), v.sleepMin != null ? fmtSleep(v.sleepMin) : null, null, sub("sleep", v.sleepMin != null))));
+      cell("steps", s("stepsLbl"), v.steps != null ? fmtInt(v.steps) : null, null, sub("steps", v.steps != null)),
+      cell("kcal", s("kcalLbl"), v.kcal != null ? fmtInt(v.kcal) : null, null, sub("calories", v.kcal != null)),
+      cell("heart", s("restHrLbl"), v.rhr != null ? String(v.rhr) : null, s("bpm"),
+        heartOff ? s("cellOff") : (v.avgHr != null && !off("heartRate") ? s("avgHr", { n: v.avgHr }) : (v.rhr != null ? null : s("cellNoData")))),
+      cell("sleep", s("sleepLbl"), v.sleepMin != null ? fmtSleep(v.sleepMin) : null, null, sub("sleep", v.sleepMin != null))));
+    if (v.rhr != null || v.avgHr != null) card.appendChild(h("p", { class: "wt-foot" }, R("hrNote")));
     if (st.status === "empty") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, s("emptyMsg")));
+      card.appendChild(h("p", { class: "wt-text wt-note" }, R("noData")));
       card.appendChild(h("div", { class: "wt-actions" }, btn(s("checkAgain"), "wt-btn-line", function () { refresh(true); }, "wtAgain")));
     } else if (st.status === "partial") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, s("partialMsg")));
-      card.appendChild(h("div", { class: "wt-actions" }, btn(s("manage"), "wt-btn-line", manage, "wtManage")));
+      card.appendChild(h("p", { class: "wt-text wt-note" }, R("partial")));
+      card.appendChild(h("div", { class: "wt-actions" }, btn(s("rowManage"), "wt-btn-line", manage, "wtManage")));
     } else if (st.status === "error") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, s("errMsg")));
+      card.appendChild(h("p", { class: "wt-text wt-note" }, R("readError")));
       card.appendChild(h("div", { class: "wt-actions" }, btn(s("tryAgain"), "wt-btn-line", function () { refresh(true); }, "wtRetry")));
     }
     return card;
@@ -528,28 +578,31 @@
     mount.hidden = true;
     if (!active()) return;
     var on = isOn();
-    var denied = on && last && last.status === "denied";
-    var cache = readCache();
-    var weight = on && cache && cache.vals && cache.vals.weightKg != null ? cache.vals.weightKg : (last && last.vals && last.vals.weightKg);
-    var desc = s(denied ? "rowDenied" : (on ? "rowOn" : "rowOff"));
-    var actions = on
-      ? [btn(s("manage"), "wt-btn-line", manage, "wtProfManage"), btn(s("disconnect"), "wt-btn-quiet wt-btn-danger", disconnect, "wtProfDisc")]
-      : [btn(s("connect"), "wt-btn-primary", connect, "wtProfConnect")];
+    var removed = on && last && last.status === "denied";
+    var cache = on && !removed ? readCache() : null;
+    var weight = cache && cache.vals && cache.vals.weightKg != null ? cache.vals.weightKg : null;
+    var at = (last && last.at) || (cache && cache.at) || 0;
+    var desc = removed ? R("accessRemoved") : (on ? R(at ? "rowOn" : "rowOnNow", { time: fmtTime(at) }) : R("rowOff"));
+    var actions;
+    if (removed) actions = [btn(s("rowConnect"), "wt-btn-primary", connect, "wtProfConnect"), btn(s("openSettings"), "wt-btn-line", manage, "wtProfManage"), btn(s("rowDisconnect"), "wt-btn-quiet wt-btn-danger", askDisconnect, "wtProfDisc")];
+    else if (on) actions = [btn(s("rowManage"), "wt-btn-line", manage, "wtProfManage"), btn(s("rowDisconnect"), "wt-btn-quiet wt-btn-danger", askDisconnect, "wtProfDisc")];
+    else actions = [btn(s("rowConnect"), "wt-btn-primary", connect, "wtProfConnect")];
     mount.appendChild(h("section", { class: "more-group wt-prof", "aria-labelledby": "wtProfT" },
-      h("div", { class: "more-label", id: "wtProfT" }, s("rowTitle")),
+      h("div", { class: "more-label", id: "wtProfT" }, R("rowTitle")),
       h("div", { class: "wt-card" },
         h("p", { class: "wt-text" }, desc),
-        on && weight != null ? h("p", { class: "wt-text wt-weight" }, s("rowWeight", { w: weight })) : null,
-        !on && discMsg ? h("p", { class: "wt-text wt-note", role: "status" }, s("disconnected")) : null,
+        weight != null ? h("p", { class: "wt-text wt-weight" }, s("latestWeight", { kg: weight })) : null,
         h("div", { class: "wt-actions" }, actions))));
     mount.hidden = false;
+  }
+
+  function askDisconnect() {
+    openSheet("confirm").then(function (yes) { if (yes) disconnect(); });
   }
 
   function renderAll() { renderPlan(); renderProfile(); }
 
   // ---------------- wiring ----------------
-  function visible(id) { var n = document.getElementById(id); return !!n && !n.hidden; }
-
   function wire() {
     if (wired) return;
     wired = true;
@@ -575,6 +628,7 @@
   // Safe to call again (tests stub window.Capacitor after load): re-reads the
   // device state and repaints.
   function init() {
+    readCache();   // drops a cache older than 30 days before anything paints it
     if (!plugin()) { avail = null; renderAll(); return Promise.resolve(); }
     wire();
     return checkAvail(true).then(function (a) {

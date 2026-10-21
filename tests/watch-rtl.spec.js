@@ -12,7 +12,7 @@ for (const theme of ["dark", "light"]) {
     await stubHealth(page);
     const noScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
-    await expect(page.locator("#watchMount .wt-ask")).toContainText("هل عندك ساعة ذكية؟");
+    await expect(page.locator("#watchMount .wt-ask")).toContainText("عندك ساعة ذكية؟");
     expect(await noScroll()).toBe(true);
     await page.click("#wtAskYes");
     await expect(page.locator("#watchSheet [role=dialog]")).toContainText("الخطوات");
@@ -21,7 +21,7 @@ for (const theme of ["dark", "light"]) {
     expect(panel.x + panel.width).toBeLessThanOrEqual(360);
     expect(await noScroll()).toBe(true);
     await page.click("#wtGo");
-    await expect(page.locator("#watchMount .wt-strip")).toContainText("من ساعتك");
+    await expect(page.locator("#watchMount .wt-strip")).toContainText("من ساعتك اليوم");
     await expect(page.locator("#watchMount .wt-cell").nth(3)).toContainText("7 س");
     expect(await noScroll()).toBe(true);
     // cells follow reading order: steps (first) sits on the right in RTL
@@ -30,7 +30,7 @@ for (const theme of ["dark", "light"]) {
     expect(a.x).toBeGreaterThan(b.x);
 
     await page.evaluate(() => GymUI.navigate("profile"));
-    await expect(page.locator("#profWatchMount")).toContainText("الساعة و Health Connect");
+    await expect(page.locator("#profWatchMount")).toContainText("الساعة الذكية");
     expect(consoleErrors).toEqual([]);
     await context.close();
   });

@@ -24,7 +24,7 @@ test("not connected: Connect runs the disclosure then the permission request", a
   await expect(page.locator("#watchSheet [role=dialog]")).toBeVisible();
   expect(await callsOf(page, "requestAuthorization")).toHaveLength(0);
   await page.click("#wtGo");
-  await expect(row).toContainText("Connected. Data stays on this phone.");
+  await expect(row).toContainText(/Connected\. Last updated \d{2}:\d{2}/);
   await expect(row).toContainText("Latest weight from your watch: 78.4 kg");
   await expect(page.locator("#wtProfManage")).toBeVisible();
   await expect(page.locator("#wtProfDisc")).toBeVisible();
@@ -41,27 +41,52 @@ test("connected: Manage opens Health Connect; a failure toasts", async ({ browse
   await context.close();
 });
 
-test("Disconnect stops reading, clears the cache, explains full revoke", async ({ browser }) => {
+test("Disconnect asks first; Cancel keeps everything, confirming stops reading and clears the cache", async ({ browser }) => {
   const { context, page } = await profile(browser, { on: true });
   await expect(page.locator("#profWatchMount")).toContainText("78.4 kg");
   const reads = (await callsOf(page, "checkAuthorization")).length;
   await page.click("#wtProfDisc");
+  const sheet = page.locator("#watchSheet [role=dialog]");
+  await expect(sheet).toContainText("Disconnect your watch?");
+  await expect(sheet).toContainText("delete the watch values saved on this phone");
+  await expect(sheet).toContainText("open Health Connect");
+  await page.click("#wtLater");                                   // Cancel
+  await expect(page.locator("#watchSheet")).toHaveCount(0);
+  expect(await lsGet(page, "etqwatch_on")).toBe("1");
+  expect(await lsGet(page, "etqwatch_cache")).not.toBeNull();
+
+  await page.click("#wtProfDisc");
+  await page.click("#wtGo");                                      // Disconnect
+  await expect(page.locator("#gymToast")).toContainText("Watch disconnected");
   expect(await lsGet(page, "etqwatch_on")).toBeNull();
   expect(await lsGet(page, "etqwatch_cache")).toBeNull();
   expect(await lsGet(page, "etqwatch_ask")).toBe("no");
   const row = page.locator("#profWatchMount .wt-prof");
-  await expect(row).toContainText("Disconnected");
-  await expect(row).toContainText("open Health Connect");
+  await expect(row).toContainText("Not connected");
   await expect(page.locator("#wtProfConnect")).toBeVisible();
   await expect(row).not.toContainText("78.4");
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  expect((await callsOf(page, "checkAuthorization")).length).toBe(reads);
+  expect((await callsOf(page, "checkAuthorization")).length).toBe(reads);   // no more reading
   await context.close();
+});
+
+test("Profile Connect always goes through the disclosure, even after an earlier Yes or No", async ({ browser }) => {
+  for (const ask of ["yes", "no", "later:1"]) {
+    const { context, page } = await profile(browser);
+    await page.evaluate((a) => { localStorage.setItem("etqwatch_ask", a); }, ask);
+    await page.evaluate(() => window.GymWatch.init());
+    await page.click("#wtProfConnect");
+    await expect(page.locator("#watchSheet [role=dialog]")).toContainText("Show your watch data in Etqadem");
+    expect(await callsOf(page, "requestAuthorization")).toHaveLength(0);
+    await page.click("#wtLater");
+    expect(await callsOf(page, "requestAuthorization")).toHaveLength(0);
+    await context.close();
+  }
 });
 
 test("permission revoked in Health Connect: the row says so", async ({ browser }) => {
   const { context, page } = await profile(browser, { on: true, health: { authorized: [] } });
-  await expect(page.locator("#profWatchMount")).toContainText("permission is off");
+  await expect(page.locator("#profWatchMount")).toContainText("Access was removed in Health Connect");
   await context.close();
 });
 

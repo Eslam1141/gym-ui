@@ -56,7 +56,7 @@ test("a rejecting plugin never throws out of the page", async ({ browser }) => {
   const { context, page, consoleErrors } = await openApp(browser, { signedIn: false });
   await page.evaluate(() => { localStorage.setItem("etqwatch_on", "1"); });
   await stubHealth(page, { health: { rejectReads: true } });
-  await expect(page.locator("#watchMount .wt-note")).toContainText("Couldn't read Health Connect");
+  await expect(page.locator("#watchMount .wt-note")).toContainText("Couldn't read your watch data");
   expect(consoleErrors).toEqual([]);
   await context.close();
 });
