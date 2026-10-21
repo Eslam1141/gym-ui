@@ -196,7 +196,7 @@
   }
 
   function prefersReducedMotion() {
-    try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+    try { return (window.GymMotion && GymMotion.reduced()) || !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { return false; }
   }
 
   // Client-side typewriter for assistant replies (the backend returns the

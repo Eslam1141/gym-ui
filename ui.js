@@ -172,8 +172,8 @@
     };
     var inSwap = false;
 
-    var reduce = window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var reduce = (window.GymMotion && GymMotion.reduced()) ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (!opts.instant && !reduce && document.startViewTransition) {
       document.startViewTransition(swap);
     } else if (!opts.instant && !reduce) {

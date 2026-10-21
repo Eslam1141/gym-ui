@@ -22,6 +22,10 @@
  *  - System bar icons: Capacitor core SystemBars.setStyle follows the APP theme
  *    (data-theme), not the phone's: dark app = style DARK (light icons), light
  *    app = style LIGHT (dark icons). Re-applied whenever data-theme changes.
+ *  - Remove animations: html[data-reduce-motion="1"] mirrors Android's animator /
+ *    transition animation scale = 0 (WebView does not set prefers-reduced-motion
+ *    for it). Set here from the EtqMotion JS interface and kept current by
+ *    MainActivity (page load, resume).
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -212,7 +216,21 @@
     } catch (e) {}
   }
 
-  window.GymNativeShell = { init: init, handleBack: handleBack, exitApp: exitApp };
+  // ---- "Remove animations" (see header): the Android shell mirrors the phone's
+  // animation scale 0 into html[data-reduce-motion="1"] (motion.js / motion.css
+  // key off it). Read synchronously here so the first paint is already still;
+  // MainActivity re-sets or clears it on every page load and on resume. ----
+  function syncReduceMotion() {
+    try {
+      var m = window.EtqMotion;
+      if (!m || typeof m.reduced !== "function") return;
+      if (m.reduced()) document.documentElement.setAttribute("data-reduce-motion", "1");
+      else document.documentElement.removeAttribute("data-reduce-motion");
+    } catch (e) {}
+  }
+  syncReduceMotion();
+
+  window.GymNativeShell = { init: init, syncReduceMotion: syncReduceMotion, handleBack: handleBack, exitApp: exitApp };
   installSessionStore();
   init();
 })();

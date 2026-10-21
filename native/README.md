@@ -102,3 +102,16 @@ Health Connect built in; Android 9-13 needs the Play app. minSdk is 26 because t
 Emulator test (API 34+ Google Play image): install the debug APK, forward the WebView debug port
 (`adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>`) and drive `Capacitor.Plugins.Health`
 over the DevTools protocol. In a debug build, call `requestAuthorization({write:[...]})` then `saveSample()` to seed.
+
+## Remove animations (reduced motion)
+
+Android's "Remove animations" (animator / transition animation scale = 0) does not set
+`prefers-reduced-motion` in the WebView. `MainActivity` reads `Settings.Global.ANIMATOR_DURATION_SCALE`
+and `TRANSITION_ANIMATION_SCALE`; if either is 0 it sets `html[data-reduce-motion="1"]` (otherwise clears
+it). It does so synchronously through the `EtqMotion` JS interface (read by `native-shell.js` at parse time,
+so the first paint is already still) and again by `evaluateJavascript` on every page load / first paint and on
+resume (the setting can change while the app is in the background). Web side: `GymMotion.reduced()` honours
+the attribute, and `motion.css` ends with a generated mirror of every `prefers-reduced-motion: reduce` rule plus
+a rule that stops animations and transitions under the attribute. After editing any reduce block run
+`node tools/mirror-reduced-motion.mjs` (a Playwright test checks it with `--check`). Test on the emulator:
+`adb shell settings put global animator_duration_scale 0`, relaunch, then check the attribute over CDP.

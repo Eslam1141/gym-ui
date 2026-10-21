@@ -141,7 +141,7 @@
     emojiEl.textContent = "";
     var pic = document.createElement("picture");
     var src = document.createElement("source");
-    src.media = "(prefers-reduced-motion: reduce)";
+    src.media = document.documentElement.getAttribute("data-reduce-motion") === "1" ? "all" : "(prefers-reduced-motion: reduce)";
     src.srcset = "icons/emoji/" + name + "-static.webp";
     var img = document.createElement("img");
     img.alt = "";
