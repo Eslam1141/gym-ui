@@ -178,14 +178,67 @@ test.describe("choosing a split", () => {
     await context.close();
   });
 
-  test("the best-fit chip for the tools is marked", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, ls: { gym_split: { days: 3, where: "home", tools: [] } } });
-    await goMore(page);
-    const best = await page.evaluate(() => [4, 5, 3, 6].map((d) => [d, GymSplits.buildPlan({ days: d, where: "home", sex: "male", tools: [] }).gaps.length]).sort((a, b) => a[1] - b[1])[0][0]);
-    await expect(page.locator("#splitPanel .sp-chip.rec")).toHaveCount(1);
-    await expect(chip(page, best)).toHaveClass(/rec/);
-    await expect(chip(page, best)).toHaveAttribute("aria-label", /best fit/);
-    await expect(page.locator("#splitPanel .sp-note").first()).toContainText(String(best));
+  test("best fit shows only when another day count leaves strictly fewer tool gaps", async ({ browser }) => {
+    for (const days of [3, 4, 5, 6]) {
+      const { context, page } = await openApp(browser, { signedIn: true, ls: { gym_split: { days, where: "home", tools: ["dumbbell", "bench"] } } });
+      await goMore(page);
+      const want = await page.evaluate((cur) => {
+        const n = (d) => GymSplits.buildPlan({ days: d, where: "home", sex: "male", tools: ["dumbbell", "bench"] }).gaps.filter((g) => g.kind === "region").length;
+        let best = 0, bn = n(cur);
+        [4, 5, 3, 6].forEach((d) => { if (d !== cur && n(d) < bn) { best = d; bn = n(d); } });
+        return best;
+      }, days);
+      await expect(page.locator("#splitPanel .sp-chip.rec")).toHaveCount(want ? 1 : 0);
+      await expect(page.locator("#splitPanel .sp-note")).toHaveCount(want ? 1 : 0);
+      if (want) {
+        await expect(chip(page, want)).toHaveClass(/rec/);
+        await expect(chip(page, want)).toHaveAttribute("aria-label", /best fit/);
+      }
+      await context.close();
+    }
+  });
+
+  test("the summary lists the fixed training weekdays, localized", async ({ browser }) => {
+    for (const [lang, re] of [["en", /Training days: Mon · Wed · Fri/], ["ar", /أيام التمرين: .+ · .+ · .+/]]) {
+      const { context, page } = await openApp(browser, { signedIn: true, lang, ls: { gym_split: { days: 3, where: "gym", tools: [] } } });
+      await goMore(page);
+      await expect(page.locator("#splitPanel .sp-wk")).toHaveText(re);
+      await page.locator('#splitPanel [data-sp-days="6"]').click();
+      const n = (await page.locator("#splitPanel .sp-wk").textContent()).split("·").length;
+      expect(n).toBe(6);
+      await context.close();
+    }
+  });
+
+  test("the selected Gym/Home button is visibly filled", async ({ browser }) => {
+    for (const theme of ["dark", "light"]) {
+      const { context, page } = await openApp(browser, { signedIn: true, theme, ls: { gym_split: { days: 4, where: "home", tools: [] } } });
+      await goMore(page);
+      const bg = (w) => page.locator('#splitPanel [data-sp-where="' + w + '"]').evaluate((e) => getComputedStyle(e).backgroundColor);
+      const on = await bg("home"), off = await bg("gym");
+      expect(on).not.toBe(off);
+      expect(off).toBe("rgba(0, 0, 0, 0)");
+      await context.close();
+    }
+  });
+
+  test("splits.js blocked: the app still renders the Classic plan", async ({ browser }) => {
+    const context = await browser.newContext({ ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}), serviceWorkers: "block", viewport: { width: 390, height: 844 } });
+    await context.route("**/splits.js", (r) => r.abort());
+    await context.addInitScript(() => {
+      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v1");
+      localStorage.setItem("gym_plan", "male"); localStorage.setItem("gym_style", "gym");
+      localStorage.setItem("gym_split", JSON.stringify({ days: 4, where: "home", tools: [] }));
+      sessionStorage.setItem("gymauth_session", JSON.stringify({ token: "tok", exp: Math.floor(Date.now() / 1000) + 3600, source: "local", profile: { name: "T", email: "t@example.com" } }));
+    });
+    const errors = [];
+    const page = await context.newPage();
+    page.on("pageerror", (e) => errors.push(String(e)));
+    await page.goto("/index.html");
+    await expect(page.locator("#exList .ex-card").first()).toBeVisible({ timeout: 15000 });
+    expect(await page.evaluate(() => typeof window.GymSplits)).toBe("undefined");
+    expect(await dayIds(page)).toEqual(["m_upper", "m_lower", "m_backbi", "m_chesttri"]);
+    expect(errors).toEqual([]);
     await context.close();
   });
 

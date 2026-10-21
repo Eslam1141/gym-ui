@@ -558,6 +558,7 @@ const T = {
   splitDaysN:["{n} days","{n} أيام"],
   splitBest:["Best fit for your setup: {n} days.","الأنسب لتجهيزاتك: {n} أيام."],
   splitBestMark:["best fit","الأنسب"],
+  splitWeekdays:["Training days: {d}","أيام التمرين: {d}"],
   splitWhere:["Where you train","مكان التمرين"],
   splitGym:["Gym","جيم"], splitHome:["Home","المنزل"],
   splitTools:["What you have at home","ما لديك في المنزل"],
@@ -2427,15 +2428,24 @@ function saveSplit(patch){
   splitChoice = Object.assign({}, splitChoice, patch);
   saveJSON("gym_split", { days: splitChoice.days, where: splitChoice.where, tools: splitChoice.tools });
 }
-// The split with the fewest gaps for this setup (ties go to 4 days, then 5, 3, 6).
+// A different day count that leaves strictly fewer tool-caused gaps ("region" gaps) than the current
+// choice, or 0. Ties go to 4 days, then 5, 3, 6. Frequency gaps are ignored: they always favour 6.
 function bestSplitDays(){
+  if(!window.GymSplits) return 0;
   const sex = activePlan === "female" ? "female" : "male";
-  let best = 0, bestN = Infinity;
+  const gaps = d=> GymSplits.buildPlan({ days: d, where: splitChoice.where, sex, tools: splitChoice.tools }).gaps.filter(g=>g.kind === "region").length;
+  let best = 0, bestN = gaps(splitChoice.days);
   [4, 5, 3, 6].forEach(d=>{
-    const n = GymSplits.buildPlan({ days: d, where: splitChoice.where, sex, tools: splitChoice.tools }).gaps.length;
+    if(d === splitChoice.days) return;
+    const n = gaps(d);
     if(n < bestN){ best = d; bestN = n; }
   });
   return best;
+}
+// "Mon · Wed · Fri" for a split's fixed training weekdays (buildPlan's `week`, Monday first).
+function weekdayList(plan){
+  const f = new Intl.DateTimeFormat(activeLang === "ar" ? "ar" : "en", { weekday:"short", timeZone:"UTC" });
+  return plan.week.map((id, i)=> id ? f.format(new Date(Date.UTC(2024, 0, 1 + i))) : null).filter(Boolean).join(" · ");
 }
 // "Tick X to cover Y" lines for the tools that would close this plan's gaps.
 function gapHints(plan){
@@ -2458,7 +2468,7 @@ function renderSplitPanel(){
   if(!host || !window.GymSplits) return;
   const esc = GymUI.esc, c = splitChoice;
   const focusKey = document.activeElement && host.contains(document.activeElement) ? document.activeElement.dataset.spKey : null;
-  const best = c.days ? bestSplitDays() : 0;
+  const best = c.days ? bestSplitDays() : 0; // 0 = none better than the current choice
   const chip = (d)=>{
     const on = c.days === d, rec = d && d === best;
     const label = d ? t("splitDaysN").replace("{n}", d) : t("splitClassic");
@@ -2470,7 +2480,7 @@ function renderSplitPanel(){
     html += `<p class="sp-note">${t("splitClassicNote")}</p>`;
   } else {
     const plan = splitPlan();
-    html += `<p class="sp-note">${t("splitBest").replace("{n}", "<bdi>" + best + "</bdi>")}</p>
+    html += (best ? `<p class="sp-note">${t("splitBest").replace("{n}", "<bdi>" + best + "</bdi>")}</p>` : "") + `
       <div class="sp-sub" id="spWhereLbl">${t("splitWhere")}</div>
       <div class="plan-toggle" role="radiogroup" aria-labelledby="spWhereLbl">
         ${["gym", "home"].map(w=>`<button type="button" role="radio" aria-checked="${c.where === w}" class="${c.where === w ? "on" : ""}" data-sp-where="${w}" data-sp-key="w${w}">${t(w === "gym" ? "splitGym" : "splitHome")}</button>`).join("")}
@@ -2486,7 +2496,7 @@ function renderSplitPanel(){
     }
     const hints = gapHints(plan);
     html += `<div class="sp-hints" aria-live="polite">${hints.map(h=>`<p class="sp-hint">${toolIcon(h.tool)}<span>${esc(h.text)}</span></p>`).join("")}</div>
-      <div class="sp-sum"><div class="sp-sub">${t("splitSumTitle")}</div><p>${t("splitSum" + c.days)}</p></div>`;
+      <div class="sp-sum"><div class="sp-sub">${t("splitSumTitle")}</div><p>${t("splitSum" + c.days)}</p><p class="sp-wk">${t("splitWeekdays").replace("{d}", "<bdi>" + esc(weekdayList(plan)) + "</bdi>")}</p></div>`;
   }
   host.innerHTML = html;
   if(focusKey){ const f = host.querySelector(`[data-sp-key="${focusKey}"]`); if(f) f.focus(); }
@@ -2507,7 +2517,7 @@ function applySplitChoice(c){
   applyState(false);
   return splitPlan();
 }
-window.GymSplits.applyChoice = applySplitChoice;
+if(window.GymSplits) window.GymSplits.applyChoice = applySplitChoice; // splits.js missing (cache/network): Classic keeps working
 (function wireSplitPanel(){
   const host = document.getElementById("splitPanel");
   if(!host) return;

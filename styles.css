@@ -256,6 +256,8 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 .sp-sum{ margin-top:14px; padding:12px 14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); }
 .sp-sum .sp-sub{ margin:0 0 4px; }
 .sp-sum p{ margin:0; font-size:var(--text-sm); color:var(--paper-dim); line-height:1.5; }
+#splitPanel .plan-toggle button.on, #splitPanel .plan-toggle button[aria-checked="true"]{ background:var(--rust); border-color:var(--rust); color:var(--on-primary); }
+.sp-sum .sp-wk{ margin-top:6px; color:var(--paper); }
 .sp-chip:focus-visible, .sp-tool:focus-visible, #splitPanel .plan-toggle button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 .ex-tools{ display:flex; flex-wrap:wrap; gap:4px 12px; margin:-4px 0 10px; margin-inline-start:38px; color:var(--paper-dim); font-size:var(--text-xs); }
 .ex-tool{ display:inline-flex; align-items:center; gap:5px; }
