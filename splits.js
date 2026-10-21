@@ -98,6 +98,10 @@
     fla_deadbug: L("Dead Bug (core)", "XcYtWYMz39w", "core_lower", null, "easy", ["none"], "secondary", "8-12/side", 30),
     mcx_flutter: L("Flutter Kicks", "pRZhSdw5Tqg", "core_lower", "quads", "easy", ["none"], "hold", "30s", 30),
     mlb_core: L("Pallof Press (core)", "P1H4IzD9rbQ", "core_obliques", null, "medium", ["cable"], "secondary", "8-12/side", 45),
+    nb_towelcurl: L("Towel Door Curl", "", "biceps_short", "biceps_long", "easy", ["none"], "isolation", "12-15", 45),
+    nb_diamond: L("Diamond Push-ups", "", "triceps_lateral", null, "medium", ["none"], "secondary", "8-12", 60),
+    nb_hinge1: L("Single-Leg Hip Hinge", "", "hamstrings", null, "medium", ["none"], "secondary", "8-12/leg", 45),
+    nb_slidecurl: L("Towel Sliding Hamstring Curl", "", "hamstrings", null, "medium", ["none"], "secondary", "8-12", 60),
     mcx_bear: L("Bear Crawl", "-9L3rTrYo4Q", "core_obliques", "shoulder_front", "medium", ["none"], "hold", "30s", 45)
   };
 
@@ -112,20 +116,30 @@
     shoulder_front: { r: ["mua_ohp", "mub_arnold", "mcp_pike"], fb: [] },
     shoulder_side: { r: ["mua_lateral"], fb: ["shoulder_rear", "shoulder_front"] },
     shoulder_rear: { r: ["mua_facepull", "mub_pullapart"], fb: ["shoulder_side", "shoulder_front"] },
-    biceps_long: { r: ["bba_inclcurl", "mub_hammer"], fb: ["biceps_short"] },
-    biceps_short: { r: ["mua_curl", "fua_arms"], fb: ["biceps_long"] },
-    triceps_long: { r: ["cta_ohext", "fua_arms"], fb: ["triceps_lateral"] },
-    triceps_lateral: { r: ["mua_pushdown", "mub_dips"], fb: ["triceps_long"] },
+    biceps_long: { r: ["bba_inclcurl", "mub_hammer"], fb: ["biceps_short", "biceps_bw"] },
+    biceps_short: { r: ["mua_curl", "fua_arms"], fb: ["biceps_long", "biceps_bw"] },
+    biceps_bw: { r: ["nb_towelcurl"], fb: [] },
+    // the biceps + triceps superset; with no dumbbell the builder splits the slot into biceps_any + triceps_any
+    arms: { r: ["fua_arms"], fb: [] },
+    biceps_any: { r: [], fb: ["biceps_short", "biceps_long", "biceps_bw"] },
+    triceps_any: { r: [], fb: ["triceps_long", "triceps_lateral", "triceps_bw"] },
+    triceps_long: { r: ["cta_ohext", "fua_arms"], fb: ["triceps_lateral", "triceps_bw"] },
+    triceps_lateral: { r: ["mua_pushdown", "mub_dips"], fb: ["triceps_bw", "triceps_long"] },
+    triceps_bw: { r: ["nb_diamond"], fb: [] },
     quads_squat: { r: ["mla_squat", "mlb_hack", "mla_legpress", "fla_goblet", "flb_sumo", "mcl_squat"], f: ["fla_goblet", "flb_sumo", "mla_legpress", "mlb_hack", "mla_squat", "mcl_squat"], fb: ["quads_uni"] },
     quads_uni: { r: ["bbb_bss", "fla_lunge", "mcl_lunge"], fb: ["quads_squat"] },
     quads_iso: { r: ["mlb_legext"], fb: ["quads_uni", "quads_squat"] },
-    ham_hinge: { r: ["mla_rdl", "fla_rdl", "mlb_sldl"], f: ["fla_rdl", "mlb_sldl", "mla_rdl"], fb: ["ham_curl"] },
-    ham_curl: { r: ["mla_legcurl", "mlb_seatcurl"], fb: ["ham_hinge"] },
+    ham_hinge: { r: ["mla_rdl", "fla_rdl", "mlb_sldl"], f: ["fla_rdl", "mlb_sldl", "mla_rdl"], fb: ["ham_curl", "ham_hinge_bw"] },
+    ham_curl: { r: ["mla_legcurl", "mlb_seatcurl"], fb: ["ham_hinge", "ham_curl_bw"] },
+    ham_hinge_bw: { r: ["nb_hinge1"], fb: [] },
+    ham_curl_bw: { r: ["nb_slidecurl"], fb: [] },
     glute_main: { r: ["mla_bridge", "mcl_bridge"], fb: ["glute_iso"] },
+    glute_dual: { r: ["flb_sumo"], fb: ["glute_main", "glute_iso"] },
     glute_iso: { r: ["mlb_kickback", "mla_bridge", "mcl_bridge"], fb: ["glute_main"] },
     calf_stand: { r: ["mla_calf"], fb: ["calf_seat"] },
     calf_seat: { r: ["mlb_calf", "mla_calf"], fb: [] },
     core_upper: { r: ["mcp_plank", "mcp_hollow"], fb: ["core_lower"] },
+    core_hollow: { r: ["mcp_hollow"], fb: ["core_upper", "core_lower"] },
     core_lower: { r: ["mla_core", "flb_legraise", "fla_deadbug", "mcp_hollow", "mcx_flutter"], fb: ["core_upper"] },
     core_obliques: { r: ["mlb_core", "mcx_bear"], fb: ["core_lower", "core_upper"] }
   };
@@ -135,7 +149,7 @@
     shoulder_front: "shoulder_front", shoulder_side: "shoulder_side", shoulder_rear: "shoulder_rear",
     biceps_long: "biceps_long", biceps_short: "biceps_short", triceps_long: "triceps_long", triceps_lateral: "triceps_lateral",
     quads_squat: "quads", quads_uni: "quads", quads_iso: "quads", ham_hinge: "hamstrings", ham_curl: "hamstrings",
-    glute_main: "glutes", glute_iso: "glutes", calf_stand: "calves", calf_seat: "calves",
+    glute_main: "glutes", glute_dual: "glutes", glute_iso: "glutes", arms: "biceps_short", biceps_any: "biceps_short", triceps_any: "triceps_lateral", biceps_bw: "biceps_short", triceps_bw: "triceps_lateral", ham_hinge_bw: "hamstrings", ham_curl_bw: "hamstrings", core_hollow: "core_lower", calf_stand: "calves", calf_seat: "calves",
     core_upper: "core_upper", core_lower: "core_lower", core_obliques: "core_obliques"
   };
 
@@ -150,11 +164,12 @@
     shoulder_rear: [F("Prone Y-T Raise", ["none"]), F("Dumbbell Rear Delt Fly", ["dumbbell"])],
     biceps_long: [F("Band Curl", ["band"])],
     biceps_short: [F("Chin-ups", ["pullup_bar"]), F("Band Curl", ["band"])],
+    biceps_any: [F("Band Curl", ["band"])],
+    arms: [F("Band Curl", ["band"]), F("Dumbbell Overhead Triceps Extension", ["dumbbell"])],
     triceps_long: [F("Bodyweight Triceps Extension", ["table"]), F("Dumbbell Overhead Triceps Extension", ["dumbbell"]), F("Band Overhead Triceps Extension", ["band"])],
-    triceps_lateral: [F("Diamond Push-ups", ["none"]), F("Band Triceps Pushdown", ["band"])],
+    triceps_lateral: [F("Band Triceps Pushdown", ["band"])],
     quads_iso: [F("Sissy Squat", ["none"])],
-    ham_hinge: [F("Single-Leg Romanian Deadlift (bodyweight)", ["none"]), F("Kettlebell Romanian Deadlift", ["kettlebell"])],
-    ham_curl: [F("Sliding Leg Curl", ["none"])],
+    ham_hinge: [F("Kettlebell Romanian Deadlift", ["kettlebell"])],
     calf_seat: [F("Bent-Knee Calf Raise (soleus)", ["none"])],
     core_obliques: [F("Side Plank", ["none"]), F("Band Pallof Press", ["band"])]
   };
@@ -162,7 +177,7 @@
     chest_lower: [F("Hands-Elevated Push-ups", ["none"]), F("Chest Dips", ["machine"])]
   };
   // regions whose parts are named differently (hamstrings = hinge + curl, quads = squat/lunge/extension)
-  REGION_FILLS.hamstrings = FILLS.ham_hinge.concat(FILLS.ham_curl);
+  REGION_FILLS.hamstrings = FILLS.ham_hinge;
   REGION_FILLS.quads = FILLS.quads_iso;
   REGION_FILLS.calves = FILLS.calf_seat;
 
@@ -170,60 +185,62 @@
   // A slot is "part:sets". The builder fills it with the best allowed move of that part,
   // rotating to the next-best move the plan hasn't used yet, so A/B days use different angles.
   // Women's versions (`f`) tweak the men's day: `sets` overrides, `add` slots, `drop` parts.
-  var UPPER = ["chest_mid:3", "back_lats:3", "shoulder_front:3", "back_mid:2", "chest_upper:2", "shoulder_side:2", "shoulder_rear:2", "biceps_long:3", "triceps_long:3", "biceps_short:2", "triceps_lateral:2"];
-  var UPPER_F = { sets: { biceps_long: 2, triceps_long: 2 } };
-  var LOWER_A = ["quads_squat:3", "ham_hinge:3", "glute_main:4", "quads_iso:2", "ham_curl:2", "calf_stand:4", "back_lower:2", "core_lower:2", "core_upper:2", "core_obliques:2"];
-  var LOWER_B = ["quads_uni:3", "ham_hinge:3", "glute_iso:4", "quads_squat:2", "ham_curl:3", "calf_seat:4", "back_lower:2", "core_lower:2", "core_upper:2", "core_obliques:2"];
-  var LOWER_A_F = { sets: { quads_squat: 4 }, add: ["glute_iso:3"] };
-  var LOWER_B_F = { sets: { quads_uni: 4 }, add: ["glute_main:3"] };
-  var PUSH = ["chest_mid:3", "shoulder_front:3", "chest_upper:3", "shoulder_side:3", "triceps_long:3", "triceps_lateral:2"];
-  var PUSH_F = { sets: { triceps_long: 2 } };
-  var PULL = ["back_lats:3", "back_mid:3", "shoulder_rear:2", "biceps_long:3", "biceps_short:2", "back_lower:2"];
-  var PULL_F = { sets: { biceps_long: 2 } };
-  var LEGS_A = ["quads_squat:3", "ham_hinge:3", "glute_main:4", "quads_iso:2", "ham_curl:2", "calf_stand:4", "core_lower:2", "core_upper:2", "core_obliques:2"];
-  var LEGS_B = ["quads_uni:3", "ham_hinge:3", "glute_iso:4", "quads_squat:2", "ham_curl:3", "calf_seat:4", "core_lower:2", "core_upper:2", "core_obliques:2"];
-
+  // Budget (beginner volume): 8 exercises max per day on 3-day plans, 7 on 4/5/6-day plans;
+  // every muscle group 8-14 working sets a week (hard cap 16). "arms" is one superset move that
+  // trains biceps and triceps together; "core_hollow" trains upper and lower core in one move.
+  var LOWER_A = ["quads_squat:4", "ham_hinge:3", "glute_main:4", "ham_curl:2", "calf_stand:4", "core_hollow:3", "core_obliques:2"];
+  var LOWER_B = ["quads_uni:4", "ham_hinge:3", "glute_iso:4", "ham_curl:2", "calf_seat:4", "core_hollow:3", "core_obliques:2"];
+  var LOWER_A_F = { sets: { quads_squat: 5, glute_main: 5, ham_curl: 3 } };
+  var LOWER_B_F = { sets: { quads_uni: 5, glute_iso: 5, ham_curl: 3 } };
   var UPPER_AR = "صدر، ظهر، أكتاف، ذراعين";
   var LOWER_AR = "أمامية الفخذ، خلفية الفخذ، ألوية، سمانة، بطن";
+  var PUSH_AR = "صدر، أكتاف، ترايسبس";
+  var PULL_AR = "ظهر، أكتاف خلفية، بايسبس";
+  var UPPER_EN = "Chest, Back, Shoulders, Arms", LOWER_EN = "Quads, Hamstrings, Glutes, Calves, Abs";
+  var PUSH_EN = "Chest, Shoulders, Triceps", PULL_EN = "Back, Rear Delts, Biceps";
+  var PUSH = ["chest_mid:3", "chest_upper:2", "shoulder_front:2", "shoulder_side:2", "triceps_long:2", "triceps_lateral:2"];
+  var PULL_A = ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:2", "biceps_short:2", "back_lower:2"];
+  var PULL_B = ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:2", "biceps_short:2"];
+  function D(key, label, labelAr, en, ar, m, f) { return { key: key, label: label, labelAr: labelAr, muscles: en, musclesAr: ar, m: m, f: f }; }
   var TEMPLATES = {
     3: {
       days: [
-        { key: "fullA", label: "Full Body A", labelAr: "كامل الجسم أ", muscles: "Full body", musclesAr: "الجسم كامل",
-          m: ["chest_mid:3", "back_lats:3", "quads_squat:3", "ham_hinge:3", "shoulder_front:3", "chest_upper:2", "glute_main:4", "back_lower:2", "shoulder_rear:2", "biceps_long:2", "triceps_long:2", "calf_stand:4", "core_upper:2"],
-          f: { sets: { chest_mid: 2, back_lats: 3 } } },
-        { key: "fullB", label: "Full Body B", labelAr: "كامل الجسم ب", muscles: "Full body", musclesAr: "الجسم كامل",
-          m: ["chest_mid:3", "back_lats:3", "back_mid:3", "quads_uni:3", "ham_curl:3", "glute_iso:4", "shoulder_side:3", "shoulder_rear:2", "biceps_short:2", "triceps_long:2", "triceps_lateral:2", "core_lower:2", "core_obliques:2"],
-          f: { sets: { chest_mid: 2 } } },
-        { key: "fullC", label: "Full Body C", labelAr: "كامل الجسم ج", muscles: "Full body", musclesAr: "الجسم كامل",
-          m: ["back_mid:2", "quads_iso:3", "ham_hinge:3", "shoulder_front:2", "chest_upper:2", "shoulder_side:3", "back_lower:2", "biceps_long:2", "biceps_short:2", "triceps_lateral:2", "calf_seat:4", "core_upper:2", "core_lower:2", "core_obliques:2"],
-          f: { add: ["glute_main:4"] } }
+        D("fullA", "Full Body A", "كامل الجسم أ", "Full body", "الجسم كامل",
+          ["chest_mid:3", "back_lats:2", "quads_squat:4", "ham_hinge:4", "shoulder_side:4", "chest_upper:3", "calf_stand:4", "core_hollow:4"], { sets: { chest_mid: 2 } }),
+        D("fullB", "Full Body B", "كامل الجسم ب", "Full body", "الجسم كامل",
+          ["chest_mid:3", "back_mid:2", "ham_hinge:4", "glute_dual:4", "arms:4", "calf_seat:4", "core_hollow:4"], { sets: { chest_mid: 2, glute_dual: 5 } }),
+        D("fullC", "Full Body C", "كامل الجسم ج", "Full body", "الجسم كامل",
+          ["back_lats:2", "back_mid:2", "quads_uni:4", "glute_iso:4", "shoulder_front:3", "arms:4", "shoulder_rear:2", "chest_upper:3"], { sets: { glute_iso: 5 } })
       ]
     },
     4: {
       days: [
-        { key: "upperA", label: "Upper A", labelAr: "علوي أ", muscles: "Chest, Back, Shoulders, Arms", musclesAr: UPPER_AR, m: UPPER, f: UPPER_F },
-        { key: "lowerA", label: "Lower A", labelAr: "سفلي أ", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LOWER_A, f: LOWER_A_F },
-        { key: "upperB", label: "Upper B", labelAr: "علوي ب", muscles: "Chest, Back, Shoulders, Arms", musclesAr: UPPER_AR, m: UPPER, f: UPPER_F },
-        { key: "lowerB", label: "Lower B", labelAr: "سفلي ب", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LOWER_B, f: LOWER_B_F }
+        D("upperA", "Upper A", "علوي أ", UPPER_EN, UPPER_AR,
+          ["chest_mid:3", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:3"]),
+        D("lowerA", "Lower A", "سفلي أ", LOWER_EN, LOWER_AR, LOWER_A, LOWER_A_F),
+        D("upperB", "Upper B", "علوي ب", UPPER_EN, UPPER_AR,
+          ["chest_mid:4", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "shoulder_rear:2"]),
+        D("lowerB", "Lower B", "سفلي ب", LOWER_EN, LOWER_AR, LOWER_B, LOWER_B_F)
       ]
     },
     5: {
       days: [
-        { key: "upper", label: "Upper", labelAr: "علوي", muscles: "Chest, Back, Shoulders, Arms", musclesAr: UPPER_AR, m: UPPER, f: UPPER_F },
-        { key: "lower", label: "Lower", labelAr: "سفلي", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LOWER_A, f: LOWER_A_F },
-        { key: "push", label: "Push", labelAr: "دفع", muscles: "Chest, Shoulders, Triceps", musclesAr: "صدر، أكتاف، ترايسبس", m: PUSH, f: PUSH_F },
-        { key: "pull", label: "Pull", labelAr: "سحب", muscles: "Back, Rear Delts, Biceps", musclesAr: "ظهر، أكتاف خلفية، بايسبس", m: PULL.filter(function (s) { return s.indexOf("back_lower") !== 0; }), f: PULL_F },
-        { key: "legs", label: "Legs", labelAr: "أرجل", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LOWER_B, f: LOWER_B_F }
+        D("upper", "Upper", "علوي", UPPER_EN, UPPER_AR,
+          ["chest_mid:3", "back_lats:2", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:2"]),
+        D("lower", "Lower", "سفلي", LOWER_EN, LOWER_AR, LOWER_A, LOWER_A_F),
+        D("push", "Push", "دفع", PUSH_EN, PUSH_AR, PUSH),
+        D("pull", "Pull", "سحب", PULL_EN, PULL_AR, ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:3", "biceps_short:3", "back_lower:2"]),
+        D("legs", "Legs", "أرجل", LOWER_EN, LOWER_AR, LOWER_B, LOWER_B_F)
       ]
     },
     6: {
       days: [
-        { key: "pushA", label: "Push A", labelAr: "دفع أ", muscles: "Chest, Shoulders, Triceps", musclesAr: "صدر، أكتاف، ترايسبس", m: PUSH, f: PUSH_F },
-        { key: "pullA", label: "Pull A", labelAr: "سحب أ", muscles: "Back, Rear Delts, Biceps", musclesAr: "ظهر، أكتاف خلفية، بايسبس", m: PULL, f: PULL_F },
-        { key: "legsA", label: "Legs A", labelAr: "أرجل أ", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LEGS_A, f: LOWER_A_F },
-        { key: "pushB", label: "Push B", labelAr: "دفع ب", muscles: "Chest, Shoulders, Triceps", musclesAr: "صدر، أكتاف، ترايسبس", m: PUSH, f: PUSH_F },
-        { key: "pullB", label: "Pull B", labelAr: "سحب ب", muscles: "Back, Rear Delts, Biceps", musclesAr: "ظهر، أكتاف خلفية، بايسبس", m: PULL, f: PULL_F },
-        { key: "legsB", label: "Legs B", labelAr: "أرجل ب", muscles: "Quads, Hamstrings, Glutes, Calves, Abs", musclesAr: LOWER_AR, m: LEGS_B, f: LOWER_B_F }
+        D("pushA", "Push A", "دفع أ", PUSH_EN, PUSH_AR, PUSH),
+        D("pullA", "Pull A", "سحب أ", PULL_EN, PULL_AR, PULL_A),
+        D("legsA", "Legs A", "أرجل أ", LOWER_EN, LOWER_AR, LOWER_A, LOWER_A_F),
+        D("pushB", "Push B", "دفع ب", PUSH_EN, PUSH_AR, PUSH),
+        D("pullB", "Pull B", "سحب ب", PULL_EN, PULL_AR, PULL_B),
+        D("legsB", "Legs B", "أرجل ب", LOWER_EN, LOWER_AR, LOWER_B, LOWER_B_F)
       ]
     }
   };
@@ -289,7 +306,7 @@
     }
     function merge(dayEx, id, sets) {
       var ex = dayEx.filter(function (e) { return e.id === id; })[0];
-      ex.sets = Math.min(5, ex.sets + sets);
+      ex.sets = Math.min(ex.id === "fua_arms" ? 3 : 4, ex.sets + sets); // the superset counts for two groups
     }
     function gap(kind, dayKey, partId, usedId) {
       var fill = cheapestFill(partId, have);
@@ -302,7 +319,13 @@
 
     TEMPLATES[days].days.forEach(function (dd) {
       var dayEx = [];
+      var slots = [];
       daySlots(dd, sex).forEach(function (slot) {
+        // no dumbbell for the biceps + triceps superset: train each on its own
+        if (slot.part === "arms" && !allowed("arms").length) slots.push({ part: "biceps_any", sets: slot.sets }, { part: "triceps_any", sets: slot.sets });
+        else slots.push(slot);
+      });
+      slots.forEach(function (slot) {
         var own = allowed(slot.part);
         if (own.length) {
           var id = pickFrom(own, dayEx);
@@ -310,7 +333,7 @@
           // every move of this part is already in the day: fine if one covers the region, else add the sets to it
           var region = PART_REGION[slot.part];
           var cover = dayEx.filter(function (e) { return e.shape === region || e.shape2 === region; })[0];
-          if (!cover) merge(dayEx, own[0], slot.sets);
+          merge(dayEx, cover ? cover.id : own[0], slot.sets);
           return;
         }
         // nothing fits the tools: walk the next-best parts of the same muscle
@@ -337,7 +360,12 @@
       });
     });
 
-    // regions the plan can't hit on two different days with this library/toolset
+    // regions the plan can't hit on two different days. "frequency": the tools reach it but the
+    // per-day exercise cap leaves it on fewer than two days. "region": no move fits the tools.
+    var reachable = {};
+    Object.keys(LIB).forEach(function (id) {
+      if (fits(LIB[id].tools, have)) [LIB[id].shape, LIB[id].shape2].forEach(function (r) { if (r) reachable[r] = 1; });
+    });
     var hit = {};
     out.forEach(function (d) {
       d.exercises.forEach(function (e) {
@@ -347,6 +375,10 @@
     Object.keys(REGIONS).forEach(function (r) {
       var n = Object.keys(hit[r] || {}).length;
       if (n >= 2) return;
+      if (reachable[r]) {
+        gaps.push({ kind: "frequency", day: null, part: null, region: r, group: REGIONS[r], used: null, days: n, needs: null, tick: null });
+        return;
+      }
       var list = REGION_FILLS[r] || FILLS[r] || [];
       var fit = list.filter(function (x) { return fits(x.tools, have); })[0];
       var tick = fit ? null : list.filter(function (x) { return x.tools[0] !== "none"; })[0];

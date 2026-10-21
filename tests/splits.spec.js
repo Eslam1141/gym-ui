@@ -28,13 +28,15 @@ const have = (c) => (c.kit.where === "gym" ? [...HOME, "barbell", "cable", "mach
 // Regions the current library cannot train on two different days, per toolset (all splits and
 // sexes agree). Each one is returned in `gaps`; the owner supplies the missing clips.
 const EXPECTED_REGION_GAPS = {
-  "bodyweight only": ["back_lats", "back_mid", "biceps_long", "biceps_short", "chest_lower", "chest_upper", "hamstrings", "shoulder_rear", "shoulder_side", "triceps_lateral", "triceps_long"],
-  dumbbell: ["back_lats", "chest_lower", "chest_upper", "shoulder_rear", "triceps_lateral"],
-  band: ["back_lats", "back_mid", "biceps_long", "biceps_short", "chest_lower", "chest_upper", "hamstrings", "shoulder_side", "triceps_lateral", "triceps_long"],
+  "bodyweight only": ["back_lats", "back_mid", "chest_lower", "chest_upper", "shoulder_rear", "shoulder_side", "triceps_long"],
+  dumbbell: ["back_lats", "chest_lower", "chest_upper", "shoulder_rear"],
+  band: ["back_lats", "back_mid", "chest_lower", "chest_upper", "shoulder_side", "triceps_long"],
   "dumbbell+band+bench": ["back_lats", "chest_lower"],
   "all home tools": ["chest_lower"],
   gym: ["chest_lower"]
 };
+// New no-equipment moves (2026-10-22). Their video is empty on purpose until the owner supplies one.
+const NO_VIDEO_YET = ["nb_towelcurl", "nb_diamond", "nb_hinge1", "nb_slidecurl"];
 
 function stats(plan) {
   const regionDays = {}, groupSets = {}, groupDay = {};
@@ -74,7 +76,8 @@ test("exercise objects match the shape app.js renders", () => {
   const p = S.buildPlan({ days: 6, where: "gym", sex: "male" });
   p.days.forEach((d) => d.exercises.forEach((e) => {
     expect(Object.keys(e).filter((k) => !["shape2"].includes(k)).sort()).toEqual(["en", "id", "rest", "reps", "sets", "shape", "tier", "tools", "vid"].sort());
-    expect(e.vid, e.id).toBeTruthy();
+    if (!NO_VIDEO_YET.includes(e.id)) expect(e.vid, e.id).toBeTruthy();
+    else expect(e.vid, e.id).toBe("");
     expect(["easy", "medium", "hard"]).toContain(e.tier);
   }));
 });
@@ -83,7 +86,7 @@ for (const c of cases) {
   test(`coverage: ${c.name}`, () => {
     const plan = build(c);
     const { regionDays, groupSets, groupDay } = stats(plan);
-    const gapRegions = new Set(plan.gaps.filter((g) => g.kind === "region").map((g) => g.region));
+    const gapRegions = new Set(plan.gaps.filter((g) => g.kind === "region" || g.kind === "frequency").map((g) => g.region));
     const gapGroups = new Set(plan.gaps.map((g) => g.group));
     // every region on >=2 different days, or recorded in gaps
     REGIONS.forEach((r) => {
@@ -91,14 +94,19 @@ for (const c of cases) {
       if (n >= 2) expect(gapRegions.has(r), `${r} is hit on ${n} days but listed as a gap`).toBe(false);
       else expect(gapRegions.has(r), `${r} hit on ${n} day(s) and not in gaps`).toBe(true);
     });
-    // weekly sets per muscle group 8-20, or the group has a recorded gap
+    // weekly sets per muscle group 8-14 (hard cap 16); a group with no move at all is a recorded gap
     new Set(Object.values(S.REGIONS)).forEach((g) => {
       const n = groupSets[g] || 0;
-      if (n < 8 || n > 20) expect(gapGroups.has(g), `${g} has ${n} sets/week and no gap`).toBe(true);
-      if (n > 20) throw new Error(`${g} has ${n} sets/week (over 20)`);
+      if (n === 0) return expect(gapGroups.has(g), `${g} has no sets and no gap`).toBe(true);
+      expect(n, `${g} sets/week`).toBeGreaterThanOrEqual(8);
+      expect(n, `${g} sets/week (hard cap 16)`).toBeLessThanOrEqual(16);
+      // the only known 15-16: home 6-day shoulders (Bear Crawl also counts as front delt)
+      if (n > 14) expect(g === "Shoulders" && c.days === 6 && c.kit.where === "home", `${g} has ${n} sets/week`).toBe(true);
     });
     // no group over 10 sets in one session
     Object.entries(groupDay).forEach(([g, n]) => expect(n, `${g} in one day`).toBeLessThanOrEqual(10));
+    // exercises per day: 8 on 3-day plans, 7 on 4/5/6-day plans
+    plan.days.forEach((d) => expect(d.exercises.length, d.id).toBeLessThanOrEqual(c.days === 3 ? 8 : 7));
   });
 
   test(`tools and reps: ${c.name}`, () => {
@@ -135,13 +143,35 @@ test("gaps per toolset are exactly the known ones, and every unfilled/substitute
       const p = S.buildPlan({ days, where: kit.where, sex, tools: kit.tools });
       p.gaps.filter((g) => g.kind === "region").forEach((g) => union.add(g.region));
       p.gaps.forEach((g) => {
-        expect(["region", "substituted", "unfilled"]).toContain(g.kind);
+        expect(["region", "frequency", "substituted", "unfilled"]).toContain(g.kind);
         expect(g.region && g.group, JSON.stringify(g)).toBeTruthy();
         // a fix is named (a clip to supply now) or a tool to tick; gym upgrades have neither
-        if (kit.where === "home" || g.kind !== "region") expect(g.needs || g.tick || g.kind === "substituted", JSON.stringify(g)).toBeTruthy();
+        if (g.kind !== "frequency" && (kit.where === "home" || g.kind !== "region")) expect(g.needs || g.tick || g.kind === "substituted", JSON.stringify(g)).toBeTruthy();
       });
     }
     expect([...union].sort(), kit.key).toEqual(EXPECTED_REGION_GAPS[kit.key]);
+  }
+});
+
+// Regions the tools can reach but the per-day exercise cap leaves on fewer than two days
+// ("frequency" gaps), gym toolset, as the union over men and women. 6-day PPL x2 has only back_lower.
+const EXPECTED_GYM_FREQUENCY = {
+  3: ["back_lower", "biceps_long", "core_obliques", "shoulder_front", "shoulder_rear", "shoulder_side", "triceps_lateral"],
+  4: ["back_lower", "biceps_long", "chest_upper", "shoulder_rear", "triceps_lateral"],
+  5: ["back_lower", "biceps_long", "shoulder_rear", "triceps_lateral"],
+  6: ["back_lower"]
+};
+test("frequency gaps (exercise cap) are recorded, never faked", () => {
+  for (const days of S.DAYS) {
+    const union = new Set();
+    for (const sex of ["male", "female"]) {
+      S.buildPlan({ days, where: "gym", sex }).gaps.filter((g) => g.kind === "frequency").forEach((g) => {
+        expect(g.days, JSON.stringify(g)).toBeLessThan(2);
+        expect(g.needs || g.tick, JSON.stringify(g)).toBeFalsy();
+        union.add(g.region);
+      });
+    }
+    expect([...union].sort(), `${days}-day gym`).toEqual(EXPECTED_GYM_FREQUENCY[days]);
   }
 });
 
@@ -151,10 +181,11 @@ test("bodyweight only: a full split, no empty day, gaps listed", () => {
     expect(p.days.length).toBe(days);
     p.days.forEach((d) => expect(d.exercises.length, d.id).toBeGreaterThanOrEqual(2));
     p.days.forEach((d) => d.exercises.forEach((e) => expect(e.tools, e.id).toEqual(["none"])));
-    // no biceps, triceps or hamstring move needs fewer than a tool tick: unfilled, not faked
-    const unfilled = new Set(p.gaps.filter((g) => g.kind === "unfilled").map((g) => g.group));
-    ["Biceps", "Triceps", "Hamstrings"].forEach((g) => expect(unfilled.has(g), g).toBe(true));
-    expect(p.gaps.length).toBeGreaterThan(10);
+    // the no-equipment moves train biceps, triceps and hamstrings; only the triceps long head stays a gap
+    const sets = stats(p).groupSets;
+    ["Biceps", "Triceps", "Hamstrings"].forEach((g) => expect(sets[g] || 0, `${g} is trained`).toBeGreaterThanOrEqual(8));
+    expect(p.gaps.some((g) => g.kind === "region" && g.region === "triceps_long")).toBe(true);
+    expect(p.gaps.length).toBeGreaterThan(5);
     // an empty tools array and a missing one both mean bodyweight
     expect(S.buildPlan({ days, where: "home", sex, tools: [] })).toEqual(p);
     expect(S.buildPlan({ days, where: "home", sex })).toEqual(p);
@@ -163,6 +194,16 @@ test("bodyweight only: a full split, no empty day, gaps listed", () => {
   const more = S.buildPlan({ days: 4, where: "home", sex: "male", tools: ["none", "table", "bench"] });
   const base = S.buildPlan({ days: 4, where: "home", sex: "male", tools: ["none"] });
   expect(more.gaps.length).toBeLessThan(base.gaps.length);
+});
+
+test("new no-equipment moves: in app.js with EN + AR names, no video, tools none", () => {
+  NO_VIDEO_YET.forEach((id) => {
+    const m = S.library[id];
+    expect(m && m.tools, id).toEqual(["none"]);
+    expect(m.vid, id).toBe("");
+    const ar = appSrc.match(new RegExp(`"${m.en}":"([^"]+)"`));
+    expect(ar && /[؀-ۿ]/.test(ar[1]), `${id} has no Arabic name in AR_EX`).toBe(true);
+  });
 });
 
 test("id reuse: one move, one id, across every split and sex", () => {
@@ -201,9 +242,9 @@ test("A and B days use different angles (no chest/back/leg move repeats within a
   const p = S.buildPlan({ days: 4, where: "gym", sex: "male" });
   const ids = (k) => p.days.find((d) => d.id.endsWith(k)).exercises.map((e) => e.id);
   const shared = (a, b) => a.filter((x) => b.includes(x));
-  // the two upper days share only moves with a single option (incline press, lateral raise, barbell curl)
-  expect(shared(ids("upperA"), ids("upperB")).sort()).toEqual(["mua_curl", "mua_lateral", "mub_incline"]);
-  expect(shared(ids("lowerA"), ids("lowerB"))).toEqual(["mcx_superman"]);
+  // the two upper days share only moves with a single option (lateral raise, the biceps/triceps superset)
+  expect(shared(ids("upperA"), ids("upperB")).sort()).toEqual(["fua_arms", "mua_lateral"]);
+  expect(shared(ids("lowerA"), ids("lowerB"))).toEqual(["mcp_hollow"]);
 });
 
 test("classic untouched: DAYS_MALE, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, LEGACY_MALE_DAYS are byte-identical", () => {
