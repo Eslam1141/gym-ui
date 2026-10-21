@@ -11,9 +11,10 @@ USER 101
 
 # Image layout: the landing page (repo landing/) at the html root, the PWA
 # (repo root files) under /app/. See docker/default.conf.
-COPY --chown=101:101 index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css tour.js tour.css motion.js motion.css celebrate.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
+COPY --chown=101:101 index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css celebrate.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js service-worker.js manifest.json config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
 COPY --chown=101:101 icons/ /usr/share/nginx/html/app/icons/
 COPY --chown=101:101 fonts/ /usr/share/nginx/html/app/fonts/
+COPY --chown=101:101 tour.js tour.css /usr/share/nginx/html/app/
 COPY --chown=101:101 landing/ /usr/share/nginx/html/
 COPY --chown=101:101 icons/ /usr/share/nginx/html/icons/
 
@@ -28,8 +29,9 @@ COPY --chown=101:101 icons/ /usr/share/nginx/html/icons/
 # base image, so no extra tooling is needed.
 RUN cd /usr/share/nginx/html/app && \
     HASH=$(cat index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js \
-        auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css tour.js tour.css motion.js motion.css \
+        auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css motion.js motion.css \
         celebrate.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js config.js manifest.json \
+        tour.js tour.css \
         icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \
         icons/icon-maskable-192-etq.png icons/icon-maskable-512-etq.png \
         icons/apple-touch-icon-etq.png icons/favicon-32-etq.png icons/favicon-16-etq.png \
