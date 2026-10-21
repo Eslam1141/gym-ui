@@ -390,6 +390,8 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 }
 .btn-sm.rest{ background:var(--rust-soft); border-color:var(--rust); }
 .btn-sm.video-toggle.on{ background:var(--rust); border-color:var(--rust); }
+/* No demo clip yet: calm, non-interactive stand-in for the Video button */
+.btn-sm.video-soon{ background:transparent; border-style:dashed; color:var(--paper-dim); font-weight:600; cursor:default; }
 .btn-sm svg{ width:13px; height:13px; fill:currentColor; flex:none; }
 
 /* inline video */

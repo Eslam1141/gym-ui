@@ -300,31 +300,31 @@ const EX_ALIASES = {
   "crunch":"Weighted Cable Crunch (core)", "crunches":"Weighted Cable Crunch (core)", "sit up":"Weighted Cable Crunch (core)", "sit ups":"Weighted Cable Crunch (core)",
   "leg raise":"Hanging Leg Raise (core)", "leg raises":"Hanging Leg Raise (core)", "hanging leg raises":"Hanging Leg Raise (core)", "lying leg raise":"Hanging Leg Raise (core)",
   "mountain climber":"Mountain Climbers", "burpee":"Burpees",
-  "chest fly":"Cable Chest Fly", "chest flys":"Cable Chest Fly", "chest flyes":"Cable Chest Fly", "dumbbell fly":"Cable Chest Fly", "pec deck":"Cable Chest Fly"
+  "chest fly":"Cable Chest Fly", "chest flys":"Cable Chest Fly", "chest flyes":"Cable Chest Fly", "dumbbell fly":"Cable Chest Fly", "pec deck":"Cable Chest Fly",
+  "reverse lunge":"Reverse Lunges", "leg presses":"Leg Press", "hanging leg raise":"Hanging Leg Raise (core)", "lying leg raises":"Lying Leg Raise (core)",
+  "dumbbell goblet squat":"Goblet Squat", "seated cable rows":"Seated Cable Row", "squat jump":"Squat Jumps", "bear crawls":"Bear Crawl"
 };
 const EX_VID = (function(){
   const m = {};
   [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.vid) return;
-      m[_normEx(ex.en)] = ex.vid;
-      const ar = AR_EX[ex.en]; if(ar) m[_normEx(ar)] = ex.vid;
+      m[_shapeKey(ex.en)] = ex.vid;
+      const ar = AR_EX[ex.en]; if(ar) m[_shapeKey(ar)] = ex.vid;
     }));
   });
   Object.keys(EX_ALIASES).forEach(alias=>{
-    const vid = m[_normEx(EX_ALIASES[alias])];
-    if(vid) m[_normEx(alias)] = vid;
+    const vid = m[_shapeKey(EX_ALIASES[alias])];
+    if(vid) m[_shapeKey(alias)] = vid;
   });
   return m;
 })();
-// Best-effort match: exact normalised name, else a contains match either way.
+// Exact normalised name (English or Arabic) or an EX_ALIASES alias, the same
+// rules as GymExerciseShape: never a contains-match, so a move never borrows
+// another move's clip. No match = "" (the card shows "Video coming soon").
 window.GymExerciseVideo = function(name){
-  const n = _normEx(name);
-  if(n.length < 4) return "";
-  if(EX_VID[n]) return EX_VID[n];
-  const keys = Object.keys(EX_VID);
-  let hit = keys.find(k => k.length >= 6 && (n.indexOf(k) !== -1 || k.indexOf(n) !== -1));
-  return hit ? EX_VID[hit] : "";
+  const k = _shapeKey(name);
+  return (k && EX_VID[k]) || "";
 };
 // ---- exercise-name -> muscle tags (AI-coach plans, and plans saved before they carried tags) ----
 // Exact normalised name (English or Arabic) or an EX_ALIASES alias, never a
@@ -488,7 +488,7 @@ const T = {
   paused:["Paused","متوقّف مؤقتاً"],
   lastSession:["Last {d} session: {n} min","آخر جلسة {d}: {n} دقيقة"],
   warmupTitle:["Warm-up — do this first","الإحماء — ابدأ به أولاً"],
-  video:["Video","فيديو"], hideVideo:["Hide video","إخفاء الفيديو"],
+  video:["Video","فيديو"], hideVideo:["Hide video","إخفاء الفيديو"], videoSoon:["Video coming soon","الفيديو قريباً"],
   warmup1:["<b>Raise your temperature</b> — 5 min easy cardio (bike, incline walk or rower) until you break a light sweat.","<b>ارفع حرارة جسمك</b> — 5 دقائق كارديو خفيف (دراجة، مشي بميل، أو تجديف) حتى يتصبب عرق خفيف."],
   warmup2:["<b>Loosen the day's joints</b> — 5-8 slow reps each. Upper-body days: band pull-aparts, shoulder dislocates, arm circles, cat-cow. Lower-body days: leg swings front & side, hip circles, 10 bodyweight squats, walking lunges.","<b>حرّك مفاصل اليوم</b> — 5-8 تكرارات بطيئة لكل حركة. أيام الجزء العلوي: شد المطاط، تدوير الكتف والذراعين، القطة-البقرة. أيام الجزء السفلي: أرجحة الساق أماماً وجانباً، تدوير الورك، 10 سكوات بوزن الجسم، طعنات مشي."],
   warmup3:["<b>Ramp up the first lift only</b> — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.","<b>تدرّج في التمرين الأول فقط</b> — بار فارغ ×10، ثم ~50% ×5، ~70% ×3، ~85% ×1. استرِح 60-90 ثانية وأوقف كل مجموعة قبل الإجهاد. (في الكاليسثينكس: مجموعة خفيفة واحدة من الحركة الأولى.)"],
@@ -1218,8 +1218,10 @@ MUSCLE_SHAPES.forEach(s=>{ SHAPE_BY_ID[s.id] = s; });
 function figureSex(){ return !isAnonMode() && activePlan === "female" ? "female" : "male"; }
 // {shape, shape2} for an exercise, or null when it has no known tag (no picture then).
 function exShapes(ex){
-  const known = id => !!(id && SHAPE_BY_ID[id]);
-  if(known(ex.shape)) return { shape: ex.shape, shape2: known(ex.shape2) && ex.shape2 !== ex.shape ? ex.shape2 : "" };
+  const id = v => String(v || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const s1 = id(ex.shape), s2 = id(ex.shape2);
+  const known = v => !!(v && SHAPE_BY_ID[v]);
+  if(known(s1)) return { shape: s1, shape2: known(s2) && s2 !== s1 ? s2 : "" };
   // Plans saved before tags existed: exact/alias name match, else no picture.
   const g = window.GymExerciseShape ? GymExerciseShape(ex.en) : null;
   return g ? { shape: g.shape, shape2: g.shape2 || "" } : null;
@@ -1294,7 +1296,9 @@ function renderExercises(){
     const lastText = esc(last ? t("lastLog").replace("{w}", last.w).replace("{r}", last.r) : t("noLog"));
     const nm = esc(exName(ex));
     const eid = esc(ex.id);
-    const hasVid = !!ex.vid; // coach-generated plans have no demo clip
+    // Plans saved before a clip matched (or whose name now matches an alias) get it here; none = "coming soon".
+    if(!ex.vid){ const v = window.GymExerciseVideo ? GymExerciseVideo(ex.en) : ""; if(v) ex.vid = v; }
+    const hasVid = !!ex.vid;
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
     const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
 
@@ -1346,7 +1350,7 @@ function renderExercises(){
         ${hasVid ? `<button class="btn-sm video-toggle ${isOpen?'on':''}" data-video="${eid}">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           ${isOpen ? t('hideVideo') : t('video')}
-        </button>` : ``}
+        </button>` : `<span class="btn-sm video-soon" role="note" aria-disabled="true" aria-label="${esc(t("videoSoon"))}">${t("videoSoon")}</span>`}
       </div>
       ${hasVid ? `<div class="video-wrap ${isOpen?'open':''}" id="vwrap-${eid}">
         <div class="video-frame" id="vframe-${eid}">
