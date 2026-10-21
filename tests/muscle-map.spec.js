@@ -144,7 +144,7 @@ test("the card: legend, named regions, tap and keyboard", async ({ browser }) =>
   await expect(card.locator(".wm-legend")).toContainText("Trained once");
   await expect(card.locator(".wm-legend")).toContainText("Trained twice");
   const regions = card.locator("[data-region]");
-  expect(await regions.count()).toBe(20);
+  await expect(regions).toHaveCount(20);
   const mid = card.locator('[data-region="chest_mid"]');
   await expect(mid).toHaveAttribute("aria-label", /chest.*trained twice/i);
   await expect(card.locator('[data-region="back_mid"]')).toHaveAttribute("aria-label", /trained once/i);
@@ -163,7 +163,7 @@ test("Arabic: legend and region names are translated, figure order follows RTL",
   await card.locator("summary").click();
   await expect(card.locator(".wm-legend")).toContainText("مرة واحدة");
   expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
-  expect(await card.locator('[data-region="chest_mid"]').getAttribute("aria-label")).toMatch(/[؀-ۿ]/);
+  await expect(card.locator('[data-region="chest_mid"]')).toHaveAttribute("aria-label", /[؀-ۿ]/);
   await context.close();
 });
 
