@@ -68,7 +68,8 @@ async function openApp(browser, opts) {
   const context = await browser.newContext({
     ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}),
     timezoneId: "Africa/Cairo", locale: opts.lang === "ar" ? "ar-EG" : "en-US", serviceWorkers: "block",
-    viewport: opts.viewport || { width: 390, height: 844 }
+    viewport: opts.viewport || { width: 390, height: 844 },
+    ...(opts.contextOptions || {})   // e.g. { hasTouch: true, isMobile: true } for a phone's coarse pointer
   });
   const server = makeServer(opts.server);
   await mockApi(context, server);

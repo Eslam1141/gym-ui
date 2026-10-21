@@ -234,32 +234,13 @@ test.describe("4 - mini timer pulse", () => {
 
 test.describe("5 - ambient background", () => {
   const bg = (page) => page.evaluate(() => document.getAnimations().filter((a) => a.effect.target.closest("#bgfx")).map((a) => a.playState));
-  test("no blur filter, drifting while visible", async ({ browser }) => {
+  test("no blur filter and nothing animating: the background is static (emulator perf check 2026-10-21)", async ({ browser }) => {
     const { context, page } = await open(browser);
     expect(await page.evaluate(() => [...document.querySelectorAll("#bgfx span")].map((s) => getComputedStyle(s).filter))).toEqual(["none", "none", "none"]);
-    expect(await bg(page)).toEqual(["running", "running", "running"]);
-    await context.close();
-  });
-  test("pauses while the tab is hidden and resumes", async ({ browser }) => {
-    const { context, page } = await open(browser);
-    const setHidden = (h) => page.evaluate((v) => {
-      Object.defineProperty(document, "hidden", { configurable: true, get: () => v });
-      document.dispatchEvent(new Event("visibilitychange"));
-    }, h);
-    await setHidden(true);
-    expect(await bg(page)).toEqual(["paused", "paused", "paused"]);
-    await setHidden(false);
-    expect(await bg(page)).toEqual(["running", "running", "running"]);
-    await context.close();
-  });
-  test("pauses while an overlay covers the app", async ({ browser }) => {
-    const { context, page } = await open(browser);
+    expect(await bg(page)).toEqual([]);
     await showVideoModal(page);
     await page.waitForTimeout(100);
-    expect(await bg(page)).toEqual(["paused", "paused", "paused"]);
-    await page.click("#modalClose");
-    await expect(page.locator("#videoModal")).toBeHidden(T);
-    expect(await bg(page)).toEqual(["running", "running", "running"]);
+    expect(await bg(page)).toEqual([]);
     await context.close();
   });
   test("reduced motion: static render, nothing animating", async ({ browser }) => {

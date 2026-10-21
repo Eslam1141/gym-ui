@@ -193,11 +193,6 @@
     dlg.classList.add("m-dlg-out");
   }
 
-  // The page-wide ambient background (#bgfx) pauses while the tab is hidden.
-  function markHidden() { document.documentElement.classList.toggle("page-hidden", !!document.hidden); }
-  document.addEventListener("visibilitychange", markHidden);
-  markHidden();
-
   window.GymMotion = { reduced: reduced, enter: enter, pop: pop, play: play, show: show, hide: hide, cancel: cancelHide,
     flip: flip, expand: expand, collapse: collapse, closeDialog: closeDialog };
 
