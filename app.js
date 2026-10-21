@@ -551,6 +551,28 @@ const T = {
   settings:["Settings","الإعدادات"],
   planLabel:["Plan","الخطة"],
   programLabel:["Program","البرنامج"],
+  splitLabel:["Training split","تقسيم التمرين"],
+  splitDays:["Days per week","أيام في الأسبوع"],
+  splitClassic:["Classic","الكلاسيكي"],
+  splitClassicNote:["Your current plan, unchanged. Pick a number of days to switch to a split.","خطتك الحالية كما هي. اختر عدد الأيام للتحويل إلى تقسيم."],
+  splitDaysN:["{n} days","{n} أيام"],
+  splitBest:["Best fit for your setup: {n} days.","الأنسب لتجهيزاتك: {n} أيام."],
+  splitBestMark:["best fit","الأنسب"],
+  splitWhere:["Where you train","مكان التمرين"],
+  splitGym:["Gym","جيم"], splitHome:["Home","المنزل"],
+  splitTools:["What you have at home","ما لديك في المنزل"],
+  splitSumTitle:["What this split trains","ماذا يدرّب هذا التقسيم"],
+  splitSum3:["Three full-body days: Full Body A, B and C. Every muscle is trained at least twice a week.","ثلاثة أيام لكامل الجسم: أ و ب و ج. كل عضلة تُدرَّب مرتين على الأقل أسبوعياً."],
+  splitSum4:["Upper, Lower, Upper, Lower. Every muscle is trained twice a week.","علوي، سفلي، علوي، سفلي. كل عضلة تُدرَّب مرتين أسبوعياً."],
+  splitSum5:["Upper, Lower, Push, Pull, Legs. Every muscle is trained twice a week, some more.","علوي، سفلي، دفع، سحب، أرجل. كل عضلة تُدرَّب مرتين أسبوعياً وبعضها أكثر."],
+  splitSum6:["Push, Pull, Legs, twice over. Every muscle is trained twice a week.","دفع، سحب، أرجل، مرتين. كل عضلة تُدرَّب مرتين أسبوعياً."],
+  splitHint:["Tick {tool} to cover {parts}.","فعّل {tool} لتغطية {parts}."],
+  splitSaved:["Split updated","تم تحديث التقسيم"],
+  toolsLbl:["Tools","الأدوات"],
+  tool_none:["No equipment","بدون معدات"], tool_dumbbell:["Dumbbells","دمبل"], tool_band:["Resistance bands","أحزمة مقاومة"],
+  tool_bench:["Bench or chair","بنش أو كرسي"], tool_table:["Sturdy table","طاولة ثابتة"], tool_pullup_bar:["Pull-up bar","بار عقلة"],
+  tool_kettlebell:["Kettlebell","كيتل بيل"], tool_jump_rope:["Jump rope","حبل قفز"],
+  tool_barbell:["Barbell","بار"], tool_cable:["Cable","كيبل"], tool_machine:["Machine","جهاز"],
   prefsLabel:["Display preferences","تفضيلات العرض"],
   themeToDark:["Switch to dark mode","التبديل إلى الوضع الداكن"], themeToLight:["Switch to light mode","التبديل إلى الوضع الفاتح"],
   menuThemeDark:["Dark mode","الوضع الداكن"], menuThemeLight:["Light mode","الوضع الفاتح"],
@@ -972,6 +994,26 @@ let activePlan  = localStorage.getItem("gym_plan");                 // "male" | 
 let activeStyle = localStorage.getItem("gym_style") || "gym";       // "gym" | "cal"
 let activeLang  = localStorage.getItem("gym_lang")  || "en";        // "en" | "ar"
 
+// Training split choice (gym_split, synced like the other prefs): days 0 = Classic (the plans
+// below, untouched); 3-6 = the generated split from splits.js. where/tools are remembered
+// either way. Nobody is moved: no pref means Classic.
+function readSplit(){
+  const s = loadJSON("gym_split", null) || {};
+  const days = [3, 4, 5, 6].indexOf(+s.days) >= 0 ? +s.days : 0;
+  const home = HOME_TOOL_KEYS;
+  return { days, where: s.where === "home" ? "home" : "gym", tools: (Array.isArray(s.tools) ? s.tools : []).filter((k, i, a)=> home.indexOf(k) > 0 && a.indexOf(k) === i) };
+}
+const HOME_TOOL_KEYS = ["none", "dumbbell", "band", "bench", "table", "pullup_bar", "kettlebell", "jump_rope"];
+let splitChoice = readSplit();
+let splitCache = null; // { sig, plan } - the generated plan for the current choice + sex
+function splitPlan(){
+  if(!splitChoice.days || !window.GymSplits) return null;
+  const sex = activePlan === "female" ? "female" : "male";
+  const sig = [splitChoice.days, splitChoice.where, splitChoice.tools.join(), sex].join("|");
+  if(!splitCache || splitCache.sig !== sig) splitCache = { sig, plan: GymSplits.buildPlan({ days: splitChoice.days, where: splitChoice.where, sex, tools: splitChoice.tools }) };
+  return splitCache.plan;
+}
+
 // Theme (auto | light | dark) is a separate axis from the plan persona; both
 // pick the palette in styles.css. theme-boot.js (loaded in <head>) resolves
 // gym_theme before first paint, follows the OS in auto mode and owns the
@@ -1002,6 +1044,8 @@ function pickDays(){
     const c = loadJSON("gym_plans_custom", null);
     if(c && c.length) return c;
   }
+  const sp = activeStyle === "gym" ? splitPlan() : null;
+  if(sp) return sp.days;
   const fem = activePlan === "female";
   if(activeStyle === "cal") return fem ? DAYS_FEMALE_CAL : DAYS_MALE_CAL;
   return fem ? DAYS_FEMALE : DAYS_MALE;
@@ -1014,15 +1058,25 @@ window.GymApp = window.GymApp || {};
 // Read-only views for the muscle-art specs (and the Plan tab's tile/close-up code).
 window.GymApp.muscleShapes = MUSCLE_SHAPES;
 window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA]; };
-window.GymApp.dayExercises = function(dayId){
+// A day by id: the active plan, the legacy plan, or - for a split day from an earlier choice this
+// week (days/tools switched since) - rebuilt from its id, so its checks still count.
+function findDay(dayId){
   const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  if(day || !window.GymSplits) return day;
+  const m = /^sp([3-6])([gh])([mf])_/.exec(dayId || "");
+  if(!m) return undefined;
+  const old = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male", tools: splitChoice.tools });
+  return old.days.find(d=>d.id===dayId);
+}
+window.GymApp.dayExercises = function(dayId){
+  const day = findDay(dayId);
   return day ? day.exercises : [];
 };
 // Marks every exercise of a past day's checklist as done (rest-days.js "save
 // yesterday"). Goes through the in-memory `checks` so the next toggle's
 // saveJSON doesn't overwrite it with a stale copy.
 window.GymApp.markDayComplete = function(date, dayId){
-  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  const day = findDay(dayId);
   if(!day) return;
   const k = date + "_" + dayId;
   checks[k] = checks[k] || {};
@@ -1031,14 +1085,14 @@ window.GymApp.markDayComplete = function(date, dayId){
 };
 // Localised day label for dayId (used by the save-yesterday sheet).
 window.GymApp.dayName = function(dayId){
-  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  const day = findDay(dayId);
   return day ? dayLabel(day) : "";
 };
 
 function t(key){ const e = T[key]; return e ? (e[activeLang === "ar" ? 1 : 0]) : key; }
 function exName(ex){ return activeLang === "ar" ? (AR_EX[ex.en] || ex.en) : ex.en; }
-function dayLabel(d){ return activeLang === "ar" ? (AR_DAY[d.label] || d.label) : d.label; }
-function musLabel(d){ return activeLang === "ar" ? (AR_MUS[d.muscles] || d.muscles) : d.muscles; }
+function dayLabel(d){ return activeLang === "ar" ? (d.labelAr || AR_DAY[d.label] || d.label) : d.label; }
+function musLabel(d){ return activeLang === "ar" ? (d.musclesAr || AR_MUS[d.muscles] || d.muscles) : d.muscles; }
 function notesKey(){ return (activePlan === "female" ? "female" : "male") + "_" + (activeStyle === "cal" ? "cal" : "gym"); }
 function activeDayStoreKey(){ return "gym_active_day_" + (activePlan || "male") + "_" + activeStyle; }
 
@@ -1057,7 +1111,7 @@ if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
 // LOCAL_ONLY convention / gymauth_session, gymcoach_form, gymchat_history)
 // so it stays device-local and is never round-tripped through sync.
 (function applyDayRotation(){
-  const rotatable = DAYS === DAYS_MALE || DAYS === DAYS_FEMALE || DAYS === DAYS_MALE_CAL || DAYS === DAYS_FEMALE_CAL;
+  const rotatable = (splitCache && DAYS === splitCache.plan.days) || DAYS === DAYS_MALE || DAYS === DAYS_FEMALE || DAYS === DAYS_MALE_CAL || DAYS === DAYS_FEMALE_CAL;
   if(!rotatable) return;
   const last = loadJSON("gymday_last_completed", null);
   if(!last || !last.dayId || last.date === todayStr()) return; // nothing to do, or completed today (not "the day after" yet)
@@ -1332,6 +1386,7 @@ function renderExercises(){
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
         <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
+      ${toolsLine(ex)}
       <div class="set-row" role="group" aria-label="${t("setsGroup")}">
         ${setState(key, ex, done).map((on, si)=>`<button type="button" class="set-chk${on?' on':''}" role="checkbox" aria-label="${esc(setLabel(ex, si + 1))}" aria-checked="${on}" data-set-ex="${eid}" data-set="${si}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
@@ -1558,6 +1613,7 @@ function renderAll(){
   updateSessionUI();
   renderNotes();
   applyAnonUI();
+  renderSplitPanel();
 }
 
 // Lock everything except the single preview day for signed-out users.
@@ -1600,6 +1656,7 @@ function applyAnonUI(){
 
 // Re-pick the day set and re-render after an auth/anon state change (ui.js).
 window.GymAppRebuild = function(){
+  splitChoice = readSplit();
   DAYS = pickDays();
   restSlot = null;
   activeDay = localStorage.getItem(activeDayStoreKey()) || DAYS[0].id;
@@ -2343,6 +2400,131 @@ function applyState(persist){
   renderAll();
 }
 
+// ---------------- TRAINING SPLIT (More tab) ----------------
+// Tool icons (24px outline). "none" is the bodyweight figure.
+const TOOL_ICONS = {
+  none: '<circle cx="12" cy="5" r="2"/><path d="M12 8v6m0 0-3 6m3-6 3 6M6.5 11 12 9.5l5.5 1.5"/>',
+  dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
+  band: '<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><path d="M7.5 12c2-4.5 7-4.5 9 0M7.5 12c2 4.5 7 4.5 9 0"/>',
+  bench: '<path d="M7 4v10h11M7 14v6M18 14v6M7 9h4"/>',
+  table: '<path d="M3 8h18M6 8v12M18 8v12M6 14h12"/>',
+  pullup_bar: '<path d="M4 20V5M20 20V5M4 7h16M9 7v4M15 7v4"/>',
+  kettlebell: '<path d="M8.5 9V7.5a3.5 3.5 0 0 1 7 0V9"/><circle cx="12" cy="14.5" r="5.5"/>',
+  jump_rope: '<rect x="5" y="3" width="3" height="5" rx="1"/><rect x="16" y="3" width="3" height="5" rx="1"/><path d="M6.5 8c-3 9 2 13 5.5 13s8.5-4 5.5-13"/>',
+  barbell: '<path d="M2.5 12h19M5 7.5v9M8 6v12M16 6v12M19 7.5v9"/>',
+  cable: '<path d="M12 3v7M8 21l4-11 4 11M9 21h6"/><circle cx="12" cy="3.5" r="1.5"/>',
+  machine: '<rect x="4" y="3" width="4" height="18" rx="1"/><path d="M8 7h10v4H8M8 17h8M14 11v6"/>'
+};
+function toolIcon(k){ return `<svg class="tool-ic" viewBox="0 0 24 24" aria-hidden="true">${TOOL_ICONS[k] || ""}</svg>`; }
+// The small "Tools" line on a split exercise card (Classic cards stay as they were).
+function toolsLine(ex){
+  if(!splitCache || DAYS !== splitCache.plan.days || !Array.isArray(ex.tools) || !ex.tools.length) return "";
+  const names = ex.tools.map(k=>t("tool_" + k));
+  return `<div class="ex-tools" role="group" aria-label="${GymUI.esc(t("toolsLbl") + ": " + names.join(", "))}">${ex.tools.map((k, i)=>`<span class="ex-tool">${toolIcon(k)}<span>${GymUI.esc(names[i])}</span></span>`).join("")}</div>`;
+}
+
+function saveSplit(patch){
+  splitChoice = Object.assign({}, splitChoice, patch);
+  saveJSON("gym_split", { days: splitChoice.days, where: splitChoice.where, tools: splitChoice.tools });
+}
+// The split with the fewest gaps for this setup (ties go to 4 days, then 5, 3, 6).
+function bestSplitDays(){
+  const sex = activePlan === "female" ? "female" : "male";
+  let best = 0, bestN = Infinity;
+  [4, 5, 3, 6].forEach(d=>{
+    const n = GymSplits.buildPlan({ days: d, where: splitChoice.where, sex, tools: splitChoice.tools }).gaps.length;
+    if(n < bestN){ best = d; bestN = n; }
+  });
+  return best;
+}
+// "Tick X to cover Y" lines for the tools that would close this plan's gaps.
+function gapHints(plan){
+  const by = {};
+  plan.gaps.forEach(g=>{
+    (g.tick || []).forEach(k=>{
+      if(k === "none") return;
+      (by[k] = by[k] || {})[g.region] = 1;
+    });
+  });
+  const list = (arr)=> window.Intl && Intl.ListFormat ? new Intl.ListFormat(activeLang, { style:"long", type:"conjunction" }).format(arr) : arr.join(", ");
+  return Object.keys(by).sort((a, b)=> Object.keys(by[b]).length - Object.keys(by[a]).length).slice(0, 2).map(k=>{
+    const parts = Object.keys(by[k]).slice(0, 3).map(r=> SHAPE_BY_ID[r] ? (activeLang === "ar" ? SHAPE_BY_ID[r].labelAr : SHAPE_BY_ID[r].label) : r);
+    return { tool: k, text: t("splitHint").replace("{tool}", t("tool_" + k)).replace("{parts}", list(parts)) };
+  });
+}
+
+function renderSplitPanel(){
+  const host = document.getElementById("splitPanel");
+  if(!host || !window.GymSplits) return;
+  const esc = GymUI.esc, c = splitChoice;
+  const focusKey = document.activeElement && host.contains(document.activeElement) ? document.activeElement.dataset.spKey : null;
+  const best = c.days ? bestSplitDays() : 0;
+  const chip = (d)=>{
+    const on = c.days === d, rec = d && d === best;
+    const label = d ? t("splitDaysN").replace("{n}", d) : t("splitClassic");
+    return `<button type="button" class="sp-chip${on ? " on" : ""}${rec ? " rec" : ""}" role="radio" aria-checked="${on}" data-sp-days="${d}" data-sp-key="d${d}" aria-label="${esc(label + (rec ? ", " + t("splitBestMark") : ""))}">${d ? d : esc(label)}</button>`;
+  };
+  let html = `<div class="sp-sub" id="spDaysLbl">${t("splitDays")}</div>
+    <div class="sp-chips" role="radiogroup" aria-labelledby="spDaysLbl">${[0, 3, 4, 5, 6].map(chip).join("")}</div>`;
+  if(!c.days){
+    html += `<p class="sp-note">${t("splitClassicNote")}</p>`;
+  } else {
+    const plan = splitPlan();
+    html += `<p class="sp-note">${t("splitBest").replace("{n}", "<bdi>" + best + "</bdi>")}</p>
+      <div class="sp-sub" id="spWhereLbl">${t("splitWhere")}</div>
+      <div class="plan-toggle" role="radiogroup" aria-labelledby="spWhereLbl">
+        ${["gym", "home"].map(w=>`<button type="button" role="radio" aria-checked="${c.where === w}" class="${c.where === w ? "on" : ""}" data-sp-where="${w}" data-sp-key="w${w}">${t(w === "gym" ? "splitGym" : "splitHome")}</button>`).join("")}
+      </div>`;
+    if(c.where === "home"){
+      html += `<div class="sp-sub" id="spToolsLbl">${t("splitTools")}</div>
+        <div class="sp-tools" role="group" aria-labelledby="spToolsLbl">
+          ${HOME_TOOL_KEYS.map(k=>{
+            const on = k === "none" ? !c.tools.length : c.tools.indexOf(k) >= 0;
+            return `<button type="button" class="sp-tool${on ? " on" : ""}" role="checkbox" aria-checked="${on}" data-sp-tool="${k}" data-sp-key="t${k}">${toolIcon(k)}<span>${esc(t("tool_" + k))}</span></button>`;
+          }).join("")}
+        </div>`;
+    }
+    const hints = gapHints(plan);
+    html += `<div class="sp-hints" aria-live="polite">${hints.map(h=>`<p class="sp-hint">${toolIcon(h.tool)}<span>${esc(h.text)}</span></p>`).join("")}</div>
+      <div class="sp-sum"><div class="sp-sub">${t("splitSumTitle")}</div><p>${t("splitSum" + c.days)}</p></div>`;
+  }
+  host.innerHTML = html;
+  if(focusKey){ const f = host.querySelector(`[data-sp-key="${focusKey}"]`); if(f) f.focus(); }
+}
+
+// Applies a split choice (More tab now, the onboarding survey later) and re-renders. days 0 =
+// Classic; 3-6 = a generated split, which also moves the user to the Gym program. Nothing is
+// written until this is called, so nobody is moved on their own. Returns { days, week, gaps }
+// for a split, or null for Classic.
+function applySplitChoice(c){
+  c = c || {};
+  const patch = {};
+  if("days" in c) patch.days = [3, 4, 5, 6].indexOf(+c.days) >= 0 ? +c.days : 0;
+  if("where" in c) patch.where = c.where === "home" ? "home" : "gym";
+  if("tools" in c) patch.tools = HOME_TOOL_KEYS.filter((k, i)=> i > 0 && (c.tools || []).indexOf(k) >= 0);
+  saveSplit(patch);
+  if(splitChoice.days && activeStyle !== "gym"){ activeStyle = "gym"; setPref("gym_style", activeStyle); }
+  applyState(false);
+  return splitPlan();
+}
+window.GymSplits.applyChoice = applySplitChoice;
+(function wireSplitPanel(){
+  const host = document.getElementById("splitPanel");
+  if(!host) return;
+  host.addEventListener("click", (e)=>{
+    const b = e.target.closest("button");
+    if(!b || !host.contains(b)) return;
+    if(isAnonMode()){ if(window.GymUI) window.GymUI.promptSignIn(); return; }
+    if(b.dataset.spDays !== undefined) applySplitChoice({ days: +b.dataset.spDays });
+    else if(b.dataset.spWhere) applySplitChoice({ where: b.dataset.spWhere });
+    else if(b.dataset.spTool){
+      const k = b.dataset.spTool, cur = splitChoice.tools.slice();
+      if(k === "none") applySplitChoice({ tools: [] });
+      else applySplitChoice({ tools: cur.indexOf(k) >= 0 ? cur.filter(x=>x !== k) : cur.concat(k) });
+    }
+  });
+})();
+
 // ---------------- DAY TABS (always-visible chip strip on the Plan screen) ----------------
 function renderDayTabs(){
   const list = document.getElementById("dayTabs");
@@ -2408,6 +2590,8 @@ function ensureCoachStyleBtn(){
 
 function setStyle(style){
   if(isAnonMode()){ if(window.GymUI) window.GymUI.promptSignIn(); return; }
+  // A split belongs to the Gym program; the in-house and coach programs go back to Classic.
+  if(style !== "gym" && splitChoice.days) saveSplit({ days: 0 });
   activeStyle = style;
   applyState(true);
   if(window.GymUI) window.GymUI.navigate("plan");
