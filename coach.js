@@ -482,7 +482,7 @@
       trainingDaysPerWeek: "4", equipment: "full_gym",
       dietPreference: "balanced", allergies: [], dislikes: [],
       inbodyOpen: false, bodyFatPct: "", skeletalMuscleMassKg: "", visceralFatLevel: "", bmrKcal: "",
-      notes: "",
+      notes: "", experience: "",
       ramadan: false, ramadanAuto: "", ramadanManual: false
     };
   }
@@ -1093,6 +1093,7 @@
     if (st.allergies && st.allergies.length) profile.allergies = st.allergies;
     if (st.dislikes && st.dislikes.length) profile.dislikes = st.dislikes;
     if (st.notes) profile.notes = st.notes;
+    if (st.experience) profile.experience = st.experience;
     var ib = {};
     ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
       if (st[k] !== "" && st[k] != null) ib[k] = n(st[k]);
@@ -1692,7 +1693,35 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
+  // Onboarding survey (survey.js): copy its answers into the coach form so
+  // the user isn't asked twice, and run the first plan from them.
+  function applySurvey(a) {
+    var st = loadState();
+    st.want = "both";
+    st.age = String(a.age);
+    st.sex = a.sex;
+    st.heightCm = String(a.heightCm);
+    st.weightKg = String(a.weightKg);
+    st.goalChecks = { lose_fat: a.goal === "lose_fat" || a.goal === "recomp",
+      gain_muscle: a.goal === "gain_muscle" || a.goal === "recomp", maintain: a.goal === "maintain" };
+    st.goal = deriveGoal(st.goalChecks);
+    st.activityLevel = a.activityLevel;
+    st.trainingDaysPerWeek = String(a.trainingDaysPerWeek);
+    st.equipment = a.equipment;
+    st.dietPreference = a.dietPreference || "balanced";
+    st.allergies = Array.isArray(a.allergies) ? a.allergies.slice(0, 10) : [];
+    st.experience = a.experience || "";
+    if (a.ramadan === true) { st.ramadan = true; st.ramadanManual = true; }
+    delete st._ramadanSuggested;
+    saveSynced(FORM_KEY, st);
+  }
+  function runSurveyPlan() {
+    var st = loadState();
+    if (!validate(st).ok) { refresh(); return; }
+    runAssessment(buildRequest(st), false);
+  }
+
+  window.GymCoach = { applySurvey: applySurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

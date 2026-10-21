@@ -2400,6 +2400,14 @@ function setStyle(style){
   else window.scrollTo(0, 0);
 }
 
+// Called by survey.js: pick the starter plan from the onboarding answers.
+window.GymSetPlan = function(plan, style){
+  if(plan !== "male" && plan !== "female") return;
+  activePlan = plan;
+  activeStyle = style === "cal" ? "cal" : "gym";
+  applyState(true);
+};
+
 // Called by coach.js: store an AI workout as a selectable plan and switch to it.
 window.GymApplyCoachPlan = function(days){
   if(!Array.isArray(days) || !days.length) return;
