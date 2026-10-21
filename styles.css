@@ -558,11 +558,11 @@ body:has(#alarmBanner:not([hidden])) .screen{ padding-bottom:calc(var(--nav-h) +
 #videoModal{
   position:fixed; inset:0; z-index:100;
   background:rgba(8,7,6,0.92);
-  display:none;
+  display:flex;
   align-items:center; justify-content:center;
   padding:20px;
 }
-#videoModal.show{ display:flex; }
+#videoModal[hidden]{ display:none; }
 .modal-inner{
   width:100%; max-width:900px;
 }
@@ -615,10 +615,17 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #miniTimer.show{ opacity:1; transform:translate(-50%,0) scale(1); pointer-events:auto; cursor:pointer; }
 #miniTimer.paused{ border-color:var(--line); }
 #miniTimer .mini-dot{
-  flex:none; width:8px; height:8px; border-radius:50%; background:var(--green);
-  animation:pulseDot 2s ease-out infinite;
+  position:relative; flex:none; width:8px; height:8px; border-radius:50%; background:var(--green);
 }
-#miniTimer.paused .mini-dot{ background:var(--paper-dim); animation:none; }
+#miniTimer.paused .mini-dot{ background:var(--paper-dim); }
+/* the pulse is a ring that scales and fades (compositor only), and only runs while
+   the pill is on screen and ticking; a hidden or paused timer animates nothing */
+#miniTimer .mini-dot::after{
+  content:""; position:absolute; inset:0; border-radius:50%; background:var(--green); opacity:0; pointer-events:none;
+}
+@media (prefers-reduced-motion:no-preference){
+  #miniTimer.show:not(.paused) .mini-dot::after{ animation:pulseDot 2s var(--ease-out) infinite; }
+}
 #miniTimer .mini-label{
   font-size:var(--text-sm); font-weight:700; color:var(--paper-dim);
   max-width:88px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -635,9 +642,8 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #miniTimer .mini-btn svg{ width:13px; height:13px; fill:currentColor; }
 #miniTimer .mini-btn:active{ transform:scale(.9); }
 @keyframes pulseDot{
-  0%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent); }
-  70%{ box-shadow:0 0 0 7px rgba(0,0,0,0); }
-  100%{ box-shadow:0 0 0 0 rgba(0,0,0,0); }
+  0%{ opacity:.6; transform:scale(1); }
+  70%, 100%{ opacity:0; transform:scale(2.75); }
 }
 
 /* ---- floating AI-coach chat bubble ---- */
@@ -703,7 +709,11 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
   opacity:0; pointer-events:none;
   transition:opacity .22s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
 }
-.gym-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+.gym-toast.show{ opacity:1; transform:translateX(-50%) translateY(calc(var(--toast-lift, 0px) * -1)); pointer-events:auto; }
+/* the rest timer and the celebration card own the same bottom edge: the toast rides above
+   them (transform, not bottom, so it stays on the compositor). The card wins when both show. */
+body:has(#timerBar.show){ --toast-lift:140px; }
+body:has(.celebrate-card.show){ --toast-lift:124px; }
 .gym-toast-msg{ font-size:var(--text-base); color:var(--paper); flex:1; min-width:0; }
 .gym-toast-action{
   flex:none; display:flex; align-items:center; justify-content:center;
@@ -887,9 +897,8 @@ body:not([data-tab="coach"]) #coachFabTip{ display:none; }
 }
 
 /* entrance animations */
-@keyframes cardIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
 @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
-.ex-card.anim-in{ animation:cardIn .34s cubic-bezier(.22,.61,.36,1) both; }
+.ex-card.anim-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; animation-delay:calc(var(--ci, 0) * var(--dur-stagger)); }
 .days-list button.active{ animation:fadeIn .2s ease; }
 
 /* gradient hover — desktop / fine pointer only, so touch taps don't stick */
@@ -1088,25 +1097,30 @@ body.anon-mode [data-style-btn].locked{ opacity:.4; }
    app relaunch — visual layer (Track B, first cut)
    ============================================================ */
 
-/* animated gradient field behind everything */
+/* animated gradient field behind everything. The blobs are radial gradients that fade to
+   transparent exactly at their own edge, so they need no filter:blur (a per-frame GPU cost on
+   big layers). The drift is transform-only and pauses whenever nobody can see it (tab hidden,
+   an overlay or the sign-in screen covering the app). Reduced motion renders it static. */
 #bgfx{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
 #bgfx span{
-  position:absolute; border-radius:50%; filter:blur(70px); opacity:.5;
-  will-change:transform;
+  position:absolute; border-radius:50%; opacity:.5;
 }
+html.page-hidden #bgfx span,
+body:has(.m-ovl:not([hidden]), .syd, dialog[open]) #bgfx span,
+body.onboarding-open #bgfx span{ animation-play-state:paused; }
 #bgfx span:nth-child(1){
   width:52vmax; height:52vmax; left:-16vmax; top:-22vmax;
-  background:radial-gradient(circle at 30% 30%, var(--accent), transparent 65%);
+  background:radial-gradient(circle closest-side, var(--accent), transparent);
   animation:drift1 34s ease-in-out infinite;
 }
 #bgfx span:nth-child(2){
   width:44vmax; height:44vmax; right:-18vmax; top:8vmax;
-  background:radial-gradient(circle at 60% 40%, var(--accent-2), transparent 65%);
+  background:radial-gradient(circle closest-side, var(--accent-2), transparent);
   opacity:.4; animation:drift2 42s ease-in-out infinite;
 }
 #bgfx span:nth-child(3){
   width:40vmax; height:40vmax; left:20vmax; bottom:-24vmax;
-  background:radial-gradient(circle at 50% 50%, var(--accent-3), transparent 68%);
+  background:radial-gradient(circle closest-side, var(--accent-3), transparent);
   opacity:.28; animation:drift3 50s ease-in-out infinite;
 }
 @keyframes drift1{ 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(6vmax,4vmax,0)} }
@@ -1631,6 +1645,10 @@ body.rest-view .warmup-card, body.rest-view #resetLink{ display:none; }
 .coach-ring circle{ fill:none; stroke-width:11; }
 .coach-ring-track{ stroke:var(--line); opacity:.55; }
 .coach-ring-arc{ stroke-linecap:butt; }
+/* one block rising in when Coach swaps view (form > loading > result); coach.js mount() */
+@media (prefers-reduced-motion:no-preference){
+  .coach-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
+}
 .coach-ring-p{ stroke:var(--macro-p); } .coach-ring-c{ stroke:var(--macro-c); } .coach-ring-f{ stroke:var(--macro-f); }
 @media (prefers-reduced-motion:no-preference){
   .coach-ring-arc{ transition:stroke-dasharray .9s var(--ease-out); }
@@ -2489,13 +2507,14 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
 
 /* save-yesterday sheet: bottom sheet on phones, centred dialog on wider screens */
 .syd{ position:fixed; inset:0; z-index:200; display:flex; align-items:flex-end; justify-content:center; }
-.syd-backdrop{ position:absolute; inset:0; background:var(--scrim); animation:sydFade var(--dur-med) var(--ease); }
+.syd[hidden]{ display:none; }
+.syd-backdrop{ position:absolute; inset:0; background:var(--scrim); }
 .syd-panel{
   position:relative; width:100%; max-width:440px;
   padding:var(--space-6) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
   background:var(--panel); color:var(--paper); border:1px solid var(--line);
   border-radius:var(--radius-lg) var(--radius-lg) 0 0; box-shadow:var(--elev-2);
-  text-align:start; animation:sydRise var(--dur-med) var(--ease);
+  text-align:start;
 }
 .syd-title{ margin:0 0 var(--space-2); font-size:var(--text-lg); line-height:var(--lh-tight); font-weight:var(--fw-black); }
 .syd-body{ margin:0 0 var(--space-5); font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
@@ -2516,10 +2535,8 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
   .syd-actions{ flex-direction:row-reverse; justify-content:flex-start; }
   .syd-yes, .syd-no{ flex:1; }
 }
-@keyframes sydFade{ from{ opacity:0; } to{ opacity:1; } }
 @keyframes sydRise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce){
-  .syd-backdrop, .syd-panel{ animation:none; }
   .rest-btn{ transition:none; }
 }
 

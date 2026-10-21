@@ -445,10 +445,10 @@
     var dayName = window.GymApp && GymApp.dayName ? GymApp.dayName(partial.dayId) : "";
     sheet = document.createElement("div");
     sheet.id = "saveYdaySheet";
-    sheet.className = "syd";
+    sheet.className = "syd m-ovl";
     sheet.innerHTML =
       '<div class="syd-backdrop"></div>' +
-      '<div class="syd-panel" role="dialog" aria-modal="true" aria-labelledby="sydTitle" aria-describedby="sydBody">' +
+      '<div class="syd-panel m-ovl-card" role="dialog" aria-modal="true" aria-labelledby="sydTitle" aria-describedby="sydBody">' +
       '<h2 id="sydTitle" class="syd-title"></h2>' +
       '<p id="sydBody" class="syd-body"></p>' +
       '<div class="syd-actions">' +
@@ -464,8 +464,9 @@
 
     function close() {
       document.removeEventListener("keydown", onKey, true);
-      if (sheet) sheet.remove();
+      var gone = sheet;
       sheet = null;
+      if (gone) GymMotion.hide(gone, function () { gone.remove(); });
     }
     function onKey(e) {
       if (e.key === "Escape") { e.stopPropagation(); no.onclick(); return; }
@@ -488,6 +489,7 @@
       });
     };
     document.body.appendChild(sheet);
+    GymMotion.show(sheet);
     document.addEventListener("keydown", onKey, true);
     yes.focus();
   }

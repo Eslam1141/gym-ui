@@ -190,6 +190,18 @@
 .m-menu.m-in{ animation:m-menu-in var(--dur-fast) var(--ease-out) backwards; }
 .m-menu.m-out{ animation:m-menu-out var(--dur-fast) var(--ease) forwards; pointer-events:none; }
 
+/* ---- reveal (GymMotion.expand / collapse): a block opening in the page flow ----
+   The block's size changes at once; GymMotion.flip() slides what sits below it
+   with transform, so no layout property is ever animated. */
+@keyframes m-dlg-out{ to{ opacity:0; transform:translate3d(0, 16px, 0); } }
+@media (prefers-reduced-motion:no-preference){
+  .m-reveal-in{ animation:m-rise var(--dur-med) var(--ease-out) backwards; }
+  .m-reveal-out{ animation:m-fade-out var(--dur-fast) var(--ease) forwards; pointer-events:none; }
+  /* <dialog> exit (GymMotion.closeDialog): the sheet drops and its backdrop fades */
+  dialog[open].m-dlg-out{ animation:m-dlg-out var(--dur-fast) var(--ease) forwards; pointer-events:none; }
+  dialog[open].m-dlg-out::backdrop{ animation:m-fade-out var(--dur-fast) var(--ease) forwards; }
+}
+
 /* ---- bell swing: once, when the unread count rises (GymMotion.play) ---- */
 @keyframes m-swing{
   0%, 100%{ transform:rotate(0); }
@@ -235,6 +247,7 @@
   .bar-fill{ transition:none; }
   .skeleton::after{ animation:none; }
   .gym-toast, .gym-toast.show{ transition:opacity var(--dur-fast) linear; transform:translateX(-50%); }
+  .gym-toast.show{ transform:translateX(-50%) translateY(calc(var(--toast-lift, 0px) * -1)); }
 }
 
 /* ---- day / rest celebration (celebrate.js) ---- */

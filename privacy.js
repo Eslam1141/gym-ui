@@ -479,7 +479,8 @@
     el("pvGo").addEventListener("click", runDelete);
     el("pvShDl").addEventListener("click", doExport);
     el("pvRaForm").addEventListener("submit", reauthLocal);
-    sheet.addEventListener("cancel", function (e) { if (deleting) e.preventDefault(); });
+    // Escape: keep the dialog open for its exit animation, then close it (unless a delete is running)
+    sheet.addEventListener("cancel", function (e) { e.preventDefault(); closeSheet(); });
     sheet.addEventListener("click", function (e) { if (e.target === sheet && !deleting) closeSheet(); });
     paintNode(sheet);
   }
@@ -508,7 +509,7 @@
 
   function closeSheet() {
     if (deleting) return;
-    if (sheet && sheet.open) sheet.close();
+    if (sheet && sheet.open) GymMotion.closeDialog(sheet);
   }
 
   function setDeleting(on) {

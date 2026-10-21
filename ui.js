@@ -207,7 +207,7 @@
 
     if (!opts.keepScroll) { try { window.scrollTo(0, 0); } catch (e) {} }
     if (tab === "coach" && window.GymCoach && typeof GymCoach.refresh === "function") {
-      try { GymCoach.refresh(); } catch (e) { if (window.console) console.warn("coach refresh failed", e); }
+      try { GymCoach.refresh({ nav: true }); } catch (e) { if (window.console) console.warn("coach refresh failed", e); }
     }
     if (tab === "food" && window.GymFood && typeof GymFood.refresh === "function") {
       try { GymFood.refresh(); } catch (e) { if (window.console) console.warn("food refresh failed", e); }
@@ -248,6 +248,7 @@
 
   function showOnboarding() {
     if (!ob) return;
+    if (window.GymMotion) { GymMotion.cancel(ob); ob.classList.remove("m-out", "m-in"); }   // a fade-out still running
     ob.hidden = false;
     document.body.classList.add("onboarding-open");
     document.body.style.overflow = "hidden";
@@ -258,7 +259,7 @@
     showObStep("choices");
   }
   function hideOnboarding() {
-    if (ob) ob.hidden = true;
+    if (ob) { if (window.GymMotion) GymMotion.hide(ob); else ob.hidden = true; }   // fades out over the app, which is already built
     document.body.classList.remove("onboarding-open");
     document.body.style.overflow = "";
   }

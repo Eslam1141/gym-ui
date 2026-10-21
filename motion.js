@@ -95,7 +95,111 @@
     el.classList.add("m-out");
   }
 
-  window.GymMotion = { reduced: reduced, enter: enter, pop: pop, play: play, show: show, hide: hide };
+  // ---- reveal: a block that opens/closes in the flow of the page ----
+  // Animating height (or grid rows) re-lays the page out every frame. Instead
+  // the block snaps to its new size at once and flip() slides everything that
+  // sits below it from its old position to the new one with transform only;
+  // the block itself fades/rises in (.m-reveal-in) or fades out first
+  // (.m-reveal-out). `apply` makes the actual DOM change (add .open, unhide).
+  function easeOut() {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue("--ease-out").trim();
+      if (v) return v;
+    } catch (e) {}
+    return "cubic-bezier(.16,1,.3,1)";
+  }
+  // The elements laid out after `el`: its later siblings and those of each
+  // ancestor up to the screen, skipping anything out of flow, hidden or far
+  // off screen (they would not be seen moving).
+  function followers(el) {
+    var out = [];
+    var vh = window.innerHeight || 800;
+    for (var n = el; n && n.parentElement && n !== document.body; n = n.parentElement) {
+      if (n.classList && n.classList.contains("screen")) break;
+      for (var sib = n.nextElementSibling; sib && out.length < 16; sib = sib.nextElementSibling) {
+        if (sib.hidden) continue;
+        var cs = getComputedStyle(sib);
+        if (cs.display === "none" || cs.position === "fixed" || cs.position === "absolute") continue;
+        var r = sib.getBoundingClientRect();
+        if (r.bottom < -vh || r.top > vh * 2) continue;
+        out.push(sib);
+      }
+    }
+    return out;
+  }
+  function flip(el, apply) {
+    if (!el || reduced()) { apply(); return; }
+    var els = followers(el);
+    var before = els.map(function (e) { return e.getBoundingClientRect().top; });
+    apply();
+    var dur = cssMs("--dur-med", 280), ease = easeOut();
+    els.forEach(function (e, i) {
+      var d = before[i] - e.getBoundingClientRect().top;
+      if (Math.abs(d) < 1 || !e.animate) return;
+      e.animate([{ transform: "translate3d(0," + d + "px,0)" }, { transform: "none" }],
+        { duration: dur, easing: ease, fill: "backwards" });
+    });
+  }
+  function cancelReveal(el) {
+    clearTimeout(el._mRevT);
+    if (el._mRevH) el.removeEventListener("animationend", el._mRevH);
+    el._mRevH = el._mRevT = null;
+    el.classList.remove("m-reveal-out");
+  }
+  function expand(el, apply) {
+    if (!el) return;
+    var closing = !!el._mRevH;
+    cancelReveal(el);
+    if (closing) { apply(); return; }
+    flip(el, apply);
+    play(el, "m-reveal-in");
+  }
+  function collapse(el, apply, done) {
+    if (!el) return;
+    function finish() {
+      cancelReveal(el);
+      el.classList.remove("m-reveal-in");
+      flip(el, apply);
+      if (done) done();
+    }
+    if (reduced()) { finish(); return; }
+    if (el._mRevH) return;
+    el._mRevH = function (e) { if (e.target === el) finish(); };
+    el.addEventListener("animationend", el._mRevH);
+    el._mRevT = setTimeout(finish, 320);
+    el.classList.remove("m-reveal-in");
+    el.classList.add("m-reveal-out");
+  }
+
+  // <dialog> exit: modal dialogs close natively with no exit, so play
+  // .m-dlg-out (sheet + ::backdrop) and call close() afterwards.
+  function closeDialog(dlg, done) {
+    if (!dlg || !dlg.open || dlg._mClosing) return;
+    function finish() {
+      clearTimeout(dlg._mClosingT);
+      dlg.removeEventListener("animationend", onEnd);
+      dlg._mClosing = false;
+      dlg.classList.remove("m-dlg-out");
+      dlg.inert = false;
+      if (dlg.open) dlg.close();
+      if (done) done();
+    }
+    function onEnd(e) { if (e.target === dlg) finish(); }
+    if (reduced()) { finish(); return; }
+    dlg._mClosing = true;
+    dlg.inert = true;
+    dlg.addEventListener("animationend", onEnd);
+    dlg._mClosingT = setTimeout(finish, 320);
+    dlg.classList.add("m-dlg-out");
+  }
+
+  // The page-wide ambient background (#bgfx) pauses while the tab is hidden.
+  function markHidden() { document.documentElement.classList.toggle("page-hidden", !!document.hidden); }
+  document.addEventListener("visibilitychange", markHidden);
+  markHidden();
+
+  window.GymMotion = { reduced: reduced, enter: enter, pop: pop, play: play, show: show, hide: hide, cancel: cancelHide,
+    flip: flip, expand: expand, collapse: collapse, closeDialog: closeDialog };
 
   // ---------------- action guards ----------------
   // once(fn, {cooldown}) wraps a handler so it cannot run again while the
