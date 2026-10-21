@@ -41,8 +41,8 @@
 
   var STR = {
     teaseTitle: ["Meet your AI coach", "تعرّف على مدرّبك الذكي"],
-    teaseBody: ["A diet and training plan calculated from your body numbers and goal — then filled in by Claude. Free with a Google account.",
-      "خطة تغذية وتمرين تُحسب من أرقام جسمك وهدفك، ثم يكملها كلود. مجانية مع حساب جوجل."],
+    teaseBody: ["A diet and training plan built from your body numbers and goal. Free with an account.",
+      "خطة غذاء وتمرين مبنية على أرقام جسمك وهدفك. مجاناً مع حساب."],
     teaseB1: ["Calorie & macro targets from your stats", "أهداف السعرات والماكروز من بياناتك"],
     teaseB2: ["A weekly split for your equipment & days", "تقسيم أسبوعي حسب معدّاتك وأيامك"],
     teaseB3: ["Swap-friendly meals for your diet", "وجبات قابلة للتبديل حسب نظامك"],

@@ -41,8 +41,8 @@
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     teaseTitle: ["Track your meals", "تابع وجباتك"],
-    teaseBody: ["Search a local food catalog, log a portion and see your daily totals against your coach targets.",
-      "ابحث في قائمة أطعمة محلية، سجّل وجبتك وشاهد إجماليك اليومي مقابل أهداف مدربك."],
+    teaseBody: ["Log local foods and see your daily totals against your targets.",
+      "سجّل أكلاتك المحلية وتابع مجموعك اليومي مقابل أهدافك."],
     teaseB1: ["Egyptian & Gulf foods, in Arabic and English", "أطعمة مصرية وخليجية، بالعربية والإنجليزية"],
     teaseB2: ["Daily kcal, protein, carbs & fat totals", "إجمالي السعرات والبروتين والكارب والدهون يومياً"],
     teaseB3: ["Grouped by meal — breakfast, lunch, dinner & more", "مقسّمة حسب الوجبة — فطار، غداء، عشاء والمزيد"],

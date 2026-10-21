@@ -225,7 +225,7 @@
       '<span class="rest-card-state" role="status">' + (rest ? ICON_MOON : "") + '<span></span></span>' +
       '<span class="rest-card-left"></span>';
     text.querySelector(".rest-card-state span:last-child").textContent = str(state);
-    text.querySelector(".rest-card-left").textContent = leftText() + ". " + str("restHint");
+    text.querySelector(".rest-card-left").textContent = leftText() + " · " + str("restHint");
     card.appendChild(text);
     var btn = trained ? null : actionButton(tKey, entry);
     if (btn) card.appendChild(btn);

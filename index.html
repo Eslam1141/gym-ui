@@ -116,7 +116,7 @@
     <div class="ob-fx" aria-hidden="true"></div>
     <a class="home-link home-link-ob" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="ob-logo" src="icons/logo-etq.svg" alt="" width="96" height="96"></a>
     <h1 class="ob-title" data-i18n="obTitle">One step forward, every day.</h1>
-    <p class="ob-sub" data-i18n="obSub">Everything you need to train: a plan that fits you, an AI coach that understands your InBody, form videos, a rest timer, and progress that follows you from phone to laptop.</p>
+    <p class="ob-sub" data-i18n="obSub">Your plan, logging, rest timer, form videos and AI coach — in one app.</p>
     <div class="ob-step-stack">
       <div id="obStepStart" class="ob-step ob-step-start">
         <button id="obStartBtn" class="ob-start-btn" data-i18n="obStart">Start Changing Yourself</button>
@@ -221,7 +221,7 @@
 
     <div class="warmup-card">
       <div class="warmup-head">
-        <h3 data-i18n="warmupTitle">Warm-up &mdash; do this first</h3>
+        <h3 data-i18n="warmupTitle">Warm-up</h3>
         <button class="btn-sm video-toggle" id="warmupVidBtn">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <span data-i18n="video">Video</span>
@@ -230,12 +230,16 @@
       <div class="video-wrap" id="warmupWrap">
         <div class="video-frame" id="warmupFrame"></div>
       </div>
-      <ol class="warmup-steps" id="warmupSteps">
-        <li data-i18n-html="warmup1"><b>Raise your temperature</b> &mdash; 5 min easy cardio (bike, incline walk or rower) until you break a light sweat.</li>
-        <li data-i18n-html="warmup2"><b>Loosen the day's joints</b> &mdash; 5-8 slow reps each. Upper-body days: band pull-aparts, shoulder dislocates, arm circles, cat-cow. Lower-body days: leg swings front &amp; side, hip circles, 10 bodyweight squats, walking lunges.</li>
-        <li data-i18n-html="warmup3"><b>Ramp up the first lift only</b> &mdash; empty bar &times;10, then ~50% &times;5, ~70% &times;3, ~85% &times;1. Rest 60-90 s and stop each set well short of effort.</li>
-        <li data-i18n-html="warmup4"><b>Start working set 1.</b> Isolation moves (raises, curls, extensions) need just one light feeder set.</li>
-      </ol>
+      <p class="warmup-sum" data-i18n="warmupSum">5 min cardio · mobility · ramp-up sets</p>
+      <details class="warmup-more">
+        <summary data-i18n="showSteps">Show steps</summary>
+        <ol class="warmup-steps" id="warmupSteps">
+          <li data-i18n-html="warmup1"><b>Cardio</b> &mdash; 5 min easy, until a light sweat.</li>
+          <li data-i18n-html="warmup2"><b>Mobility</b> &mdash; 5&ndash;8 slow reps: arm circles and band pull-aparts on upper days; leg swings and bodyweight squats on lower days.</li>
+          <li data-i18n-html="warmup3"><b>Ramp-up sets</b> &mdash; first lift only: bar &times;10, ~50% &times;5, ~70% &times;3, ~85% &times;1.</li>
+          <li data-i18n-html="warmup4"><b>Go.</b> Isolation moves need just one light set first.</li>
+        </ol>
+      </details>
     </div>
 
     <!-- P-13 skeleton loading (audit §4.6): static shimmer placeholder so a
@@ -249,10 +253,10 @@
 
     <div class="reset-link" id="resetLink" data-i18n="resetChecklist">Reset today's checklist</div>
 
-    <div class="notes" id="notesBox">
-      <h3 data-i18n="notesTitle">Important Notes</h3>
+    <details class="notes" id="notesBox">
+      <summary><h3 data-i18n="notesTitle">Plan tips</h3></summary>
       <ul id="notesList"></ul>
-    </div>
+    </details>
   </div>
 </div>
 
@@ -327,7 +331,7 @@
     </div>
 
     <div class="install-tip" id="installTip" data-i18n-html="installTip">
-      <b>Add this app to your home screen:</b> open your browser menu and choose "Add to Home Screen" so it opens like a regular app.
+      <b>Install the app:</b> browser menu &rarr; Add to Home Screen.
     </div>
 
     <div class="more-ver" id="moreVer"></div>
