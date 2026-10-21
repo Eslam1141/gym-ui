@@ -615,6 +615,11 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
   opacity:1; transform:translate(-50%,0) scale(1); pointer-events:auto; cursor:pointer;
   transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease-spring);
 }
+/* phones: #topBar / #topPrefs (54px tall, top 10px) share the top row and the
+   centred pill runs into them below ~580px, so drop the pill under that row */
+@media (max-width:599.98px){
+  #miniTimer{ top:calc(env(safe-area-inset-top) + 72px); }
+}
 #miniTimer.paused{ border-color:var(--line); }
 #miniTimer .mini-dot{
   position:relative; flex:none; width:8px; height:8px; border-radius:50%; background:var(--green);
