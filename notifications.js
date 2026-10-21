@@ -65,6 +65,7 @@
   var bellBtn, badgeEl, backdrop, panel, listEl, closeBtn, titleEl, readAllBtn, liveEl;
 
   var ICON_BELL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></svg>';
+  var ICON_CHEVRON = '<svg class="notif-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 5.6 15.8 12l-6.4 6.4-1.4-1.4 5-5-5-5z"/></svg>';
   var ICON_CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.3 19.7 2.89 18.29 9.17 12 2.89 5.71 4.3 4.3l6.29 6.29L16.89 4.3z"/></svg>';
 
   // ---------------- bell (built into header.js's slot) ----------------
@@ -222,19 +223,142 @@
       body.appendChild(timeSpan);
 
       row.appendChild(body);
+
+      var hint = document.createElement("span");
+      hint.className = "notif-item-hint";
+      hint.textContent = str(hintKey(routeFor(item)));
+      body.appendChild(hint);
+      row.insertAdjacentHTML("beforeend", ICON_CHEVRON);
       row.addEventListener("click", function () { onItemTap(item); });
       listEl.appendChild(row);
     });
   }
 
   // ---------------- actions ----------------
+  // ---------------- routing: what tapping a notification does ----------------
+  // Contract with gym-be: url is "./#plan", "./#plan?day=YYYY-MM-DD",
+  // "./#checkin" or "./#food|coach|profile". Notifications stored before that
+  // (url "./") are recognised by their known EN/AR titles instead.
+  var ROUTE_RE = /^#(plan|coach|food|profile|checkin)(?:\?(.*))?$/;
+  var DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  var LEGACY_TITLES = {
+    plan: ["workout reminder", "تذكير بالتمرين", "no workout logged", "لم يسجل تمرين"],
+    checkin: ["weekly check-in", "الفحص الاسبوعي", "تسجيل اسبوعي"]
+  };
+
+  function normTitle(t) {
+    return String(t || "").toLowerCase()
+      .replace(/[\u064B-\u065F\u0670\u0640]/g, "")   // Arabic marks and tatweel
+      .replace(/[\u0623\u0625\u0622]/g, "\u0627")      // alef variants
+      .replace(/\s+/g, " ").trim();
+  }
+
+  function pad2(n) { return n < 10 ? "0" + n : String(n); }
+  function yesterdayKey(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() - 1);
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  // The hash of a same-origin url, "" when there is none, null when the url is
+  // cross-origin or unparseable (never navigated to).
+  function hashOf(url, base) {
+    try {
+      var u = new URL(url, base || window.location.href);
+      if (u.origin !== (base ? new URL(base).origin : window.location.origin)) return null;
+      return u.hash;
+    } catch (e) { return null; }
+  }
+
+  // "#plan?day=2026-10-20", "#checkin", ... for a notification item.
+  function routeFor(item, base) {
+    var hash = item && item.url ? hashOf(item.url, base) : "";
+    var m = hash ? ROUTE_RE.exec(hash) : null;
+    if (m) return hash;
+    var title = normTitle(item && item.title);
+    if (LEGACY_TITLES.checkin.indexOf(title) !== -1) return "#checkin";
+    if (LEGACY_TITLES.plan.indexOf(title) !== -1) {
+      var day = yesterdayKey(item.createdAt);
+      return day ? "#plan?day=" + day : "#plan";
+    }
+    return "#plan";
+  }
+
+  function parseRoute(hash) {
+    var m = ROUTE_RE.exec(hash || "");
+    if (!m) return null;
+    var day = null;
+    if (m[2]) {
+      var q = new URLSearchParams(m[2]).get("day");
+      if (q && DAY_RE.test(q)) day = q;
+    }
+    return { name: m[1], day: day };
+  }
+
+  function hintKey(hash) {
+    var r = parseRoute(hash) || { name: "plan" };
+    if (r.name === "plan") return r.day ? "notifHintDay" : "notifHintPlan";
+    return { checkin: "notifHintCheckin", coach: "notifHintCoach", food: "notifHintFood", profile: "notifHintProfile" }[r.name];
+  }
+
+  function toast(key) {
+    if (window.GymToast && typeof GymToast.show === "function") GymToast.show({ message: str(key), duration: 6500 });
+  }
+
+  function goPlan(day) {
+    if (window.GymUI) GymUI.navigate("plan");
+    if (day && window.GymCalendar && typeof GymCalendar.focusDay === "function") GymCalendar.focusDay(day);
+  }
+
+  // Moves the app to the screen a "#..." route names, without a page load.
+  function routeTo(hash) {
+    var r = parseRoute(hash);
+    if (!r) return false;
+    if (r.name === "plan") { goPlan(r.day); return true; }
+    if (r.name === "checkin") {
+      var opener = window.GymCheckin && typeof GymCheckin.open === "function" ? GymCheckin.open() : Promise.resolve("unavailable");
+      opener.then(function (res) {
+        if (res === "ok") return;
+        goPlan(null);
+        toast(res === "done" ? "notifCheckinDone" : res === "baseline" ? "notifCheckinBaseline" : "notifCheckinOff");
+      });
+      return true;
+    }
+    if (window.GymUI) GymUI.navigate(r.name);
+    return true;
+  }
+
+  // A url from outside the panel (address bar, web-push click, native shell).
+  function routeUrl(url) {
+    var hash = hashOf(url);
+    if (!hash) return false;
+    return routeTo(hash);
+  }
+
+  // Run once the app shell is up; a signed-out start waits briefly for the
+  // session so "#checkin" is not judged before sign-in restores.
+  function routeFromLocation() {
+    var hash = window.location.hash;
+    if (!parseRoute(hash)) return;
+    var go = function () {
+      try { history.replaceState(history.state, "", window.location.pathname + window.location.search); } catch (e) {}
+      routeTo(hash);
+    };
+    if (isAuthed() || hash.indexOf("#checkin") !== 0) { go(); return; }
+    var done = false;
+    var once = function () { if (done) return; done = true; document.removeEventListener("gym:authchange", once); go(); };
+    document.addEventListener("gym:authchange", once);
+    setTimeout(once, 3000);
+  }
+
   function isSameOriginOtherPage(url) {
     try {
       var resolved = new URL(url, window.location.href);
       if (resolved.origin !== window.location.origin) return false;
-      var cur = window.location.href.split("#")[0];
-      var tgt = resolved.href.split("#")[0];
-      return tgt !== cur;
+      // "./" is this app (the index page), not another page.
+      var dir = function (href) { return href.split("#")[0].split("?")[0].replace(/index\.html$/, ""); };
+      return dir(resolved.href) !== dir(window.location.href);
     } catch (e) { return false; }
   }
 
@@ -251,7 +375,9 @@
     }
     var url = item.url;
     close();
-    if (url && isSameOriginOtherPage(url)) window.location.assign(url);
+    var route = routeFor(item);
+    if (url && !ROUTE_RE.test(hashOf(url) || "") && isSameOriginOtherPage(url)) { window.location.assign(url); return; }
+    routeTo(route);
   }
 
   // Optimistic: flip everything loaded to read first, then tell the server.
@@ -400,6 +526,9 @@
       }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     } catch (e) {}
     if (isAuthed()) fetchNotifications();
+    // After ui.js has restored the saved tab, so a deep link wins over it.
+    if (document.readyState === "complete") setTimeout(routeFromLocation, 0);
+    else window.addEventListener("load", function () { setTimeout(routeFromLocation, 0); });
   }
 
   // Exposed for a plain-node smoke test of the pure relTime() helper only;
@@ -415,8 +544,17 @@
   window.GymNotifications = {
     refresh: fetchNotifications,
     open: open,
-    close: close
+    close: close,
+    route: routeUrl
   };
+
+  window.addEventListener("hashchange", function () { routeFromLocation(); });
+  // A web-push click on an already-open window (service-worker.js).
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      if (e.data && e.data.type === "gym:route" && typeof e.data.url === "string") routeUrl(e.data.url);
+    });
+  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
