@@ -13,6 +13,11 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Window behind the WebView: the app's dark bg, not the DayNight default
+             (white in light mode). Shown whenever the WebView surface is not
+             painted, e.g. for a moment after returning from the Health Connect
+             permission screen. -->
+        <item name="android:windowBackground">@color/etq_window_bg</item>
     </style>
 
 
