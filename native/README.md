@@ -26,6 +26,20 @@ cd android && ./gradlew assembleDebug
 # -> android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Capacitor patch (`patches/`)
+
+`npm ci` runs `patch-package`, which patches `@capacitor/android`:
+`Bridge.setAllowedOriginRules` added `server.url` verbatim as a WebView
+origin rule, and a URL with a path (`.../app/`) is not a valid rule, so
+`addWebMessageListener` threw and Capacitor fell back to
+`addJavascriptInterface`, exposing `androidBridge` (plugin calls) to every
+frame, YouTube iframes included. The patch reduces it to
+`scheme://host[:port]` and logs if the fallback ever happens again
+(`adb logcat | grep "addWebMessageListener failed"`). On a Capacitor
+upgrade, check whether upstream fixed it; if `npm ci` fails to apply the
+patch, regenerate it with `npx patch-package @capacitor/android` (delete
+`node_modules/@capacitor/android/capacitor/build` first).
+
 ## Test unmerged web changes in the app
 
 `tools/dev-proxy.mjs` serves this checkout's web app under `/app/` and
