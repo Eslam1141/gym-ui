@@ -125,9 +125,32 @@
     var n = document.querySelectorAll(".syd:not(.m-out)").length;   // a sheet fading out is already closed
     var banner = document.getElementById("alarmBanner");
     if (banner && !banner.hidden) n++;
+    if (window.GymChat && typeof GymChat.isOpen === "function" && GymChat.isOpen()) n++;   // its own Escape handler closes the photo menu first, then the chat
     return n;
   }
+  // Layers with no Escape path of their own (or a native <dialog>, which only
+  // reacts to a real key press): close them directly. Returns true if one closed.
+  function closeOtherLayer() {
+    var dlgs = document.querySelectorAll("dialog[open]:not(.m-out)");
+    var dlg = dlgs[dlgs.length - 1];
+    if (dlg) {
+      var ev = new Event("cancel", { cancelable: true });
+      dlg.dispatchEvent(ev);
+      if (!ev.defaultPrevented && dlg.open) dlg.close();
+      return true;
+    }
+    var scrim = document.querySelector(".wb-scrim");   // workout-builder bottom sheet
+    if (scrim) { scrim.click(); return true; }
+    var modals = ["calendarModal", "videoModal"];
+    for (var i = 0; i < modals.length; i++) {
+      var m = document.getElementById(modals[i]);
+      var btn = m && !m.hidden && !m.classList.contains("m-out") && m.querySelector(".modal-close, .cal-modal-close");
+      if (btn) { btn.click(); return true; }
+    }
+    return false;
+  }
   function closeTopLayer() {
+    if (closeOtherLayer()) return true;
     var before = openLayers();
     if (!before) return false;
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));

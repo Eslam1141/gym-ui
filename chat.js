@@ -538,9 +538,20 @@
   }
   var SCREENS = ["plan", "coach", "food", "watch", "more"];   // the API's accepted "screen" values
   var openedFrom = "";   // the tab the sheet was opened over, captured at open time
+  // Messenger-style open: the panel grows out of the bubble. Needs the bubble's
+  // rect before it hides; with no bubble on screen (Coach tab, timer running)
+  // the plain slide-up is used.
+  function setBubbleOrigin(r) {
+    var panel = chat.querySelector(".coach-chat-panel");
+    if (!r || !r.width || !panel) { chat.classList.remove("bubble"); return; }
+    chat.style.setProperty("--co-x", Math.round(r.left + r.width / 2 - panel.offsetLeft) + "px");
+    chat.style.setProperty("--co-y", Math.round(r.top + r.height / 2 - panel.offsetTop) + "px");
+    chat.classList.add("bubble");
+  }
   function showChat() {
     var tab = document.body.getAttribute("data-tab");
     openedFrom = SCREENS.indexOf(tab) >= 0 ? tab : "";
+    var fabRect = fab.hidden ? null : fab.getBoundingClientRect();
     open = true;
     chat.hidden = false;
     requestAnimationFrame(function () { chat.classList.add("show"); });
@@ -548,6 +559,7 @@
     refreshFabVisibility();
     renderHistory();
     renderChips();
+    setBubbleOrigin(fabRect);   // after the content, so the panel's height (and top) is final
     setTimeout(function () { if (open) try { input.focus({ preventScroll: true }); } catch (e) {} }, 60);
   }
   function closeChat() {
@@ -1057,5 +1069,9 @@
 
   // Lets other modules (the Coach tab's result screen) open the chat drawer
   // without needing to know anything about its internals.
-  window.GymChat = { open: function () { openChat(); } };
+  window.GymChat = {
+    open: function () { openChat(); },
+    close: function () { if (open) closeChat(); },
+    isOpen: function () { return open; }
+  };
 })();
