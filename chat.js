@@ -27,6 +27,7 @@
   var MSG_MAX = 600;      // mirrors the backend's per-message cap
   var POS_KEY = "gymcoach_bubble_pos";
   var DRAG_PX = 6;         // less movement than this is a tap, not a drag
+  var SCROLL_REST_MS = 600; // the bubble restores this long after scrolling stops
   var EDGE_GAP = 12;       // space kept between the button and the screen edge / nav
   var SWIPE_CLOSE_PX = 90; // sheet swipe-down distance that closes it
 
@@ -268,6 +269,19 @@
     return p && (p.side === "l" || p.side === "r") && isFinite(p.bottom) ? p : null;
   }
   function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+  // Bottom edge of the sticky header pill (#topBar when signed in, #topPrefs
+  // when not), measured so the safe-area inset and the pill's real height are
+  // included; 64 is the fallback when neither is on screen.
+  function headerBottom() {
+    var bottom = 0;
+    ["topBar", "topPrefs"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      if (r.height > 0 && r.width > 0) bottom = Math.max(bottom, r.bottom);
+    });
+    return bottom || 64;
+  }
   // Where the button may sit: above the bottom nav, below the top bar, and
   // (on desktop, where the nav is a side rail) beside the rail, never over it.
   function bounds() {
@@ -276,11 +290,9 @@
     var nav = document.getElementById("appNav");
     var nr = nav ? nav.getBoundingClientRect() : null;
     var rail = !!nr && nr.width > 0 && nr.width < vw / 2;
-    var bar = document.getElementById("topBar");
-    var br = bar ? bar.getBoundingClientRect() : null;
     var rtl = document.documentElement.dir === "rtl";
     var minBottom = rail ? 24 : (nr && nr.height ? vh - nr.top + EDGE_GAP : EDGE_GAP);
-    var topLimit = br && br.height ? br.bottom + EDGE_GAP : 64;
+    var topLimit = headerBottom() + EDGE_GAP;
     return {
       vw: vw, vh: vh, size: size, minBottom: minBottom, topLimit: topLimit,
       maxBottom: Math.max(minBottom, vh - topLimit - size),
@@ -356,8 +368,27 @@
       e.preventDefault();
     }, true);
     window.addEventListener("resize", applyPos);
+    window.addEventListener("orientationchange", applyPos);
+    // the header pill appears, disappears and changes size after load (sign-in,
+    // language switch), so a restored spot is re-clamped whenever it does
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(applyPos);
+      ["topBar", "topPrefs"].forEach(function (id) { var el = document.getElementById(id); if (el) ro.observe(el); });
+    }
     pos = loadPos();
     applyPos();
+    wireScrollDim();
+  }
+  // While the page scrolls the button shrinks and fades (CSS .scrolling) so it
+  // never hides what is being read; it comes back SCROLL_REST_MS after the last scroll.
+  function wireScrollDim() {
+    var t = 0;
+    document.addEventListener("scroll", function () {
+      if (open) return;
+      fab.classList.add("scrolling");
+      clearTimeout(t);
+      t = setTimeout(function () { fab.classList.remove("scrolling"); }, SCROLL_REST_MS);
+    }, { capture: true, passive: true });
   }
 
   // ---------------- screen-aware suggestions ----------------

@@ -762,18 +762,22 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 
 /* ---- floating AI-coach chat bubble ---- */
 /* Opens the coach chat as a sheet over Plan, Food and More. Default spot is the
-   bottom inline-end corner (#toTop takes the other one). chat.js lets the user
+   inline-end edge just under the header pill, beside the logo: on Plan that spot is clear of every
+   control at scroll 0 (Start Workout and the exercise-progress pill sit at the
+   bottom inline-end) and below the header pill (#toTop takes the bottom corner).
+   .screen's bottom padding (nav + 88px) lets the last content scroll clear of a
+   bubble parked at the bottom. chat.js lets the user
    drag it: it sets .moved + data-side (l|r) + an inline `bottom`, and animates
    the snap with a transform. z-index 65 keeps it under the nav, dialogs and toasts. */
 #coachFab{
   position:fixed; inset-inline-end:calc(16px + env(safe-area-inset-right)); z-index:65;
-  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px);
+  top:calc(env(safe-area-inset-top) + 72px);
   width:56px; height:56px; border-radius:50%; padding:0; cursor:grab;
   background:var(--primary); border:2px solid var(--surface-2);
   display:flex; align-items:center; justify-content:center;
   touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
   box-shadow:var(--elev-2), 0 0 0 1px var(--line);
-  transition:transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  transition:transform var(--dur-fast) var(--ease), opacity var(--dur-med) var(--ease), background var(--dur-fast) var(--ease);
   animation:fabIn var(--dur-med) var(--ease-spring) backwards;
 }
 @keyframes fabIn{ from{ opacity:0; transform:scale(.6); } to{ opacity:1; transform:none; } }
@@ -783,6 +787,10 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #coachFab:active{ transform:scale(.92); }
 #coachFab:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; }
 #coachFab svg{ width:32px; height:32px; pointer-events:none; }
+/* scrolling: shrink and fade, still tappable; chat.js drops the class ~600ms after the last scroll */
+#coachFab.scrolling{ transform:scale(.8); opacity:.45; }
+@media (prefers-reduced-motion:reduce){ #coachFab.scrolling{ transform:none; } }
+#coachFab.moved{ top:auto; }
 #coachFab.moved[data-side="l"]{ inset-inline:auto; left:calc(16px + env(safe-area-inset-left)); }
 #coachFab.moved[data-side="r"]{ inset-inline:auto; right:calc(16px + env(safe-area-inset-right)); }
 #coachFab.dragging{ cursor:grabbing; transition:none; animation:none; box-shadow:var(--elev-3, var(--elev-2)), 0 0 0 1px var(--line); }
@@ -809,7 +817,7 @@ body.tour-open #coachFab{ pointer-events:none; animation:none; }
   /* the bottom nav becomes a fixed rail on the inline-start edge (#appNav,
      below): the default spot stays on the free end, and a bubble parked on the
      rail's side sits beside the rail, never under it. */
-  #coachFab{ bottom:24px; }
+  #coachFab{ top:auto; bottom:24px; }
   #coachFab.moved[data-side="l"]{ left:calc(var(--side-w) + 16px); }
   [dir="rtl"] #coachFab.moved[data-side="l"]{ left:calc(16px + env(safe-area-inset-left)); }
   [dir="rtl"] #coachFab.moved[data-side="r"]{ right:calc(var(--side-w) + 16px); }
