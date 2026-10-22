@@ -225,10 +225,14 @@ test.describe("Watch tab tours", () => {
     await expect(tourCard(page)).toBeVisible({ timeout: 10000 });
     await expect(page.locator("#tour .tour-text")).toHaveText("Connect your watch to fill this screen. It takes about a minute.");
     await expect(page.locator("#tour .tour-count")).toHaveText("");
-    const spot = await page.locator("#tour .tour-spot").boundingBox();
-    const btn = await page.locator("#wtConnect").boundingBox();
-    expect(spot.x).toBeLessThanOrEqual(btn.x);
-    expect(spot.x + spot.width).toBeGreaterThanOrEqual(btn.x + btn.width);
+    // The spotlight glides in (CSS transition on transform/width/height), so
+    // poll until it has settled around the button instead of reading it mid-glide.
+    await expect(async () => {
+      const spot = await page.locator("#tour .tour-spot").boundingBox();
+      const btn = await page.locator("#wtConnect").boundingBox();
+      expect(spot.x).toBeLessThanOrEqual(btn.x);
+      expect(spot.x + spot.width).toBeGreaterThanOrEqual(btn.x + btn.width);
+    }).toPass({ timeout: 5000 });
     await page.click("#tour .tour-next");
     expect((await seenOf(page)).watchOff).toBe(1);
     expect((await seenOf(page)).watch).toBeUndefined();
