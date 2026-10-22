@@ -286,7 +286,7 @@ const AR_EX = {
   "Prone Y-T Raise":"رفع Y-T على البطن (كتف خلفي وترابيس)",
   "Hands-Elevated Push-ups":"ضغط بيدين مرتفعتين (صدر سفلي)",
   "Side-Lying Hip Abduction":"فتح الورك مستلقياً على الجنب (ألوية)",
-  "Sissy Squat":"سكوات سيسي (أمامية الفخذ)",
+  "Sissy Squat":"سكوات",
   "Side Plank":"بلانك جانبي (بطن)",
   "Decline Push-ups":"ضغط بقدمين مرتفعتين (صدر علوي)",
   "Bent-Knee Calf Raise":"رفع السمانة بركبة مثنية",
