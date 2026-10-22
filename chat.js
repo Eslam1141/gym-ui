@@ -450,7 +450,14 @@
     }
     Promise.race([foodP, foodWait]).catch(function () { return ""; }).then(function (foodToday) {
       if (foodToday) body.foodToday = String(foodToday).slice(0, 2000);
-      return GymCoachConsent.run(function () { return post(body); });
+      return GymCoachConsent.run(function () {
+        return post(body).then(function (r) {
+          var retry = window.GymCoach && GymCoach.retryWithoutExperience ? GymCoach.retryWithoutExperience(r, body) : null;
+          if (!retry) return r;
+          body = retry;
+          return post(body);
+        });
+      });
     }).then(function (r) {
       if (!r) { setSending(false); return; } // 401/429 already answered; "Not now" on a retry lands here too
       setSending(false);

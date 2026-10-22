@@ -17,8 +17,8 @@ test("the policy has the §3.12 Health Connect section in EN and AR with stable 
   expect(html).toContain("Google Play User Data policy, including its Health Connect Limited Use requirements");
 });
 
-test("version is v3 in both headers and the old v2 marker is gone", () => {
-  expect((html.match(/v3 \(2026-10-21\)/g) || []).length).toBe(2);
+test("version is v4 in both headers and the old v2 marker is gone", () => {
+  expect((html.match(/v4 \(2026-10-22\)/g) || []).length).toBe(2);
   expect(html).not.toContain("v2 (2026-10-19)");
 });
 

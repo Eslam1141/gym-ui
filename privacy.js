@@ -58,6 +58,15 @@
     caOk: ["AI coach turned off. Nothing more will be sent to Anthropic.", "تم إيقاف المدرّب الذكي، ولن يُرسل أي شيء آخر إلى Anthropic."],
     caErr: ["Couldn't turn off the AI coach. It's still on. Check your connection and try again.", "تعذّر إيقاف المدرّب الذكي وما زال يعمل. تحقق من اتصالك وحاول مرة أخرى."],
     ibErr: ["Couldn't withdraw your consent. It's still active. Check your connection and try again.", "تعذّر سحب موافقتك وما زالت سارية. تحقق من اتصالك وحاول مرة أخرى."],
+    frTitle: ["First-run answers", "إجابات البداية"],
+    frDesc: ["Delete the answers you gave in the first-run questions and stop us using them. The values they filled into your coach form are cleared too. Your starter plan stays.",
+      "احذف إجاباتك على أسئلة البداية وأوقف استخدامنا لها. وتُمسح أيضًا القيم التي ملأتها في نموذج المدرّب. وتبقى خطتك المبدئية كما هي."],
+    frBtn: ["Withdraw", "سحب الموافقة"],
+    frOk: ["Withdrawn. Your first-run answers were deleted and your starter plan stays.", "تم السحب. حُذفت إجاباتك على أسئلة البداية وبقيت خطتك المبدئية."],
+    frErr: ["Couldn't withdraw. Check your connection and try again.", "تعذّر السحب. تحقق من اتصالك وحاول مرة أخرى."],
+    frShTitle: ["Withdraw your first-run answers?", "سحب إجابات البداية؟"],
+    frShLead: ["We delete your saved answers from your account and clear what they filled into your coach form. Your starter plan stays. You can answer again any time.",
+      "نحذف إجاباتك المحفوظة من حسابك ونمسح ما ملأته في نموذج المدرّب. وتبقى خطتك المبدئية. ويمكنك الإجابة مجددًا في أي وقت."],
     delTitle: ["Delete my account", "حذف حسابي"],
     delDesc: ["Permanently remove your account and everything in it.", "احذف حسابك وكل ما فيه نهائيًا."],
     delBtn: ["Delete my account", "حذف حسابي"],
@@ -305,6 +314,11 @@
           '<button type="button" class="pv-btn" id="pvIbBtn"><span data-pk="ibBtn"></span></button>' +
           '<p class="pv-status" id="pvIbStatus" role="status" aria-live="polite"></p>' +
         '</div>' +
+        '<div class="pv-row" id="pvFrRow" hidden>' +
+          '<div class="pv-text"><div class="pv-title" data-pk="frTitle"></div><p class="pv-desc" data-pk="frDesc"></p><a class="pv-link" href="/privacy#first-run" data-pk="wdMore"></a></div>' +
+          '<button type="button" class="pv-btn" id="pvFrBtn"><span data-pk="frBtn"></span></button>' +
+          '<p class="pv-status" id="pvFrStatus" role="status" aria-live="polite"></p>' +
+        '</div>' +
         '<div class="pv-row pv-row-danger">' +
           '<div class="pv-text"><div class="pv-title" data-pk="delTitle"></div><p class="pv-desc" data-pk="delDesc"></p></div>' +
           '<button type="button" class="pv-btn pv-btn-danger" id="pvDelete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1 11a2 2 0 0 1-2 1.8H9A2 2 0 0 1 7 20L6 9z"/></svg><span data-pk="delBtn"></span></button>' +
@@ -315,6 +329,7 @@
     el("pvDelete").addEventListener("click", openSheet);
     el("pvIbBtn").addEventListener("click", withdrawInbody);
     el("pvCaBtn").addEventListener("click", withdrawCoach);
+    el("pvFrBtn").addEventListener("click", askFirstRun);
     paint();
   }
 
@@ -389,6 +404,74 @@
     });
   }
 
+  // ---------------- first-run survey consent (onboarding; granted by survey.js) ----------------
+  // Shown only while an active consent or saved answers exist. Withdrawing deletes the consent record
+  // and the answers on the server, then survey.js clears what it filled into the coach form.
+  var frActive = false, frDone = false, frBusy = false, frSheet = null;
+  function frAnswers() {
+    var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
+    return !!(me && me.onboardingCompleted === true);
+  }
+  function paintFirstRun() {
+    var row = el("pvFrRow");
+    if (!row) return;
+    row.hidden = !(signedIn() && (frActive || frDone || frAnswers()));
+    el("pvFrBtn").disabled = frBusy || frDone;
+  }
+  function loadFirstRun() {
+    if (!signedIn()) { frActive = false; frDone = false; paintFirstRun(); return; }
+    call("/me/consents").then(function (r) {
+      if (!r.res) return;
+      return r.res.json().then(function (d) {
+        var list = (d && d.consents) || [];
+        frActive = list.some(function (c) { return c && c.type === "onboarding" && !c.withdrawnAt; });
+        if (frActive) frDone = false;
+        paintFirstRun();
+      }, function () {});
+    });
+  }
+  function ok2xx(r) { return (r.status >= 200 && r.status < 300) || r.status === 404; } // 404: nothing left to delete
+  function askFirstRun() {
+    if (frBusy || frDone) return;
+    if (!frSheet) {
+      frSheet = document.createElement("dialog");
+      frSheet.className = "pv-sheet";
+      frSheet.setAttribute("aria-labelledby", "pvFrShTitle");
+      frSheet.innerHTML =
+        '<div class="pv-sheet-grip" aria-hidden="true"></div>' +
+        '<div>' +
+          '<h2 id="pvFrShTitle" class="pv-sh-title" data-pk="frShTitle" tabindex="-1"></h2>' +
+          '<p class="pv-sh-lead" data-pk="frShLead"></p>' +
+          '<div class="pv-actions">' +
+            '<button type="button" class="pv-btn" id="pvFrCancel" data-pk="cancel"></button>' +
+            '<button type="button" class="pv-btn pv-btn-fill" id="pvFrGo"><span data-pk="frBtn"></span></button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(frSheet);
+      frSheet.addEventListener("cancel", function (e) { e.preventDefault(); closeFrSheet(); });
+      frSheet.addEventListener("click", function (e) { if (e.target === frSheet) closeFrSheet(); });
+      el("pvFrCancel").addEventListener("click", closeFrSheet);
+      el("pvFrGo").addEventListener("click", function () { closeFrSheet(); withdrawFirstRun(); });
+    }
+    paintNode(frSheet);
+    frSheet.showModal();
+    el("pvFrShTitle").focus();
+  }
+  function closeFrSheet() { if (frSheet && frSheet.open) GymMotion.closeDialog(frSheet); }
+  function withdrawFirstRun() {
+    if (frBusy) return;
+    frBusy = true; paintFirstRun();
+    Promise.all([call("/me/consents/onboarding", { method: "DELETE" }), call("/me/onboarding", { method: "DELETE" })]).then(function (rs) {
+      frBusy = false;
+      if (rs.every(ok2xx)) {
+        frActive = false; frDone = true;
+        setStatus(el("pvFrStatus"), "ok", "frOk");
+        if (window.GymSurvey && GymSurvey.afterWithdraw) GymSurvey.afterWithdraw();
+      } else setStatus(el("pvFrStatus"), "err", "frErr");
+      paintFirstRun();
+    });
+  }
+
   // build: fn returning an already-built message (waits with a number). It is
   // stored on the node and re-run by paintNode so a language switch re-translates it.
   function setStatus(node, kind, key, build) {
@@ -410,8 +493,9 @@
   }
 
   function paint() {
-    if (section) { section.hidden = !signedIn(); paintNode(section); paintInbody(); paintCoach(); }
+    if (section) { section.hidden = !signedIn(); paintNode(section); paintInbody(); paintCoach(); paintFirstRun(); }
     if (sheet) paintNode(sheet);
+    if (frSheet) paintNode(frSheet);
     if (doneEl) paintNode(doneEl);
   }
 
@@ -643,7 +727,18 @@
   // ---------------- boot ----------------
   function init() {
     buildSection();
-    document.addEventListener("gym:authchange", function () { paint(); loadInbody(); loadCoach(); });
+    document.addEventListener("gym:authchange", function () { paint(); loadInbody(); loadCoach(); loadFirstRun(); });
+    document.addEventListener("etq:onboarding-consent-changed", function (e) {
+      frActive = !!(e.detail && e.detail.granted);
+      if (frActive) { frDone = false; var n = el("pvFrStatus"); n._pvText = null; delete n.dataset.pk; n.textContent = ""; n.className = "pv-status"; }
+      paintFirstRun();
+    });
+    // header.js loads after this file: its /me (onboardingCompleted) is read at DOMContentLoaded and on every change.
+    function hookHeader() {
+      if (window.GymHeader && GymHeader.onChange) GymHeader.onChange(paintFirstRun);
+      paintFirstRun();
+    }
+    if (document.readyState === "complete") hookHeader(); else document.addEventListener("DOMContentLoaded", hookHeader);
     document.addEventListener("etq:coach-consent-changed", function (e) {
       caActive = !!(e.detail && e.detail.granted);
       if (caActive) { caDone = false; var n = el("pvCaStatus"); n._pvText = null; delete n.dataset.pk; n.textContent = ""; n.className = "pv-status"; }
@@ -661,6 +756,7 @@
     paint();
     loadInbody();
     loadCoach();
+    loadFirstRun();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

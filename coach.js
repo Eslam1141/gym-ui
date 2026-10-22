@@ -482,7 +482,7 @@
       trainingDaysPerWeek: "4", equipment: "full_gym",
       dietPreference: "balanced", allergies: [], dislikes: [],
       inbodyOpen: false, bodyFatPct: "", skeletalMuscleMassKg: "", visceralFatLevel: "", bmrKcal: "",
-      notes: "",
+      notes: "", experience: "",
       ramadan: false, ramadanAuto: "", ramadanManual: false
     };
   }
@@ -1077,6 +1077,18 @@
     refreshValidity();          // dim submit + show hints on first paint
   }
 
+  // gym-assistant rejects unknown fields ("malformed JSON body", 400). Until
+  // it knows `experience` (gym-assistant#42), a request carrying it fails, so
+  // retry once without it and stop sending it for this session.
+  var expUnsupported = false;
+  function retryWithoutExperience(r, payload) {
+    var msg = r && r.status === 400 && r.body && r.body.error && r.body.error.message;
+    if (msg !== "malformed JSON body" || !payload || !payload.profile || !payload.profile.experience) return null;
+    expUnsupported = true;
+    var copy = JSON.parse(JSON.stringify(payload));
+    delete copy.profile.experience;
+    return copy;
+  }
   function buildProfile(st) {
     var n = function (x) { return x === "" || x == null ? undefined : Number(x); };
     var profile = {
@@ -1093,6 +1105,7 @@
     if (st.allergies && st.allergies.length) profile.allergies = st.allergies;
     if (st.dislikes && st.dislikes.length) profile.dislikes = st.dislikes;
     if (st.notes) profile.notes = st.notes;
+    if (st.experience && !expUnsupported) profile.experience = st.experience;
     var ib = {};
     ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
       if (st[k] !== "" && st[k] != null) ib[k] = n(st[k]);
@@ -1210,6 +1223,14 @@
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     var url = ASSIST_BASE + "/assessment" + (strong ? "?model=strong" : "");
     function post() {
+      return postOnce().then(function (r) {
+        var retry = retryWithoutExperience(r, reqBody);
+        if (!retry) return r;
+        reqBody = retry;
+        return postOnce();
+      });
+    }
+    function postOnce() {
       return fetchTimeout(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
@@ -1692,7 +1713,61 @@
     else renderForm();
   }
 
-  window.GymCoach = { refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
+  // Onboarding survey (survey.js): copy its answers into the coach form so
+  // the user isn't asked twice, and run the first plan from them. The fields
+  // it wrote are remembered (SURVEY_FILLED_KEY) so withdrawing the survey
+  // consent can clear exactly those, and not anything the user typed since.
+  // Allergies, Ramadan and Halal are not survey questions: the coach form
+  // keeps its own fields for them.
+  var SURVEY_FILLED_KEY = "gym_survey_filled"; // local only (see sync.js LOCAL_ONLY)
+  function applySurvey(a, inbody) {
+    var st = loadState();
+    var wrote = {};
+    function put(k, v) { st[k] = v; wrote[k] = v; }
+    put("want", "both");
+    put("age", String(a.age));
+    put("sex", a.sex);
+    put("heightCm", String(a.heightCm));
+    put("weightKg", String(a.weightKg));
+    put("goalChecks", { lose_fat: a.goal === "lose_fat" || a.goal === "recomp",
+      gain_muscle: a.goal === "gain_muscle" || a.goal === "recomp", maintain: a.goal === "maintain" });
+    put("goal", deriveGoal(st.goalChecks));
+    put("activityLevel", a.activityLevel);
+    put("trainingDaysPerWeek", String(a.trainingDaysPerWeek));
+    put("equipment", a.equipment);
+    put("dietPreference", a.dietPreference || "balanced");
+    put("experience", a.experience || "");
+    if (inbody && typeof inbody === "object") {
+      var any = false;
+      ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
+        if (typeof inbody[k] === "number" && isFinite(inbody[k])) { put(k, String(inbody[k])); any = true; }
+      });
+      if (any) put("inbodyOpen", true);
+    }
+    saveJSON(SURVEY_FILLED_KEY, wrote);
+    saveSynced(FORM_KEY, st);
+  }
+  // Withdrawing the survey consent: put back the default of every field the
+  // survey filled, unless the user changed it since.
+  function clearSurvey() {
+    var wrote = loadJSON(SURVEY_FILLED_KEY, null);
+    try { localStorage.removeItem(SURVEY_FILLED_KEY); } catch (e) {}
+    if (!wrote) return;
+    var def = defaultState();
+    var st = Object.assign({}, def, loadJSON(FORM_KEY, {}));
+    Object.keys(wrote).forEach(function (k) {
+      if (JSON.stringify(st[k]) === JSON.stringify(wrote[k])) st[k] = def[k];
+    });
+    saveSynced(FORM_KEY, st);
+    refresh();
+  }
+  function runSurveyPlan() {
+    var st = loadState();
+    if (!validate(st).ok) { refresh(); return; }
+    runAssessment(buildRequest(st), false);
+  }
+
+  window.GymCoach = { retryWithoutExperience: retryWithoutExperience, applySurvey: applySurvey, clearSurvey: clearSurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

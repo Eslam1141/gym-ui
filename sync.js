@@ -103,7 +103,7 @@
   // in-app inbox), and calendar.js now clears this key on load — but it
   // stays listed here so a stale value lingering on some other, not-yet-
   // updated device never syncs onto a device that already cleared it.
-  var LOCAL_ONLY = { gym_meta_updatedAt: 1, gym_user_sub: 1, gym_tab: 1, gym_anon: 1, gym_session_active: 1, gym_push_endpoint: 1 };
+  var LOCAL_ONLY = { gym_meta_updatedAt: 1, gym_user_sub: 1, gym_tab: 1, gym_anon: 1, gym_session_active: 1, gym_push_endpoint: 1, gym_survey_draft: 1, gym_survey_filled: 1, gym_survey_dismissed: 1, gym_survey_card_closed: 1 };
   function syncable(k) { return k && k.indexOf("gym_") === 0 && !LOCAL_ONLY[k]; }
   var FETCH_TIMEOUT_MS = 8000;
   var DEBOUNCE_MS = 1500;

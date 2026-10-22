@@ -63,7 +63,7 @@ async function mockApi(context, s) {
   });
 }
 
-// opts: { termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
+// opts: { setup (async (context, server) => ...: extra routes), termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
@@ -74,6 +74,7 @@ async function openApp(browser, opts) {
   });
   const server = makeServer(opts.server);
   await mockApi(context, server);
+  if (opts.setup) await opts.setup(context, server); // routes added here win over mockApi's (use route.fallback() to pass a request on)
   const consoleErrors = [];
   await context.addInitScript((o) => {
     try {
