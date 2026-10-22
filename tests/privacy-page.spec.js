@@ -185,7 +185,7 @@ test("InBody consent links to #inbody (AR text too)", async ({ browser }) => {
 
 test("chat note links to #ai-coach and the meal-photo notice to #meal-photos", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true });
-  await page.click('#appNav button[data-tab="coach"]');
+  await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
   const note = page.locator("#coachChatNote a.pol-link");
   await expect(note).toBeVisible();

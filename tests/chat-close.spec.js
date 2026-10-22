@@ -9,7 +9,7 @@ async function openChat(browser, viewport) {
   const { context, page } = await openApp(browser, { signedIn: true, ls: { gymcoach_last: { computed: { targetKcal: 2000, proteinG: 150, carbG: 200, fatG: 60 } } } });
   if (viewport) await page.setViewportSize(viewport);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.click('#appNav button[data-tab="coach"]');
+  await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
   await expect(page.locator("#coachChat.show")).toBeVisible();
   await page.waitForTimeout(350);

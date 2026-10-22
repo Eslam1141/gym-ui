@@ -146,7 +146,7 @@ async function openChat({ browser, lang, theme, reply }) {
     calls.chat.push(JSON.parse(route.request().postData()));
     return json(route, 200, reply);
   });
-  await page.click('#appNav button[data-tab="coach"]'); // the coach FAB only shows on the Coach tab
+  await page.click('#appNav button[data-tab="more"]'); // the coach bubble is hidden on the Coach tab
   await page.click("#coachFab");
   return { context, page, calls };
 }

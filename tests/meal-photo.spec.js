@@ -100,7 +100,7 @@ async function openChat({ browser, lang, theme, status, body, acked, viewport, m
     calls.photo.push({ auth: req.headers().authorization, ...parseMultipart(req) });
     return json(route, status || 200, body || OK);
   });
-  await page.click('#appNav button[data-tab="coach"]');
+  await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
   await expect(page.locator("#coachChat.show")).toBeVisible();
   return { context, page, calls };
@@ -390,7 +390,7 @@ test("the thumbnail is not persisted: history keeps a text placeholder and no im
   expect(stored).not.toContain("blob:");
   expect(stored).not.toContain("data:image");
   await page.reload();
-  await page.click('#appNav button[data-tab="coach"]');
+  await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
   await expect(page.locator(".coach-chat-msg.user").first()).toContainText("📷 Meal photo");
   await expect(page.locator("#coachChatMsgs img")).toHaveCount(0);

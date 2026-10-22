@@ -14,7 +14,7 @@ async function openChat(browser) {
     await gate; // hold the reply so the "sending" state is observable
     return json(route, 200, { reply: "ok" });
   });
-  await page.click('#appNav button[data-tab="coach"]');
+  await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
   return { context, page, release };
 }
