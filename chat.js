@@ -1,8 +1,8 @@
 /* chat.js — floating live nutrition/fitness chat bubble.
  *
  * A small circular "AI coach" button on Plan, Food and More (not on the Coach
- * tab, and not while the workout timer runs, a dialog is up or the tour,
- * survey or sign-in screen is open) that opens the chat as a sheet over the
+ * tab, and not while the workout timer runs, a dialog is up or the survey or
+ * sign-in screen is open; the screen tour spotlights it, inert) that opens the chat as a sheet over the
  * current screen, backed by POST /assistant/chat. The button can be dragged;
  * it snaps to the nearest side edge and the spot is remembered per device.
  * Anonymous taps prompt sign-in, same as the Coach tab.

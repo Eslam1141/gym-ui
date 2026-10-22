@@ -54,6 +54,8 @@ const ASSETS = [
   "./profile.js",
   "./watch.js",
   "./watch.css",
+  "./watch-screen.js",
+  "./watch-screen.css",
   "./toast.js",
   "./dom.js",
   "./config.js",

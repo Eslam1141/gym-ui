@@ -24,7 +24,7 @@ async function setup(context, log) {
 }
 async function start(browser, opts) {
   const puts = [];
-  const o = Object.assign({ signedIn: true, setup: (c) => setup(c, puts), ls: { gym_tours_seen: { plan: 1, more: 1 } } }, opts || {});
+  const o = Object.assign({ signedIn: true, setup: (c) => setup(c, puts), ls: { gym_tours_seen: { plan: 2, coach: 2, food: 2, more: 2, watch: 1, watchOff: 1, bubble: 1 } } }, opts || {});
   const app = await openApp(browser, o);
   app.puts = puts;
   return app;

@@ -1,13 +1,14 @@
 /* watch.js — smartwatch data from Health Connect, Android app only.
  *
- *   Plan tab    ask card ("Do you have a smartwatch?") -> disclosure sheet ->
- *               Health Connect permission sheet -> "today" strip.
+ *   Watch tab   (watch-screen.js) connect card -> disclosure sheet -> Health
+ *               Connect permission sheet -> today's dial + the last 7 days.
+ *   Plan tab    one line (steps and kcal) that opens the Watch tab.
  *   Profile     "Watch & Health Connect" row: connect / manage / disconnect.
  *
  * Gate: the native Capacitor shell AND window.Capacitor.Plugins.Health (the
  * @capgo/capacitor-health plugin) AND Android 9+ AND a usable Health Connect.
  * On the web, in an APK without the plugin, or on Android 8 and below nothing
- * is rendered and nothing is stored. Every plugin call can reject; a failure
+ * is stored (the Watch tab then explains that watch data works in the Android app). Every plugin call can reject; a failure
  * shows a calm message and never breaks the page.
  *
  * Privacy: watch data is read on demand, kept only in this phone's localStorage
@@ -16,12 +17,14 @@
  * sync.js's clearUserData() wipes the "etqwatch_" prefix on sign-out / account
  * switch, and privacy.js wipes all local data on account delete.
  *
- *   etqwatch_ask    "yes" | "no" | "later:<ms>"   the ask-card answer
+ *   etqwatch_ask    "yes" | "no" | "later:<ms>"   last connect answer (no longer drives any UI)
  *   etqwatch_on     "1"                            connected and reading
  *   etqwatch_cache  {day, at, vals, denied}        last values shown
+ *   etqwatch_week   {day, at, days:[{d, steps, kcal, rhr, sleepMin} x7]}   the 7-day chart
+ *   etqwatch_tabseen / etqwatch_metric             Watch-tab dot and chart choice (watch-screen.js)
  *
  * Revocation: there is no callback when the user removes access in Health
- * Connect, so on every resume and Plan-tab show checkAuthorization() runs; values
+ * Connect, so on every resume and Plan/Watch-tab show checkAuthorization() runs; values
  * for types no longer allowed are dropped, and if none is left the whole cache
  * goes. The cache also expires after 30 days without a refresh.
  *
@@ -34,27 +37,26 @@
   if (!window.GymDom) throw new Error("watch.js: dom.js must load first");
   var h = GymDom.h;
 
-  var KEY_ASK = "etqwatch_ask", KEY_ON = "etqwatch_on", KEY_CACHE = "etqwatch_cache";
+  var KEY_ASK = "etqwatch_ask", KEY_ON = "etqwatch_on", KEY_CACHE = "etqwatch_cache", KEY_WEEK = "etqwatch_week";
+  var KEY_SEEN = "etqwatch_tabseen", KEY_METRIC = "etqwatch_metric";
   var TYPES = ["steps", "calories", "heartRate", "restingHeartRate", "sleep", "weight"];
   // which cached value each Health Connect type feeds
   var VAL_OF = { steps: "steps", calories: "kcal", heartRate: "avgHr", restingHeartRate: "rhr", sleep: "sleepMin", weight: "weightKg" };
-  var ASK_AGAIN_MS = 7 * 24 * 3600 * 1000;
   var CACHE_MAX_MS = 30 * 24 * 3600 * 1000;
   var THROTTLE_MS = 60 * 1000;
-  // Display-only daily goals for the rings on the strip (not user settings yet).
-  var GOALS = { steps: 8000, kcal: 500 };
-  var COUNT_MS = 800;      // first appearance: count up from 0 and fill the rings
-  var DELTA_MS = 600;      // a refresh that changed a value: move from what is shown
+  // Display-only daily goals (not user settings yet): sleep in minutes.
+  var GOALS = { steps: 8000, kcal: 500, sleepMin: 480 };
+  var DAYS = 7;
   var PLAY_URL = "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata";
 
   var STR = {
-    // ---- ask card (B1) ----
-    askTitle: ["Do you have a smartwatch?", "عندك ساعة ذكية؟"],
+    // ---- Watch tab / Plan link ----
+    navWatch: ["Watch", "ساعتي"],
+    planSteps: ["{n} steps", "{n} خطوة"],
+    planKcal: ["{n} kcal", "{n} سعرة"],
+    planAria: ["Watch: {parts}. Open", "ساعتي: {parts}. افتح"],
     askBody: ["Connect it to see your steps, sleep and heart rate next to your plan. It stays on your phone.",
       "اربطها لتشوف خطواتك ونومك ونبضك بجانب خطتك. وكل شيء يبقى على هاتفك."],
-    askYes: ["Yes", "نعم"],
-    askLater: ["Not now", "ليس الآن"],
-    askNo: ["No", "لا"],
 
     // ---- prominent disclosure, shown BEFORE the Android permission screen (B2) ----
     discTitle: ["Show your watch data in Etqadem", "اعرض بيانات ساعتك في اتقدم"],
@@ -90,12 +92,10 @@
     latestWeight: ["Latest weight from your watch: {kg} kg", "آخر وزن من ساعتك: {kg} كجم"],
 
     // ---- today strip, empty states and errors (B4) ----
-    stripTitle: ["From your watch today", "من ساعتك اليوم"],
     updated: ["Updated {time}", "آخر تحديث {time}"],
     stepsLbl: ["Steps", "الخطوات"],
     kcalLbl: ["Active kcal", "السعرات النشطة"],
     restHrLbl: ["Resting heart rate", "نبض الراحة"],
-    sleepLbl: ["Last night's sleep", "نوم الليلة الماضية"],
     hrNote: ["Estimate from your watch. Not medical advice.", "تقدير من ساعتك. وليس نصيحة طبية."],
     noData: ["No data from your watch yet. Open your watch app to sync.", "لا توجد بيانات من ساعتك بعد. افتح تطبيق ساعتك للمزامنة."],
     partial: ["Some types are off. Open Health Connect, then tap App permissions → Etqadem to turn them on.", "بعض الأنواع غير مفعّلة. افتح <span dir=\"ltr\">Health Connect</span> ثم اضغط «أذونات التطبيقات» ← اتقدم لتفعيلها."],
@@ -114,11 +114,8 @@
     tryAgain: ["Try again", "حاول مرة أخرى"],
     loading: ["Reading your watch data...", "جارٍ قراءة بيانات ساعتك..."],
     bpm: ["bpm", "نبضة/د"],
-    avgHr: ["avg {n} today", "المتوسط {n} اليوم"],
     cellNoData: ["No data", "لا توجد بيانات"],
     cellOff: ["Not allowed", "غير مسموح"],
-    goalSteps: ["{pct}% of {goal}", "{pct}% من {goal}"],
-    goalKcal: ["{pct}% of {goal} kcal", "{pct}% من {goal} سعرة"],
     hr: ["h", "س"],
     min: ["m", "د"],
     connected: ["Watch connected", "تم ربط الساعة"],
@@ -164,26 +161,53 @@
     return c;
   }
   function isOn() { return lsGet(KEY_ON) === "1"; }
-  function askDue() {
-    var a = lsGet(KEY_ASK);
-    if (!a) return true;
-    if (a.indexOf("later:") === 0) return Date.now() - (Number(a.slice(6)) || 0) >= ASK_AGAIN_MS;
-    return false;
-  }
   function clearAll() {
     gen++;
-    lsDel(KEY_ASK); lsDel(KEY_ON); lsDel(KEY_CACHE);
+    lsDel(KEY_ASK); lsDel(KEY_ON); lsDel(KEY_CACHE); lsDel(KEY_WEEK); lsDel(KEY_SEEN); lsDel(KEY_METRIC);
     last = null; lastRefresh = 0; inflight = null;
   }
+
+  // The last 7 local days, oldest first: [{d, steps, kcal, rhr, sleepMin}].
+  // The cache is re-aligned to today, so a week cached yesterday shifts by one day.
+  function dayKeys() {
+    var out = [];
+    for (var i = -(DAYS - 1); i <= 0; i++) out.push(GymDate.key(i));
+    return out;
+  }
+  function blankDay(k) { return { d: k, steps: null, kcal: null, rhr: null, sleepMin: null }; }
+  function weekHasData(days) {
+    return !!days && days.some(function (x) { return x.steps != null || x.kcal != null || x.rhr != null || x.sleepMin != null; });
+  }
+  function readWeek() {
+    var c = null;
+    try { c = JSON.parse(lsGet(KEY_WEEK)); } catch (e) {}
+    if (!c || typeof c !== "object" || !Array.isArray(c.days)) { if (lsGet(KEY_WEEK) !== null) lsDel(KEY_WEEK); return null; }
+    if (c.at && Date.now() - c.at > CACHE_MAX_MS) { lsDel(KEY_WEEK); return null; }
+    var by = {};
+    c.days.forEach(function (x) { if (x && x.d) by[x.d] = x; });
+    return dayKeys().map(function (k) { return Object.assign(blankDay(k), by[k] || {}); });
+  }
+  function writeWeek(week, at) {
+    if (weekHasData(week)) lsSet(KEY_WEEK, JSON.stringify({ day: GymDate.key(), at: at, days: week }));
+    else lsDel(KEY_WEEK);
+  }
+
   // Drop what was cached for types that are no longer allowed.
+  var COL_OF = { steps: "steps", calories: "kcal", restingHeartRate: "rhr", sleep: "sleepMin" };
   function purgeDenied(denied) {
     if (!denied.length) return;
-    var c = readCache();
+    var c = readCache(), w = readWeek();
     denied.forEach(function (t) {
       if (c) delete c.vals[VAL_OF[t]];
       if (last && last.vals) delete last.vals[VAL_OF[t]];
+      var col = COL_OF[t];
+      if (col) {
+        if (w) w.forEach(function (x) { x[col] = null; });
+        if (last && last.week) last.week.forEach(function (x) { x[col] = null; });
+      }
     });
     if (c) lsSet(KEY_CACHE, JSON.stringify(c));
+    if (w) writeWeek(w, (last && last.at) || Date.now());
   }
 
   // ---------------- plugin ----------------
@@ -291,6 +315,16 @@
     if (can("restingHeartRate")) jobs.rhr = attempt(samples("restingHeartRate", dayStart(-3), 1));
     if (can("sleep")) jobs.sleep = attempt(samples("sleep", dayStart(-1, 18), 20));
     if (can("weight")) jobs.weight = attempt(samples("weight", dayStart(-30), 1));
+    // The 7-day chart: same permissions, one day bucket per day (the plugin skips
+    // days with no data); no sleep aggregation exists, so sessions are read and
+    // assigned to the day they ended.
+    var weekAgg = function (type) {
+      return call("queryAggregated", { dataType: type, startDate: dayStart(-(DAYS - 1)).toISOString(), endDate: now, bucket: "day", aggregation: "sum" });
+    };
+    if (can("steps")) jobs.wSteps = attempt(weekAgg("steps"));
+    if (can("calories")) jobs.wKcal = attempt(weekAgg("calories"));
+    if (can("restingHeartRate")) jobs.wRhr = attempt(samples("restingHeartRate", dayStart(-(DAYS - 1)), 30));
+    if (can("sleep")) jobs.wSleep = attempt(samples("sleep", dayStart(-DAYS, 18), 200));
     var keys = Object.keys(jobs);
     return Promise.all(keys.map(function (k) { return jobs[k]; })).then(function (res) {
       var out = {}, failed = 0;
@@ -312,8 +346,41 @@
     };
   }
 
-  function stripEmpty(v) {
-    return v.steps == null && v.kcal == null && v.rhr == null && v.avgHr == null && v.sleepMin == null;
+  function stripEmpty(v, week) {
+    return v.steps == null && v.kcal == null && v.rhr == null && v.avgHr == null && v.sleepMin == null && !weekHasData(week);
+  }
+
+  function toWeek(raw, vals) {
+    var days = dayKeys().map(blankDay);
+    var t0 = dayStart(-(DAYS - 1)).getTime(), DAY = 86400000;
+    var at = function (iso, round) {
+      var t = Date.parse(iso);
+      if (!isFinite(t)) return -1;
+      var i = Math[round ? "round" : "floor"]((t - t0) / DAY);
+      return i >= 0 && i < DAYS ? i : -1;
+    };
+    var agg = function (r, col) {
+      ((r && r.samples) || []).forEach(function (x) {
+        var n = num(x && x.value), i = x && x.startDate ? at(x.startDate, true) : -1;
+        if (n != null && i >= 0) days[i][col] = (days[i][col] || 0) + Math.round(n);
+      });
+    };
+    agg(raw.wSteps, "steps");
+    agg(raw.wKcal, "kcal");
+    ((raw.wRhr && raw.wRhr.samples) || []).forEach(function (x) {      // newest first: keep the first per day
+      var n = num(x && x.value), i = x && x.startDate ? at(x.startDate) : -1;
+      if (n != null && i >= 0 && days[i].rhr == null) days[i].rhr = Math.round(n);
+    });
+    ((raw.wSleep && raw.wSleep.samples) || []).forEach(function (x) {
+      if (!x || x.sleepState === "awake") return;
+      var m = num(x.value);
+      if (m == null && x.startDate && x.endDate) m = (Date.parse(x.endDate) - Date.parse(x.startDate)) / 60000;
+      var i = at(x.endDate || x.startDate);
+      if (m != null && m > 0 && i >= 0) days[i].sleepMin = (days[i].sleepMin || 0) + Math.round(m);
+    });
+    var today = days[DAYS - 1];
+    ["steps", "kcal", "sleepMin"].forEach(function (col) { if (today[col] == null && vals[col] != null) today[col] = vals[col]; });
+    return days;
   }
 
   // Always re-checks what Health Connect still allows (cheap, and the only way
@@ -327,33 +394,37 @@
     var dayKey = GymDate.key();
     var hadLast = !!last;
     if (!last) last = cached && cached.day === dayKey
-      ? { status: "loading", vals: cached.vals, denied: cached.denied || [], at: cached.at }
-      : { status: "loading", vals: cached ? { weightKg: cached.vals.weightKg } : {}, denied: [], at: 0 };
+      ? { status: "loading", vals: cached.vals, denied: cached.denied || [], at: cached.at, week: readWeek() }
+      : { status: "loading", vals: cached ? { weightKg: cached.vals.weightKg } : {}, denied: [], at: 0, week: readWeek() };
     if (!hadLast) renderAll();
     inflight = call("checkAuthorization", { read: TYPES }).then(function (a) {
       var ok = (a && a.readAuthorized) || [];
       var denied = TYPES.filter(function (t) { return ok.indexOf(t) < 0; });
-      if (!ok.length) { lsDel(KEY_CACHE); return { status: "denied", vals: {}, denied: denied, at: 0, fresh: true }; }
+      if (!ok.length) { lsDel(KEY_CACHE); lsDel(KEY_WEEK); return { status: "denied", vals: {}, denied: denied, at: 0, week: null, fresh: true }; }
       purgeDenied(denied);
       var due = force || Date.now() - lastRefresh >= THROTTLE_MS || /^(denied|error|loading)$/.test(last.status);
       if (!due) {
-        var st = denied.length ? (stripEmpty(last.vals) ? "empty" : "partial") : (last.status === "partial" ? "ok" : last.status);
-        return { status: st, vals: last.vals, denied: denied, at: last.at };
+        var st = denied.length ? (stripEmpty(last.vals, last.week) ? "empty" : "partial") : (last.status === "partial" ? "ok" : last.status);
+        return { status: st, vals: last.vals, denied: denied, at: last.at, week: last.week };
       }
       lastRefresh = Date.now();
       return readAll(ok).then(function (r) {
         // Carry the last weight over only while weight is still allowed (a revoked type must not come back from the cache).
         var vals = toVals(r.raw, ok.indexOf("weight") >= 0 && cached ? cached.vals : null);
-        if (r.tried && r.failed === r.tried) return { status: "error", vals: last.vals, denied: denied, at: last.at };
-        var status = stripEmpty(vals) ? "empty" : (denied.length ? "partial" : "ok");
-        return { status: status, vals: vals, denied: denied, at: Date.now(), fresh: true };
+        if (r.tried && r.failed === r.tried) return { status: "error", vals: last.vals, denied: denied, at: last.at, week: last.week };
+        var week = toWeek(r.raw, vals);
+        var status = stripEmpty(vals, week) ? "empty" : (denied.length ? "partial" : "ok");
+        return { status: status, vals: vals, denied: denied, at: Date.now(), week: week, fresh: true };
       });
     }).catch(function () {
-      return { status: "error", vals: last ? last.vals : {}, denied: [], at: last ? last.at : 0 };
+      return { status: "error", vals: last ? last.vals : {}, denied: [], at: last ? last.at : 0, week: last ? last.week : null };
     }).then(function (res) {
       if (myGen !== gen) return;
       last = res;
-      if (res.fresh && res.status !== "denied") lsSet(KEY_CACHE, JSON.stringify({ day: dayKey, at: res.at, vals: res.vals, denied: res.denied }));
+      if (res.fresh && res.status !== "denied") {
+        lsSet(KEY_CACHE, JSON.stringify({ day: dayKey, at: res.at, vals: res.vals, denied: res.denied }));
+        writeWeek(res.week, res.at);
+      }
     }).then(function () {
       inflight = null;
       renderAll();
@@ -367,21 +438,29 @@
   // The only way to the Android permission screen: the disclosure sheet first,
   // from the ask card and from Profile alike. Not now / Back / outside tap /
   // Escape all resolve false and never reach requestAuthorization.
+  // Resolves "granted" | "none" (nothing allowed) | "cancel" | "install" | "error".
   function connect() {
-    if (connecting) return Promise.resolve();
+    if (connecting) return Promise.resolve("cancel");
     connecting = true;
+    var outcome = "cancel";
     return checkAvail(true).then(function (a) {
       avail = a;
       if (a === "none") { renderAll(); return; }
-      if (a === "install") return openSheet("install");
+      if (a === "install") { outcome = "install"; return openSheet("install"); }
       return openSheet("disclose").then(function (go) {
         if (!go) { if (!isOn()) lsSet(KEY_ASK, "later:" + Date.now()); return; }
-        return authorize();
+        return authorize().then(function (r) { outcome = r; });
       });
-    }).catch(function () { toast("connectErr"); }).then(function () {
+    }).catch(function () { outcome = "error"; toast("connectErr"); }).then(function () {
       connecting = false;
       renderAll();
+      return outcome;
     });
+  }
+
+  // "Check again" on the install card: re-read whether Health Connect is usable now.
+  function recheck() {
+    return checkAvail(true).then(function (a) { avail = a; renderAll(); });
   }
 
   function authorize() {
@@ -389,17 +468,17 @@
       if (r && Array.isArray(r.readAuthorized)) return r.readAuthorized;
       return call("checkAuthorization", { read: TYPES }).then(function (a) { return (a && a.readAuthorized) || []; });
     }).then(function (ok) {
-      if (!ok.length) { if (!isOn()) lsSet(KEY_ASK, "later:" + Date.now()); toast("notGranted"); return; }
+      if (!ok.length) { if (!isOn()) lsSet(KEY_ASK, "later:" + Date.now()); toast("notGranted"); return "none"; }
       lsSet(KEY_ON, "1"); lsSet(KEY_ASK, "yes");
       last = null;
       toast("connected");
-      return refresh(true);
-    }, function () { toast("connectErr"); });
+      return refresh(true).then(function () { return "granted"; });
+    }, function () { toast("connectErr"); return "error"; });
   }
 
   function disconnect() {
     gen++;
-    lsDel(KEY_ON); lsDel(KEY_CACHE); lsSet(KEY_ASK, "no");
+    lsDel(KEY_ON); lsDel(KEY_CACHE); lsDel(KEY_WEEK); lsSet(KEY_ASK, "no");
     last = null; lastRefresh = 0; inflight = null;
     renderAll();
     toast("disconnected");
@@ -512,198 +591,27 @@
     return n;
   }
 
-  // ---- motion: count-up, goal rings, idle life (transform/opacity only) ----
-  // shown/ring remember what is on screen, so a rebuild or a refresh animates
-  // only the difference; t0 is when the strip first appeared with values.
-  var anim = { shown: {}, ring: {}, t0: 0, epoch: 0, tasks: [] };
-  var live = { card: null, io: null, inView: true };
-  function staggerMs() {
-    var v = getComputedStyle(document.documentElement).getPropertyValue("--dur-stagger").trim();
-    var n = parseFloat(v);
-    return isNaN(n) ? 90 : (/ms$/.test(v) ? n : n * 1000) * 2;
-  }
-  function calm() { return !!(window.GymMotion && GymMotion.reduced()); }
-  function forgetAnim() { anim.shown = {}; anim.ring = {}; anim.t0 = 0; }
-  function ease(p) { return 1 - Math.pow(1 - p, 4); }
-
-  // One metric cell: icon (inside a goal ring when it has a goal), value, caption, sub line.
-  // o: { key, ic, cap, n, fmt, unit, sub, goal, goalKey, off, i, cls, beat }
-  function cell(o) {
-    var step = staggerMs();
-    var empty = o.n == null, quiet = calm();
-    var entering = false, el = 0;
-    if (!quiet && !empty) {
-      if (!anim.t0) anim.t0 = performance.now();
-      el = performance.now() - anim.t0;
-      entering = el < COUNT_MS + 4 * step;
-    }
-    var to = empty ? null : o.n;
-    var from = empty || quiet ? to : (anim.shown[o.key] != null ? anim.shown[o.key] : 0);
-    var hasRing = !!o.goal && !empty && !o.off;
-    var ringTo = hasRing ? Math.min(to / o.goal, 1) : null;     // capped at a full ring
-    var ringFrom = !hasRing || quiet ? ringTo : (anim.ring[o.key] != null ? anim.ring[o.key] : 0);
-    var goalText = function (v) { return s(o.goalKey, { pct: Math.round(v / o.goal * 100), goal: fmtInt(o.goal) }); };
-
-    var numEl = h("span", { class: "wt-n" });
-    // digits stay big; letters between them ("h", "m") drop to the unit style
-    var put = function (v) {
-      var txt = o.fmt(v);
-      numEl.textContent = "";
-      if (!o.units) { numEl.textContent = txt; return; }
-      txt.split(/(\d+)/).forEach(function (part) {
-        if (part) numEl.appendChild(/\d/.test(part) ? document.createTextNode(part) : h("span", { class: "wt-unit wt-unit-in" }, part));
-      });
-    };
-    if (empty) numEl.textContent = "—"; else put(from);
-    var subEl = hasRing ? h("div", { class: "wt-sub" }, goalText(from)) : (o.sub ? h("div", { class: "wt-sub" }, o.sub) : null);
-    var ico = h("span", { class: "wt-ico" });
-    var arc = null;
-    if (hasRing) {
-      arc = svgEl("circle", { class: "wt-ring-arc", cx: 14, cy: 14, r: 12, pathLength: 100, "stroke-dasharray": 100, "stroke-dashoffset": 100 - 100 * ringFrom });
-      var ring = svgEl("svg", { class: "wt-ring", viewBox: "0 0 28 28", "aria-hidden": "true" });
-      ring.appendChild(svgEl("circle", { class: "wt-ring-track", cx: 14, cy: 14, r: 12 }));
-      ring.appendChild(arc);
-      ico.appendChild(ring);
-    }
-    ico.appendChild(icon(o.ic));
-    var node = h("div", { class: "wt-cell" + (empty ? " is-empty" : "") + (o.cls ? " " + o.cls : "") + (entering ? " wt-in" : ""), "data-key": o.key },
-      ico,
-      h("div", { class: "wt-val" }, numEl, !empty && o.unit ? h("span", { class: "wt-unit" }, o.unit) : null),
-      h("div", { class: "wt-cap" }, o.cap),
-      subEl);
-    if (entering) node.style.animationDelay = (o.i * step - el) + "ms";
-    if (o.beat && !empty) node.style.setProperty("--wt-beat", Math.min(1.6, Math.max(.8, 60 / o.beat)).toFixed(2) + "s");
-
-    if (empty) { delete anim.shown[o.key]; delete anim.ring[o.key]; return node; }
-    anim.shown[o.key] = from;
-    if (hasRing) anim.ring[o.key] = ringFrom; else delete anim.ring[o.key];
-    if (from !== to || ringFrom !== ringTo) {
-      anim.tasks.push({
-        node: node, from: from, to: to, rFrom: ringFrom, rTo: ringTo,
-        delay: entering ? Math.max(0, o.i * step - el) : 0,
-        dur: entering ? Math.max(300, COUNT_MS - Math.max(0, el - o.i * step)) : DELTA_MS,
-        paint: function (v, r) {
-          anim.shown[o.key] = v;
-          put(v);
-          if (subEl && hasRing) subEl.textContent = goalText(v);
-          if (arc) { anim.ring[o.key] = r; arc.setAttribute("stroke-dashoffset", 100 - 100 * r); }
-        }
-      });
-    }
-    return node;
-  }
-
-  // One rAF loop for the whole strip; ends by itself, or when a newer render replaces it.
-  function runTasks() {
-    var tasks = anim.tasks, ep = anim.epoch;
-    anim.tasks = [];
-    if (!tasks.length) return;
-    var t0 = performance.now();
-    (function frame() {
-      if (ep !== anim.epoch) return;
-      var now = performance.now(), left = 0;
-      tasks.forEach(function (k) {
-        if (!k.node.isConnected) return;
-        var p = Math.min(1, Math.max(0, (now - t0 - k.delay) / k.dur));
-        if (p < 1) left++;
-        var e = ease(p);
-        k.paint(Math.round(k.from + (k.to - k.from) * e), k.rTo == null ? null : k.rFrom + (k.rTo - k.rFrom) * e);
-      });
-      if (left) requestAnimationFrame(frame);
-    })();
-  }
-
-  // Idle life (heartbeat, moon drift) runs only while the strip is on screen, the
-  // page is visible and motion is allowed; the CSS defines no animation otherwise.
-  function syncLive() {
-    if (live.card) live.card.classList.toggle("wt-live", !calm() && !document.hidden && live.inView);
-  }
-  function unbindLive() {
-    if (live.io) { live.io.disconnect(); live.io = null; }
-    live.card = null;
-  }
-  function bindLive(card) {
-    unbindLive();
-    live.card = card; live.inView = true;
-    if (typeof IntersectionObserver === "function") {
-      live.io = new IntersectionObserver(function (es) { live.inView = es[es.length - 1].isIntersecting; syncLive(); });
-      live.io.observe(card);
-    }
-    syncLive();
-  }
-
+  // ---- Plan tab: one line that links to the Watch tab ----
+  var MINI_C = 2 * Math.PI * 10;   // mini ring r=10: circumference for the dash offset
   function renderPlan() {
     var mount = document.getElementById("watchMount");
     if (!mount) return;
     mount.textContent = "";
     mount.hidden = true;
-    anim.epoch++; anim.tasks = [];     // a newer paint supersedes any running count-up
-    unbindLive();
-    if (!active()) { forgetAnim(); return; }
-    var node = null;
-    if (isOn()) node = stripNode();
-    else { forgetAnim(); if (askDue() && lsGet(KEY_ASK) !== "yes") node = askNode(); }
-    if (!node) return;
-    mount.appendChild(node);
+    var v = last && last.vals;
+    if (!active() || !isOn() || !v || (v.steps == null && v.kcal == null)) return;
+    var parts = [];
+    if (v.steps != null) parts.push(s("planSteps", { n: fmtInt(v.steps) }));
+    if (v.kcal != null) parts.push(s("planKcal", { n: fmtInt(v.kcal) }));
+    var pct = v.steps != null ? Math.min(1, v.steps / GOALS.steps) : 0;
+    var ring = svgEl("svg", { class: "wt-mini", viewBox: "0 0 24 24", "aria-hidden": "true" });
+    ring.appendChild(svgEl("circle", { class: "wt-mini-track", cx: 12, cy: 12, r: 10 }));
+    ring.appendChild(svgEl("circle", { class: "wt-mini-arc", cx: 12, cy: 12, r: 10, "stroke-dasharray": MINI_C.toFixed(2), "stroke-dashoffset": (MINI_C * (1 - pct)).toFixed(2) }));
+    mount.appendChild(h("button", { type: "button", class: "wt-link", id: "wtPlanLink", "aria-label": s("planAria", { parts: parts.join(", ") }), on: { click: function () { if (window.GymUI) GymUI.navigate("watch"); } } },
+      ring,
+      h("span", { class: "wt-link-txt" }, parts.map(function (t) { return h("span", { class: "wt-link-part" }, t); })),
+      h("span", { class: "wt-link-go", "aria-hidden": "true" }, s("navWatch"), h("span", { class: "wt-chev" }, "\u203A"))));
     mount.hidden = false;
-    if (node.querySelector(".wt-cell[data-key]")) { bindLive(node); runTasks(); }
-  }
-
-  function askNode() {
-    return h("section", { class: "wt-card wt-ask", "aria-labelledby": "wtAskT" },
-      h("div", { class: "wt-ask-head" },
-        h("span", { class: "wt-badge" }, icon("watch", "wt-ic wt-ic-lg")),
-        h("div", {},
-          h("h3", { class: "wt-title", id: "wtAskT" }, R("askTitle")),
-          h("p", { class: "wt-text" }, R("askBody")))),
-      h("div", { class: "wt-actions" },
-        btn(s("askYes"), "wt-btn-primary", connect, "wtAskYes"),
-        btn(s("askLater"), "wt-btn-line", function () { lsSet(KEY_ASK, "later:" + Date.now()); renderAll(); }, "wtAskLater"),
-        btn(s("askNo"), "wt-btn-quiet", function () { lsSet(KEY_ASK, "no"); renderAll(); }, "wtAskNo")));
-  }
-
-  function stripNode() {
-    var st = last;
-    var card = h("section", { class: "wt-card wt-strip", "aria-labelledby": "wtStripT" });
-    var meta = st && st.at && st.status !== "denied" ? s("updated", { time: fmtTime(st.at) }) : (!st || st.status === "loading" ? s("loading") : "");
-    card.appendChild(h("div", { class: "wt-strip-head" },
-      h("h3", { class: "wt-title", id: "wtStripT" }, R("stripTitle")),
-      h("span", { class: "wt-meta", role: "status", "aria-live": "polite" }, meta)));
-    if (!st || (st.status === "loading" && !st.at)) {
-      forgetAnim();
-      card.appendChild(h("div", { class: "wt-grid wt-skel", "aria-hidden": "true" }, [0, 1, 2, 3].map(function () { return h("div", { class: "wt-cell wt-skel-cell" }); })));
-      return card;
-    }
-    if (st.status === "denied") {
-      forgetAnim();
-      card.appendChild(h("p", { class: "wt-text wt-note", role: "status" }, R("accessRemoved")));
-      card.appendChild(h("div", { class: "wt-actions" },
-        btn(s("rowConnect"), "wt-btn-primary", connect, "wtReconnect"),
-        btn(s("openSettings"), "wt-btn-line", manage, "wtOpenHc")));
-      return card;
-    }
-    var v = st.vals || {};
-    var off = function (t) { return st.denied.indexOf(t) >= 0; };
-    var sub = function (t, hasValue) { return off(t) ? s("cellOff") : (hasValue ? null : s("cellNoData")); };
-    var heartOff = off("restingHeartRate");
-    var hrSub = heartOff ? s("cellOff") : (v.avgHr != null && !off("heartRate") ? s("avgHr", { n: v.avgHr }) : (v.rhr != null ? null : s("cellNoData")));
-    card.appendChild(h("div", { class: "wt-grid" },
-      cell({ key: "steps", ic: "steps", cap: s("stepsLbl"), n: v.steps, fmt: fmtInt, goal: GOALS.steps, goalKey: "goalSteps", off: off("steps"), sub: sub("steps", v.steps != null), i: 0 }),
-      cell({ key: "kcal", ic: "kcal", cap: s("kcalLbl"), n: v.kcal, fmt: fmtInt, goal: GOALS.kcal, goalKey: "goalKcal", off: off("calories"), sub: sub("calories", v.kcal != null), i: 1 }),
-      cell({ key: "rhr", ic: "heart", cap: s("restHrLbl"), n: v.rhr, fmt: String, unit: s("bpm"), sub: hrSub, i: 2, cls: "wt-heart", beat: v.avgHr || v.rhr }),
-      cell({ key: "sleep", ic: "sleep", cap: s("sleepLbl"), n: v.sleepMin, fmt: fmtSleep, units: true, sub: sub("sleep", v.sleepMin != null), i: 3, cls: "wt-moon" })));
-    if (v.rhr != null || v.avgHr != null) card.appendChild(h("p", { class: "wt-foot" }, R("hrNote")));
-    if (st.status === "empty") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, R("noData")));
-      card.appendChild(h("div", { class: "wt-actions" }, btn(s("checkAgain"), "wt-btn-line", function () { refresh(true); }, "wtAgain")));
-    } else if (st.status === "partial") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, R("partial")));
-      card.appendChild(h("div", { class: "wt-actions" }, btn(s("rowManage"), "wt-btn-line", manage, "wtManage")));
-    } else if (st.status === "error") {
-      card.appendChild(h("p", { class: "wt-text wt-note" }, R("readError")));
-      card.appendChild(h("div", { class: "wt-actions" }, btn(s("tryAgain"), "wt-btn-line", function () { refresh(true); }, "wtRetry")));
-    }
-    return card;
   }
 
   function renderProfile() {
@@ -736,27 +644,38 @@
     openSheet("confirm").then(function (yes) { if (yes) disconnect(); });
   }
 
-  function renderAll() { renderPlan(); renderProfile(); }
+  var listeners = [];
+  function renderAll() {
+    renderPlan(); renderProfile();
+    listeners.slice().forEach(function (fn) { try { fn(); } catch (e) {} });
+  }
+  function state() {
+    var l = last;
+    return {
+      plugin: !!plugin(), avail: avail, on: isOn(), connecting: connecting,
+      status: l ? l.status : (isOn() && active() ? "loading" : null),
+      vals: l && l.vals ? Object.assign({}, l.vals) : {}, denied: l && l.denied ? l.denied.slice() : [], at: l ? l.at : 0,
+      week: l && l.week ? l.week.map(function (x) { return Object.assign({}, x); }) : null,
+      goals: GOALS
+    };
+  }
+  function onChange(fn) { if (typeof fn === "function") listeners.push(fn); }
+  function disconnectAsk() { askDisconnect(); }
 
   // ---------------- wiring ----------------
   function wire() {
     if (wired) return;
     wired = true;
     document.addEventListener("visibilitychange", function () {
-      syncLive();
       if (!document.hidden && active() && isOn()) refresh(false);
     });
-    try {   // "Remove animations" (data-reduce-motion) or the OS setting flipped: repaint calm / alive
-      new MutationObserver(renderPlan).observe(document.documentElement, { attributes: true, attributeFilter: ["data-reduce-motion"] });
-      var mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
-      if (mq && mq.addEventListener) mq.addEventListener("change", renderPlan);
-    } catch (e) {}
     function watchHidden(id, fn) {
       var n = document.getElementById(id);
       if (!n || typeof MutationObserver !== "function") return;
       new MutationObserver(function () { if (!n.hidden) fn(); }).observe(n, { attributes: true, attributeFilter: ["hidden"] });
     }
     watchHidden("screen-plan", function () { renderAll(); refresh(false); });
+    watchHidden("screen-watch", function () { refresh(false); });
     watchHidden("screen-profile", function () { renderProfile(); refresh(false); });
     document.addEventListener("gym:authchange", function (e) {
       if (e && e.detail === false) { clearAll(); renderAll(); }
@@ -780,6 +699,11 @@
     });
   }
 
-  window.GymWatch = { init: init, refresh: function () { return refresh(true); }, connect: connect };
+  window.GymWatch = {
+    init: init, refresh: function () { return refresh(true); }, connect: connect,
+    state: state, onChange: onChange, manage: manage, disconnect: disconnectAsk, recheck: recheck,
+    // for watch-screen.js: shared copy and formatting, so the two files never drift
+    ui: { add: function (t) { Object.keys(t).forEach(function (k) { STR[k] = t[k]; }); }, raw: raw, s: s, R: R, rich: rich, icon: icon, btn: btn, svgEl: svgEl, fmtInt: fmtInt, fmtSleep: fmtSleep, fmtTime: fmtTime, li: li, playUrl: PLAY_URL, keys: { seen: KEY_SEEN, metric: KEY_METRIC } }
+  };
   init();
 })();
