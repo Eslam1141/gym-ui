@@ -17,7 +17,7 @@
     stepOf: ["{n} of {t}", "{n} من {t}"],
     planDays: ["Pick today's workout here.", "اختر تمرين اليوم من هنا."],
     planStart: ["Start the timer when you begin. It keeps running if you switch screens.", "شغّل المؤقت عند البدء. يستمر حتى لو انتقلت لشاشة أخرى."],
-    planRest: ["Log each set, then tap Rest to start the rest timer.", "سجّل كل مجموعة، ثم اضغط راحة لتشغيل مؤقت الراحة."],
+    planRest: ["Tick each set as you finish it and the rest timer starts. You can also tap Rest.", "علّم كل مجموعة عند إنهائها ليبدأ مؤقت الراحة. ويمكنك أيضاً الضغط على راحة."],
     coachForm: ["Your answers are here. Tap the button to get a diet and training plan.", "إجاباتك هنا. اضغط الزر لتحصل على خطة غذاء وتمرين."],
     coachFab: ["Ask the coach a quick question from any screen.", "اسأل المدرب سؤالاً سريعاً من أي شاشة."],
     foodTotals: ["Your calories and protein for the day.", "سعراتك وبروتينك لليوم."],

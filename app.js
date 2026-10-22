@@ -1522,6 +1522,12 @@ function renderExercises(){
       saveSetChecks();
       paintSets(id, st);
       if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn); }
+      if(st[i]){
+        // same value the card's Rest button uses; restarts a running timer
+        const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
+        const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
+        if(rest > 0) startRestTimer(rest, restBtn.dataset.name);
+      }
       const all = st.every(Boolean);
       if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
     };
