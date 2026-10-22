@@ -220,6 +220,49 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 .plan-toggle button:active{ transform:scale(.96); }
 .plan-toggle button.on, .plan-toggle button[aria-checked="true"]{ background:var(--rust); border-color:var(--rust); color:var(--on-primary); }
 
+/* Training split picker (More tab): days chips, Gym/Home, home tool checklist, gap hint, summary */
+.sp-sub{ font-size:var(--text-sm); font-weight:700; color:var(--paper); margin:16px 0 8px; }
+#splitPanel > .sp-sub:first-child{ margin-top:0; }
+.sp-chips{ display:flex; gap:6px; }
+.sp-chip, .sp-tool, #splitPanel .plan-toggle button{
+  min-height:44px; font-family:inherit; font-weight:700; font-size:var(--text-sm); cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--paper-dim); border-radius:9px;
+  transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.sp-chip{ position:relative; flex:1; padding:6px 4px; font-variant-numeric:tabular-nums; }
+.sp-chip[data-sp-days="0"]{ flex:2; }
+.sp-chip:active, .sp-tool:active{ transform:scale(.96); }
+.sp-chip.on{ background:var(--rust); border-color:var(--rust); color:var(--on-primary); }
+.sp-chip.rec::after{ content:""; position:absolute; inset-block-start:5px; inset-inline-end:5px; width:6px; height:6px; border-radius:50%; background:var(--primary-text); }
+.sp-chip.on.rec::after{ background:var(--on-primary); }
+.sp-note{ margin:10px 0 0; font-size:var(--text-sm); color:var(--paper-dim); line-height:1.5; }
+.sp-tools{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
+.sp-tool{ display:flex; align-items:center; gap:8px; padding:6px 10px; text-align:start; line-height:1.25; }
+.sp-tool::after{
+  content:""; flex:none; margin-inline-start:auto; width:18px; height:18px; border-radius:5px;
+  border:1.5px solid var(--line-strong); display:grid; place-items:center; font-size:12px; line-height:1; color:var(--on-primary);
+}
+.sp-tool.on{ border-color:var(--primary); color:var(--paper); background:color-mix(in srgb, var(--primary) 14%, transparent); }
+.sp-tool.on::after{ content:"\2713"; background:var(--primary); border-color:var(--primary); }
+.sp-tool.on .tool-ic{ color:var(--primary-text); }
+.tool-ic{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.sp-hints:empty{ display:none; }
+.sp-hint{
+  display:flex; align-items:flex-start; gap:10px; margin:12px 0 0; padding:10px 12px; border-radius:10px;
+  font-size:var(--text-sm); line-height:1.45; color:var(--paper);
+  background:color-mix(in srgb, var(--primary) 12%, transparent); border:1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+}
+.sp-hint .tool-ic{ margin-top:1px; color:var(--primary-text); }
+.sp-sum{ margin-top:14px; padding:12px 14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); }
+.sp-sum .sp-sub{ margin:0 0 4px; }
+.sp-sum p{ margin:0; font-size:var(--text-sm); color:var(--paper-dim); line-height:1.5; }
+#splitPanel .plan-toggle button.on, #splitPanel .plan-toggle button[aria-checked="true"]{ background:var(--rust); border-color:var(--rust); color:var(--on-primary); }
+.sp-sum .sp-wk{ margin-top:6px; color:var(--paper); }
+.sp-chip:focus-visible, .sp-tool:focus-visible, #splitPanel .plan-toggle button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.ex-tools{ display:flex; flex-wrap:wrap; gap:4px 12px; margin:-4px 0 10px; margin-inline-start:38px; color:var(--paper-dim); font-size:var(--text-xs); }
+.ex-tool{ display:inline-flex; align-items:center; gap:5px; }
+.ex-tool .tool-ic{ width:16px; height:16px; }
+
 [dir="rtl"] .ex-meta{ margin:10px 38px 10px 0; }
 [dir="rtl"] .video-wrap{ margin:12px 38px 0 0; }
 [dir="rtl"] .lastlog{ margin:8px 38px 0 0; }
