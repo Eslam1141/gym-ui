@@ -101,9 +101,10 @@ test("tap opens the sheet over the current screen; Escape closes it and focus re
   await fab(page).click();
   await expect(page.locator("#coachChat.show")).toBeVisible();
   expect(await page.evaluate(() => document.body.getAttribute("data-tab"))).toBe("food"); // still on Food underneath
-  await expect(fab(page)).toBeHidden();
+  await expect(fab(page)).toBeVisible();   // it stays up as the chat's head
+  await expect(fab(page)).toHaveAttribute("aria-expanded", "true");
   const panel = await rect(page, ".coach-chat-panel");
-  expect(panel.h).toBeLessThanOrEqual(844 * 0.9 + 1);
+  expect(panel.h).toBeLessThanOrEqual(844 + 1);
   await page.keyboard.press("Escape");
   await expect(page.locator("#coachChat")).toBeHidden();
   await expect(fab(page)).toBeVisible();
@@ -325,6 +326,7 @@ test("screen-aware suggestions: Food and Plan chips send an ordinary chat messag
   await fab(page).click();
   const chip = page.locator(".coach-chat-chip", { hasText: "Add a meal for me" });
   await expect(chip).toBeVisible();
+  await page.waitForFunction(() => getComputedStyle(document.querySelector(".coach-chat-panel")).transform === "none");   // unfold finished
   expect((await rect(page, ".coach-chat-chip")).h).toBeGreaterThanOrEqual(44);
   await chip.click();
   await expect(page.locator(".coach-chat-msg.assistant").last()).toHaveText("Sure thing.");

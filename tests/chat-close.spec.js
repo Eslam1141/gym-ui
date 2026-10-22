@@ -29,7 +29,7 @@ test("tapping the dimmed area above the panel closes the chat and returns focus 
 
 test("tapping the dimmed area beside the panel closes it on desktop", async ({ browser }) => {
   const { context, page } = await openChat(browser, { width: 1280, height: 800 });
-  await page.mouse.click(1100, 300);
+  await page.mouse.click(600, 300);   // the panel hangs from the inline-end side, so the dim is on the other side
   await closed(page);
   await context.close();
 });

@@ -27,7 +27,7 @@
   /* motion system (motion.css / motion.js): entrance curve, springy settle,
      per-item stagger step, slide distance, and the inline direction sign
      (flipped under [dir=rtl] so slides always travel along reading order). */
-  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --ease-out:cubic-bezier(.16,1,.3,1); --ease-spring:cubic-bezier(.34,1.56,.64,1); --ease-head:cubic-bezier(.3,1.2,.5,1);
   --dur-stagger:45ms; --m-dist:14px; --m-dir:1; --nav-sign:1;
 
   /* dark / men (default) */
@@ -805,6 +805,17 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #coachFab.moved[data-side="r"]{ inset-inline:auto; right:calc(16px + env(safe-area-inset-right)); }
 #coachFab.dragging{ cursor:grabbing; transition:none; animation:none; box-shadow:var(--elev-3, var(--elev-2)), 0 0 0 1px var(--line); }
 #coachFab.settling{ transition:transform var(--dur-med) var(--ease-spring); }
+/* Chat head: while the chat is open the bubble sits at the top inline-end corner,
+   under the header, above the panel (chat.js sets --head-top and flies it there
+   with a transform; the parked position stays in its inline style). */
+#coachFab.head{
+  top:var(--head-top, 72px) !important; bottom:auto !important;
+  left:auto !important; right:calc(12px + env(safe-area-inset-right)) !important;
+  z-index:155; cursor:pointer;
+}
+[dir="rtl"] #coachFab.head{ right:auto !important; left:calc(12px + env(safe-area-inset-left)) !important; }
+#coachFab.flying{ z-index:155; transition:transform .46s var(--ease-head); }
+@media (prefers-reduced-motion:reduce){ #coachFab.flying{ transition:none; } }
 
 /* Hidden where it would be in the way or redundant: on the Coach tab itself,
    the survey, sign-in, any open dialog or sheet,
@@ -877,18 +888,42 @@ body:has(.celebrate-card.show){ --toast-lift:124px; }
   transform:translateY(100%); transition:transform var(--dur-med) var(--ease-out);
 }
 #coachChat.show .coach-chat-panel{ transform:translateY(0); }
-/* Messenger-style: grows out of / shrinks back into the bubble (origin set from its rect in chat.js) */
+/* Messenger chat head (phone and desktop): a card under the head bubble, filling
+   to the bottom of the screen, anchored to the inline-end side. It unfolds from
+   the caret (transform-origin) once the head has started moving, and folds back
+   up into it. --panel-top is set by chat.js from the header's bottom edge. */
 #coachChat.bubble .coach-chat-panel{
-  transform-origin:var(--co-x, 50%) var(--co-y, 100%); transform:scale(.1); opacity:0;
-  transition:transform var(--dur-med) var(--ease), opacity var(--dur-fast) var(--ease);
+  --caret-x:40px;   /* head centre, from the screen edge */
+  left:auto; right:calc(8px + env(safe-area-inset-right)); margin:0;
+  width:calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width:420px;
+  top:var(--panel-top, 140px); bottom:calc(8px + env(safe-area-inset-bottom)); max-height:none;
+  border-radius:20px; overflow:visible;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);
+  transform-origin:calc(100% - var(--caret-x) + 8px) 0;
+  transform:translateY(-8px) scale(.2); opacity:0;
+  transition:transform .26s var(--ease), opacity .2s var(--ease);
 }
 #coachChat.bubble.show .coach-chat-panel{
   transform:none; opacity:1;
-  transition:transform var(--dur-med) var(--ease-spring), opacity var(--dur-fast) var(--ease);
+  transition:transform .36s var(--ease-out) .12s, opacity .24s var(--ease) .12s;
 }
+[dir="rtl"] #coachChat.bubble .coach-chat-panel{
+  left:calc(8px + env(safe-area-inset-left)); right:auto;
+  transform-origin:calc(var(--caret-x) - 8px) 0;
+}
+#coachChat.bubble .coach-chat-msgs{ min-height:0; }
+#coachChat.bubble .coach-chat-form{ padding-bottom:10px; }
+/* the caret: a notch on the top edge pointing at the head */
+#coachChat.bubble .coach-chat-panel::before{
+  content:""; position:absolute; top:-7px; width:14px; height:14px;
+  inset-inline-end:calc(var(--caret-x) - 8px - 7px);
+  background:var(--bg-alt); border:1px solid var(--line); border-width:1px 0 0 1px;
+  transform:rotate(45deg); pointer-events:none;
+}
+[dir="rtl"] #coachChat.bubble .coach-chat-panel::before{ inset-inline-end:auto; inset-inline-start:calc(var(--caret-x) - 8px - 7px); }
 @media (prefers-reduced-motion:reduce){
   #coachChat.bubble .coach-chat-panel,
-  #coachChat.bubble.show .coach-chat-panel{ transform:none; transition:opacity .15s linear; }
+  #coachChat.bubble.show .coach-chat-panel{ transform:none; transition:opacity .15s linear; transition-delay:0s; }
 }
 .coach-chat-panel.dragging{ transition:none; }
 .coach-chat-head{ touch-action:none; }
@@ -1047,17 +1082,18 @@ body:has(.celebrate-card.show){ --toast-lift:124px; }
 .coach-mp-fit.over{ background:transparent; border-color:var(--danger); color:var(--danger); }
 
 @media (min-width:900px){
-  .coach-chat-panel{
+  #coachChat:not(.bubble) .coach-chat-panel{
     left:calc(var(--side-w) + 16px); right:auto; bottom:24px; width:380px; max-height:min(560px, 80vh);
     border-radius:18px;
     transform:translateY(16px) scale(.96); opacity:0;
     transition:transform var(--dur-med) var(--ease), opacity var(--dur-fast) var(--ease);
   }
-  #coachChat.show .coach-chat-panel{
+  #coachChat.show:not(.bubble) .coach-chat-panel{
     transform:none; opacity:1;
     transition:transform var(--dur-med) var(--ease-spring), opacity var(--dur-fast) var(--ease);
   }
-  [dir="rtl"] .coach-chat-panel{ left:auto; right:calc(var(--side-w) + 16px); }
+  [dir="rtl"] #coachChat:not(.bubble) .coach-chat-panel{ left:auto; right:calc(var(--side-w) + 16px); }
+  #coachChat.bubble .coach-chat-panel{ width:380px; }
 }
 
 /* entrance animations */
