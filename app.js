@@ -508,6 +508,11 @@ const T = {
   warmup3:["<b>Ramp up the first lift only</b> — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.","<b>تدرّج في التمرين الأول فقط</b> — بار فارغ ×10، ثم ~50% ×5، ~70% ×3، ~85% ×1. استرِح 60-90 ثانية وأوقف كل مجموعة قبل الإجهاد. (في الكاليسثينكس: مجموعة خفيفة واحدة من الحركة الأولى.)"],
   warmup4:["<b>Start working set 1.</b> Isolation moves (raises, curls, extensions) need just one light feeder set.","<b>ابدأ المجموعة الأولى الفعلية.</b> تمارين العزل (الرفرفة، المرجحة، التمديد) تحتاج مجموعة تحضيرية خفيفة واحدة فقط."],
   viewFront:["Front","أمام"], viewBack:["Back","خلف"],
+  mapTitle:["Muscles this week","عضلات هذا الأسبوع"],
+  mapSummary:["{two} of {n} trained twice, {one} once","تم تدريب {two} من {n} مرتين و{one} مرة واحدة"],
+  mapOnce:["Trained once","تم التدريب مرة واحدة"], mapTwice:["Trained twice","تم التدريب مرتين"], mapNone:["not trained yet","لم تُدرَّب بعد"],
+  mapOnceIn:["trained once","تم التدريب مرة واحدة"], mapTwiceIn:["trained twice","تم التدريب مرتين"],
+  mapRegion:["{m}, {s}","{m}، {s}"], mapHint:["Tap a muscle to see its name.","المس عضلة لمعرفة اسمها."],
   setsGroup:["Sets","المجموعات"], setLblReps:["Set {n} · {r} reps","المجموعة {n} · {r} تكرار"], setLblSec:["Set {n} · {r} sec","المجموعة {n} · {r} ث"], setLblRaw:["Set {n} · {r}","المجموعة {n} · {r}"],
   sets:["sets","مجموعات"], reps:["reps","تكرار"], rest:["rest","راحة"],
   save:["Save","حفظ"], saved:["✓ Saved","✓ تم الحفظ"], restBtn:["Rest","راحة"],
@@ -1028,6 +1033,24 @@ window.GymApp.markDayComplete = function(date, dayId){
   checks[k] = checks[k] || {};
   day.exercises.forEach(ex=>{ checks[k][ex.id] = true; });
   saveJSON("gym_checks", checks);
+  rememberTags(k, day.exercises);
+  refreshWeekMap();
+};
+// Strings and language for the weekly muscle map (muscle-map.js), and the tags of
+// one exercise of a day in any plan we can still see (Classic, either persona,
+// the AI plan). null when the plan that had it is gone: the map then falls back
+// to the copy it stored when the exercise was ticked.
+window.GymApp.t = t;
+window.GymApp.lang = ()=> activeLang;
+window.GymApp.exerciseShapes = function(dayId, exId){
+  const custom = loadJSON("gym_plans_custom", null);
+  const sets = window.GymApp.allDaySets().concat([DAYS], Array.isArray(custom) ? [custom] : []);
+  for(const set of sets){
+    const day = set.find(d=>d.id === dayId);
+    const ex = day && (day.exercises || []).find(e=>e.id === exId);
+    if(ex) return exShapes(ex);
+  }
+  return null;
 };
 // Localised day label for dayId (used by the save-yesterday sheet).
 window.GymApp.dayName = function(dayId){
@@ -1282,6 +1305,17 @@ function renderMuscleTiles(day){
   if(html && animateCards && window.GymMotion) GymMotion.enter(dayMuscleTiles);   // no-op under reduced motion
 }
 
+// ---- weekly muscle map (muscle-map.js) ----
+// Keep each ticked exercise's tags with the session, so a later plan switch can't orphan the tick.
+function rememberTags(sessionKey, exercises){
+  if(!window.GymMuscleMap) return;
+  GymMuscleMap.remember(sessionKey, exercises.map(ex=>{ const sh = exShapes(ex); return sh && { id:ex.id, shape:sh.shape, shape2:sh.shape2 }; }).filter(Boolean));
+}
+function refreshWeekMap(){
+  const host = document.getElementById("weekMap");
+  if(host && window.GymMuscleMap) GymMuscleMap.render(host, { sex: figureSex() });
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
@@ -1387,6 +1421,8 @@ function renderExercises(){
     checks[k] = checks[k] || {};
     checks[k][id] = on;
     saveJSON("gym_checks", checks);
+    if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
+    refreshWeekMap();
     const el = exList.querySelector(`.check[data-id="${id}"]`);
     if(el){
       const was = el.classList.contains("on");
@@ -1554,6 +1590,7 @@ function renderAll(){
   renderDate();
   renderDayTabs();
   renderExercises();
+  refreshWeekMap();
   updateProgress();
   updateSessionUI();
   renderNotes();
