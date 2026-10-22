@@ -57,13 +57,17 @@ test("visible on Plan, Food and More; hidden on the Coach tab", async ({ browser
   await context.close();
 });
 
-test("hidden during the first-visit tour", async ({ browser }) => {
+test("during the screen tour it stays put but inert and under the scrim, and works again after", async ({ browser }) => {
   const { context, page } = await setup(browser, { tours: true });
   await expect(page.locator("#tour .tour-card")).toBeVisible({ timeout: 10000 });
-  await expect(fab(page)).toBeHidden();
+  await expect(fab(page)).toBeVisible();
+  expect(await fab(page).evaluate((n) => getComputedStyle(n).pointerEvents)).toBe("none");
+  const z = await page.evaluate(() => [+getComputedStyle(document.getElementById("coachFab")).zIndex, +getComputedStyle(document.getElementById("tour")).zIndex]);
+  expect(z[0]).toBeLessThan(z[1]);
   await page.click("#tour .tour-skip");
   await expect(page.locator("#tour")).toBeHidden();
   await expect(fab(page)).toBeVisible();
+  expect(await fab(page).evaluate((n) => getComputedStyle(n).pointerEvents)).not.toBe("none");
   await context.close();
 });
 

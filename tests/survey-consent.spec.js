@@ -54,7 +54,7 @@ const idx = (b, m, p) => b.log.findIndex((r) => r.m === m && r.p === p);
 async function open(browser, b, opts) {
   opts = opts || {};
   // the screen tours (tour.js) would sit on top of the Plan and More screens
-  const ls = Object.assign({ gym_tours_seen: { plan: 1, more: 1 } }, opts.ls);
+  const ls = Object.assign({ gym_tours_seen: { plan: 2, coach: 2, food: 2, more: 2, watch: 1, watchOff: 1, bubble: 1 } }, opts.ls);
   return openApp(browser, Object.assign({ signedIn: true, setup: b.setup }, opts, { ls }));
 }
 async function answerAll(page, inbody) {

@@ -789,11 +789,10 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 #coachFab.settling{ transition:transform var(--dur-med) var(--ease-spring); }
 
 /* Hidden where it would be in the way or redundant: on the Coach tab itself,
-   under the first-visit tour, the survey, sign-in, any open dialog or sheet,
+   the survey, sign-in, any open dialog or sheet,
    the rest alarm, the celebration card and the workout builder (it has its own save bar). chat.js also hides it
    while the rest timer shows or the chat is open. */
 body[data-tab="coach"] #coachFab,
-body.tour-open #coachFab,
 body.survey-open #coachFab,
 body:has(.m-ovl:not([hidden])) #coachFab,
 body:has(.syd) #coachFab,
@@ -802,6 +801,9 @@ body:has(.wb-screen) #coachFab,
 body:has(.wb-scrim) #coachFab,
 body:has(#alarmBanner:not([hidden])) #coachFab,
 body:has(.celebrate-card.show) #coachFab{ display:none; }
+/* The screen tour points at it (tour.js): it stays where it is, under the scrim
+   (#tour is z-index 230) and inert, so a tap on the spotlight never opens the chat. */
+body.tour-open #coachFab{ pointer-events:none; animation:none; }
 
 @media (min-width:900px){
   /* the bottom nav becomes a fixed rail on the inline-start edge (#appNav,

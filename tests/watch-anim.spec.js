@@ -1,8 +1,8 @@
-// The "From your watch today" strip is alive: count-up, goal rings, idle life,
+// The Watch tab's dial is alive: count-up, goal rings, idle life (the heart),
 // and all of it off under reduced motion. Also the Arabic "Health Connect" unit.
 const { test, expect } = require("@playwright/test");
 const { openApp } = require("./helpers");
-const { stubHealth } = require("./watch-helpers");
+const { stubHealth, goWatch } = require("./watch-helpers");
 
 test.setTimeout(60000);
 
@@ -16,16 +16,17 @@ async function open(browser, o) {
   // record every text the first value shows, from the first paint on
   await page.evaluate(() => {
     window.__seen = { steps: [] };
-    const rec = () => { const n = document.querySelector('#watchMount .wt-cell[data-key="steps"] .wt-n'); if (n) window.__seen.steps.push(n.textContent); };
-    new MutationObserver(rec).observe(document.getElementById("watchMount"), { subtree: true, childList: true, characterData: true });
+    const rec = () => { const n = document.querySelector('#watchBody .wt-leg[data-key="steps"] .wt-n'); if (n) window.__seen.steps.push(n.textContent); };
+    new MutationObserver(rec).observe(document.getElementById("watchBody"), { subtree: true, childList: true, characterData: true });
     (function loop() { rec(); requestAnimationFrame(loop); })();
   });
   await stubHealth(page, o.stub);
+  await goWatch(page);
   return app;
 }
-const num = (page, key) => page.locator(`#watchMount .wt-cell[data-key="${key}"] .wt-n`);
-const offset = (page, key) => page.locator(`#watchMount .wt-cell[data-key="${key}"] .wt-ring-arc`).getAttribute("stroke-dashoffset").then(Number);
-const stripAnims = (page) => page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest("#watchMount")).length);
+const num = (page, key) => page.locator(`#watchBody .wt-leg[data-key="${key}"] .wt-n, #watchBody .wt-stat[data-key="${key}"] .wt-n`);
+const offset = (page, key) => page.locator(`#watchBody .wt-arc-${key}`).getAttribute("stroke-dashoffset").then(Number);
+const stripAnims = (page) => page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest("#screen-watch")).length);
 
 test("numbers count up from 0 and land on the exact values", async ({ browser }) => {
   const { context, page } = await open(browser);
@@ -46,7 +47,7 @@ test("rings follow the goals, capped at a full ring; the text keeps the real per
   await expect(num(page, "steps")).toHaveText("8,214");
   await expect.poll(() => offset(page, "steps")).toBe(0);                     // 103% -> full ring
   await expect.poll(() => offset(page, "kcal")).toBe(50);                     // 250 / 500
-  const sub = (k) => page.locator(`#watchMount .wt-cell[data-key="${k}"] .wt-sub`);
+  const sub = (k) => page.locator(`#watchBody .wt-leg[data-key="${k}"] .wt-leg-s`);
   await expect(sub("steps")).toHaveText("103% of 8,000");
   await expect(sub("kcal")).toHaveText("50% of 500 kcal");
   await context.close();
@@ -56,7 +57,7 @@ test("a ring fills clockwise in LTR and mirrors in RTL", async ({ browser }) => 
   for (const lang of ["en", "ar"]) {
     const { context, page } = await open(browser, { lang });
     await expect(num(page, "steps")).toHaveText("8,214");
-    const t = await page.locator('#watchMount .wt-cell[data-key="kcal"] .wt-ring-arc').evaluate((n) => getComputedStyle(n).transform);
+    const t = await page.locator("#watchBody .wt-arc-kcal").evaluate((n) => getComputedStyle(n).transform);
     // rotate(-90deg) = matrix(0,-1,1,0,0,0); RTL adds a vertical flip = matrix(0,-1,-1,0,0,0)
     expect(t).toBe(lang === "ar" ? "matrix(0, -1, -1, 0, 0, 0)" : "matrix(0, -1, 1, 0, 0, 0)");
     await context.close();
@@ -69,8 +70,8 @@ for (const mode of ["reduceAttr", "reduceMedia"]) {
     // no waiting: stubHealth has already awaited the first render
     expect(await num(page, "steps").textContent()).toBe("8,214");
     expect(await offset(page, "kcal")).toBeCloseTo(100 - 100 * 412 / 500, 5);
-    expect(await page.locator("#watchMount .wt-in").count()).toBe(0);
-    expect(await page.locator("#watchMount .wt-live").count()).toBe(0);
+    expect(await page.locator("#watchBody .wt-chip-in, #watchBody .wt-grow, #watchBody .wt-draw, #watchBody .wt-pop").count()).toBe(0);
+    expect(await page.locator("#watchBody.wt-live").count()).toBe(0);
     expect(await stripAnims(page)).toBe(0);
     expect(await page.evaluate(() => window.__seen.steps.every((t) => t === "8,214"))).toBe(true);
     await context.close();
@@ -80,25 +81,25 @@ for (const mode of ["reduceAttr", "reduceMedia"]) {
 test("idle life runs on screen and stops when the page is hidden", async ({ browser }) => {
   const { context, page } = await open(browser);
   await expect(num(page, "steps")).toHaveText("8,214");
-  await expect(page.locator("#watchMount .wt-strip")).toHaveClass(/wt-live/);
-  await expect.poll(() => page.evaluate(() => document.getAnimations().map((a) => a.animationName).filter((n) => /wt-(beat|drift)/.test(n)).length)).toBe(2);
+  await expect(page.locator("#watchBody")).toHaveClass(/wt-live/);
+  await expect.poll(() => page.evaluate(() => document.getAnimations().map((a) => a.animationName).filter((n) => /wt-beat/.test(n)).length)).toBe(2);   // the two heart icons
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await expect(page.locator("#watchMount .wt-strip")).not.toHaveClass(/wt-live/);
-  expect(await page.evaluate(() => document.getAnimations().filter((a) => /wt-(beat|drift)/.test(a.animationName)).length)).toBe(0);
+  await expect(page.locator("#watchBody")).not.toHaveClass(/wt-live/);
+  expect(await page.evaluate(() => document.getAnimations().filter((a) => /wt-beat/.test(a.animationName)).length)).toBe(0);
   await context.close();
 });
 
-test("idle life stops when the strip scrolls off screen", async ({ browser }) => {
+test("idle life stops when the screen scrolls off", async ({ browser }) => {
   const { context, page } = await open(browser, { viewport: { width: 360, height: 420 } });
   await expect(num(page, "steps")).toHaveText("8,214");
-  await page.evaluate(() => { document.body.style.minHeight = "4000px"; document.querySelector("#watchMount .wt-strip").scrollIntoView({ block: "center" }); });
-  await expect(page.locator("#watchMount .wt-strip")).toHaveClass(/wt-live/);
+  await page.evaluate(() => { document.body.style.minHeight = "4000px"; document.querySelector("#wtDial").scrollIntoView({ block: "center" }); });
+  await expect(page.locator("#watchBody")).toHaveClass(/wt-live/);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.evaluate(() => { document.body.style.minHeight = "6000px"; window.scrollTo(0, 5000); });
-  await expect(page.locator("#watchMount .wt-strip")).not.toHaveClass(/wt-live/);
+  await expect(page.locator("#watchBody")).not.toHaveClass(/wt-live/);
   await context.close();
 });
 
@@ -107,7 +108,7 @@ test("a refresh with the same values does not replay the entrance", async ({ bro
   await expect(num(page, "steps")).toHaveText("8,214");
   await page.waitForTimeout(1500);                           // entrance done
   await page.evaluate(() => { window.__seen.steps.length = 0; return window.GymWatch.refresh(); });
-  expect(await page.locator("#watchMount .wt-in").count()).toBe(0);
+  expect(await page.locator("#watchBody .wt-chip-in, #watchBody .wt-grow").count()).toBe(0);
   expect(await num(page, "steps").textContent()).toBe("8,214");
   expect(await offset(page, "kcal")).toBeCloseTo(100 - 100 * 412 / 500, 5);
   await page.waitForTimeout(200);
@@ -123,7 +124,7 @@ test("a refresh that changed a value moves only the difference", async ({ browse
   await expect(num(page, "steps")).toHaveText("9,000");
   const ints = (await page.evaluate(() => window.__seen.steps)).map((t) => Number(t.replace(/,/g, "")));
   expect(Math.min(...ints)).toBeGreaterThanOrEqual(8214);      // never restarts from 0
-  expect(await page.locator("#watchMount .wt-in").count()).toBe(0);
+  expect(await page.locator("#watchBody .wt-chip-in, #watchBody .wt-grow").count()).toBe(0);
   await context.close();
 });
 
@@ -132,7 +133,7 @@ test("Arabic: Health Connect is one unbreakable LTR unit and 'و' does not glue 
     const { context, page } = await open(browser, { lang: "ar", viewport: { width, height: 780 } });
     await page.evaluate(() => { localStorage.removeItem("etqwatch_on"); localStorage.removeItem("etqwatch_ask"); });
     await page.evaluate(() => GymWatch.init());
-    await page.click("#wtAskYes");
+    await page.click("#wtConnect");
     const units = page.locator("#watchSheet .wt-ltr");
     await expect(units).toHaveCount(3);                       // intro + two in bullet 4
     for (let i = 0; i < 3; i++) {
@@ -152,7 +153,7 @@ test("the manage button says where it goes, in EN and AR", async ({ browser }) =
   for (const lang of ["en", "ar"]) {
     const { context, page } = await open(browser, { lang, stub: { health: { authorized: ["steps", "calories", "sleep"] } } });
     await expect(page.locator("#wtManage")).toContainText("Health Connect");
-    await expect(page.locator("#watchMount .wt-note")).toContainText(lang === "ar" ? "أذونات التطبيقات" : "App permissions");
+    await expect(page.locator("#watchBody .wt-note-card")).toContainText(lang === "ar" ? "أذونات التطبيقات" : "App permissions");
     await page.evaluate(() => GymUI.navigate("profile"));
     await expect(page.locator("#profWatchMount .wt-hint")).toContainText(lang === "ar" ? "اتقدم" : "Etqadem");
     await context.close();

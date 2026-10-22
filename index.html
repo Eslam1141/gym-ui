@@ -68,6 +68,7 @@
 <link rel="stylesheet" href="survey.css">
 <link rel="stylesheet" href="privacy.css">
 <link rel="stylesheet" href="watch.css">
+<link rel="stylesheet" href="watch-screen.css">
 </head>
 <body>
 
@@ -161,6 +162,10 @@
   <button type="button" data-tab="food">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.1 13.34l2.83-2.83L3.91 3.5c-1.56 1.56-1.56 4.09 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.2-1.1-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 13l1.47-1.47z"/></svg>
     <span data-i18n="navFood">Food</span>
+  </button>
+  <button type="button" data-tab="watch">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l1 4H7l1-4zm0 20 -1-4h10l-1 4H8zM7 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zm4.2 3v3.6l2.4 1.5.8-1.2-1.7-1V9h-1.5z"/></svg>
+    <span data-i18n="navWatch">Watch</span>
   </button>
   <button type="button" data-tab="more">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
@@ -285,6 +290,18 @@
       <div class="sub" data-i18n="foodSub">Log your meals and see today's totals</div>
     </header>
     <div id="foodBody"></div>
+  </div>
+</div>
+
+<!-- ===================== WATCH SCREEN ===================== -->
+<div id="screen-watch" class="screen" hidden>
+  <div class="wrap">
+    <header class="hero">
+      <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
+      <h1 data-i18n="watchTitle" tabindex="-1">Watch</h1>
+      <div class="sub" data-i18n="watchSub">Steps, sleep and heart rate from your watch</div>
+    </header>
+    <div id="watchBody"></div>
   </div>
 </div>
 
@@ -536,5 +553,6 @@
 <script src="notifications.js" defer></script>
 <script src="profile.js" defer></script>
 <script src="watch.js" defer></script>
+<script src="watch-screen.js" defer></script>
 </body>
 </html>
