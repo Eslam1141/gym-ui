@@ -688,7 +688,13 @@
     maybeOpen();
   }
 
-  window.GymSurvey = { open: open, close: close, isOpen: isOpen, afterWithdraw: afterWithdraw };
+  // tour.js: the tips wait while this is true (the survey will auto-open).
+  function isPending() {
+    var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
+    return !!(me && me.onboardingCompleted === false && lsGet(DISMISS_KEY) !== "1");
+  }
+
+  window.GymSurvey = { open: open, close: close, isOpen: isOpen, isPending: isPending, afterWithdraw: afterWithdraw };
 
   // Deferred scripts run before DOMContentLoaded; wait for it so header.js
   // (GymHeader), coach.js and app.js have all loaded.
