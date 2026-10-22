@@ -77,12 +77,20 @@
     var card = document.getElementById("sessionCard");
     return !!(card && card.classList.contains("active"));
   }
-  function blocked() {
+  function surveyPending() {
+    var sv = window.GymSurvey;
+    if (!sv) return false;
+    return typeof sv.isPending === "function" ? !!sv.isPending() : true;
+  }
+  function blocked(force) {
     var b = document.body.classList;
     if (b.contains("onboarding-open") || b.contains("survey-open")) return true;
     var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
     if (!me) return true;                               // /me not loaded yet
-    if (me.onboardingCompleted === false) return true;  // survey comes first
+    // The survey comes first, but only when this build has one that is about
+    // to open: without survey.js every /me says onboardingCompleted:false
+    // and the tips would never run.
+    if (!force && me.onboardingCompleted === false && surveyPending()) return true;
     if (workoutRunning()) return true;
     // another sheet/dialog is open (consent, calendar, video, menus...)
     var ds = document.querySelectorAll('[role="dialog"], dialog[open], #videoModal.show, .tb-menu');
@@ -230,22 +238,27 @@
   var timer = null;
   // tries: how many more times to look again if something is in the way
   // (a menu still animating closed, a screen still rendering).
+  // force (Replay tips): the user asked, so an unfinished survey doesn't
+  // hold the tips back.
+  var forced = false;
   function schedule(delay, tries) {
     clearTimeout(timer);
     timer = setTimeout(function () { maybeStart(tries == null ? 3 : tries); }, delay == null ? 700 : delay);
   }
   function maybeStart(tries) {
     if (run || !authed()) return;
-    if (blocked()) { if (tries > 0) schedule(500, tries - 1); return; }
+    if (blocked(forced)) { if (tries > 0) schedule(500, tries - 1); else forced = false; return; }
     var tab = currentTab();
-    if (!TOURS[tab] || readSeen()[tab]) return;
-    if (!start(tab) && tries > 0) schedule(600, tries - 1);
+    if (!TOURS[tab] || readSeen()[tab]) { forced = false; return; }
+    if (start(tab) || tries <= 0) forced = false;
+    else schedule(600, tries - 1);
   }
 
   // Avatar menu: show all tips again, starting with this screen.
   function replay() {
     if (run) end();
     writeSeen({});
+    forced = true;
     schedule(300);
   }
 
