@@ -1,14 +1,16 @@
 const { test, expect } = require("@playwright/test");
 
 // Native session store (native-shell.js): the Keystore-backed SessionVault
-// plugin + the synchronous window.EtqSessionVault.getSync read are mocked.
+// plugin is mocked; the synchronous read is the one-shot window.__etqVault marker the native
+// document-start script sets ("" = empty vault, absent = no vault path).
 
 test.setTimeout(45000);
 const KEY = "gymauth_refresh";
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const jwt = (c) => b64({ alg: "none" }) + "." + b64(c) + ".sig";
 
-// opts: native (default true), vault (record already in the vault), sync (expose getSync),
+// opts: native (default true), vault (record already in the vault), sync (native sets the marker),
+//       marker (override the raw marker value),
 //       ls (raw localStorage[KEY]), setFails
 async function open(browser, opts) {
   opts = Object.assign({ native: true, sync: true }, opts);
@@ -52,8 +54,8 @@ async function open(browser, opts) {
       };
       window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android", Plugins: plugins };
       if (o.sync) {
-        // returns "" like the real interface when the vault is empty / unreadable
-        window.EtqSessionVault = { getSync: () => { window.__order.push("getSync"); return window.__vault.value || ""; } };
+        // "" like the real script when the vault is empty / unreadable
+        window.__etqVault = "marker" in o ? o.marker : (window.__vault.value || "");
       }
     }
     try {
@@ -80,7 +82,8 @@ test("hydrated before sync.js: boots signed in from the vault with the stored to
   const { context, page, api, errors } = await open(browser, { vault: REC });
   await page.waitForFunction(() => GymSync.isSignedIn(), null, { timeout: 15000 });
   expect(api.refreshBodies[0].refreshToken).toBe("rt-vault");
-  expect(await page.evaluate(() => window.__order[0])).toBe("getSync");
+  // the marker was read once at parse time and removed from window
+  expect(await page.evaluate(() => "__etqVault" in window)).toBe(false);
   // rotated token was written through to the vault, never to localStorage
   await expect.poll(async () => JSON.parse((await vaultVal(page)) || "{}").rt).toMatch(/^rt-new-/);
   expect(await lsVal(page)).toBeNull();
@@ -142,21 +145,23 @@ test("keystore read failure (native returns empty): app is signed out cleanly", 
   await context.close();
 });
 
-test("getSync throwing is treated as signed out", async ({ browser }) => {
-  const context = await browser.newContext({ ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}), serviceWorkers: "block" });
-  await context.addInitScript(() => {
-    window.Capacitor = { isNativePlatform: () => true, Plugins: { SplashScreen: { hide() {} }, SessionVault: { get: () => Promise.resolve({}), set: () => Promise.resolve(), clear: () => Promise.resolve() } } };
-    window.EtqSessionVault = { getSync: () => { throw new Error("boom"); } };
-  });
-  await context.route("**/config.js", (r) => r.fulfill({ contentType: "application/javascript", body: 'window.GYM_API_BASE="";window.GOOGLE_CLIENT_ID="";window.GYM_APP_HOST="";' }));
-  const page = await context.newPage();
-  await page.goto("/index.html");
-  await page.waitForFunction(() => window.GymSync);
-  expect(await page.evaluate(() => GymSessionStore.get())).toBeNull();
+test("malformed marker values are treated as signed out", async ({ browser }) => {
+  for (const marker of ["not json", "{}", '{"rt":""}', '{"rt":5}', "[]", "null"]) {
+    const { context, page, errors } = await open(browser, { marker });
+    expect(await page.evaluate(() => GymSessionStore.get())).toBeNull();
+    expect(await page.evaluate(() => "__etqVault" in window)).toBe(false);
+    expect(errors).toEqual([]);
+    await context.close();
+  }
+});
+
+test("a non-string marker is ignored: no GymSessionStore, localStorage kept", async ({ browser }) => {
+  const { context, page } = await open(browser, { marker: { rt: "x" } });
+  expect(await page.evaluate(() => typeof window.GymSessionStore)).toBe("undefined");
   await context.close();
 });
 
-test("native without the JS interface falls back to localStorage (no GymSessionStore)", async ({ browser }) => {
+test("native without the marker (old WebView) falls back to localStorage (no GymSessionStore)", async ({ browser }) => {
   const { context, page } = await open(browser, { sync: false });
   expect(await page.evaluate(() => typeof window.GymSessionStore)).toBe("undefined");
   await context.close();

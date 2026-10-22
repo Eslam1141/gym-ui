@@ -1,0 +1,36 @@
+diff --git a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/Bridge.java b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/Bridge.java
+index 9a3c6e0..aad8a53 100644
+--- a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/Bridge.java
++++ b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/Bridge.java
+@@ -239,7 +239,18 @@ public class Bridge {
+         String scheme = this.getScheme();
+         allowedOriginRules.add(scheme + "://" + authority);
+         if (this.getServerUrl() != null) {
+-            allowedOriginRules.add(this.getServerUrl());
++            // Origin rules must be scheme://host[:port]. A server.url with a path
++            // (https://example.com/app/) makes addWebMessageListener throw, and
++            // MessageHandler then falls back to addJavascriptInterface, which
++            // exposes androidBridge to every frame (iframes included).
++            Uri serverUri = Uri.parse(this.getServerUrl());
++            if (serverUri.getScheme() != null && serverUri.getHost() != null) {
++                String origin = serverUri.getScheme() + "://" + serverUri.getHost();
++                if (serverUri.getPort() != -1) {
++                    origin += ":" + serverUri.getPort();
++                }
++                allowedOriginRules.add(origin);
++            }
+         }
+         if (appAllowNavigationConfig != null) {
+             for (String allowNavigation : appAllowNavigationConfig) {
+diff --git a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/MessageHandler.java b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/MessageHandler.java
+index dc91c9b..634268e 100644
+--- a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/MessageHandler.java
++++ b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/MessageHandler.java
+@@ -35,6 +35,7 @@ public class MessageHandler {
+             try {
+                 WebViewCompat.addWebMessageListener(webView, "androidBridge", bridge.getAllowedOriginRules(), capListener);
+             } catch (Exception ex) {
++                Logger.error("addWebMessageListener failed (" + bridge.getAllowedOriginRules() + "); androidBridge falls back to a JavascriptInterface visible to every frame", ex);
+                 webView.addJavascriptInterface(this, "androidBridge");
+             }
+         } else {

@@ -7,11 +7,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.webkit.ScriptHandler;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
@@ -53,14 +55,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    /** Synchronous read for native-shell.js, so the first paint is already still. */
-    private static final class MotionBridge {
-        private final Context ctx;
-        MotionBridge(Context ctx) { this.ctx = ctx; }
-        @JavascriptInterface
-        public boolean reduced() { return animationsRemoved(ctx); }
-    }
-
     /** Set or clear the attribute on the live page (page load, resume). */
     private void pushMotion() {
         if (getBridge() == null) return;
@@ -77,7 +71,7 @@ public class MainActivity extends BridgeActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable watchdog;
-    private SessionVaultPlugin.Sync vaultSync;
+    private ScriptHandler docStartHandler;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -114,17 +108,13 @@ public class MainActivity extends BridgeActivity {
                     Toast.LENGTH_SHORT).show();
             }
         });
-        // Synchronous read of the Keystore-backed session record for
-        // native-shell.js (must exist before sync.js runs; see SessionVaultPlugin).
-        vaultSync = new SessionVaultPlugin.Sync(this, getBridge().getWebView(), getBridge().getServerUrl());
-        vaultSync.lastUrl = getBridge().getServerUrl();
-        getBridge().getWebView().addJavascriptInterface(vaultSync, "EtqSessionVault");
-        getBridge().getWebView().addJavascriptInterface(new MotionBridge(this), "EtqMotion");
+        // Hand the Keystore-backed session record and the reduced-motion flag
+        // to the app's own pages before any page script runs (native-shell.js).
+        // No JavascriptInterface: those reach every frame, YouTube included.
+        refreshDocStartScript();
         getBridge().addWebViewListener(new WebViewListener() {
             @Override
             public void onPageStarted(WebView webView) {
-                String u = webView.getUrl();
-                if (vaultSync != null && u != null) vaultSync.lastUrl = u;
                 arm(webView);
             }
 
@@ -147,6 +137,34 @@ public class MainActivity extends BridgeActivity {
                 disarm();
             }
         });
+    }
+
+    /**
+     * (Re)registers the document-start script with the current vault value and
+     * animation setting, scoped to the app's origins. Takes effect for the next
+     * document load (the live page keeps its in-memory copy, and pushMotion()
+     * updates its motion attribute). Safe to call from any thread.
+     */
+    void refreshDocStartScript() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() { registerDocStartScript(); }
+        });
+    }
+
+    private void registerDocStartScript() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        // Unsupported WebView: no marker, the page keeps its localStorage session store.
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return;
+        try {
+            String script = DocStartScript.build(SessionVault.get(this), animationsRemoved(this));
+            ScriptHandler next = WebViewCompat.addDocumentStartJavaScript(
+                getBridge().getWebView(), script, DocStartScript.allowedOrigins(getBridge().getServerUrl()));
+            if (docStartHandler != null) docStartHandler.remove();
+            docStartHandler = next;
+        } catch (RuntimeException e) {
+            // Invalid origin rule or WebView gone: leave the previous script (or none) in place.
+        }
     }
 
     private boolean isLocal(WebView webView) {
@@ -184,6 +202,7 @@ public class MainActivity extends BridgeActivity {
         foreground = true;
         // The user can flip "Remove animations" while the app is in the background.
         pushMotion();
+        registerDocStartScript(); // keep the next page load's motion flag current
         // Back in the app: stop a still-ringing timer notification (a pending
         // alarm, if the timer is still running, stays scheduled).
         ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).cancel(4242);

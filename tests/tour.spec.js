@@ -16,7 +16,7 @@ async function replayFromMenu(page) {
 test("no survey pending: tips start on Plan and Replay shows them again", async ({ browser }) => {
   // gym_survey_dismissed = "Not now" was tapped (no-op where survey.js isn't shipped).
   const { context, page } = await openApp(browser, {
-    signedIn: true, server: { onboardingCompleted: false }, ls: { gym_survey_dismissed: 1 }
+    signedIn: true, tours: true, server: { onboardingCompleted: false }, ls: { gym_survey_dismissed: 1 }
   });
   await expect(tourCard(page)).toBeVisible({ timeout: 10000 });
   await page.click("#tour .tour-skip");
@@ -29,7 +29,7 @@ test("no survey pending: tips start on Plan and Replay shows them again", async 
 });
 
 test("a pending survey holds the automatic tips, but Replay still works", async ({ browser }) => {
-  const { context, page } = await openApp(browser, { signedIn: true, server: { onboardingCompleted: false } });
+  const { context, page } = await openApp(browser, { signedIn: true, tours: true, server: { onboardingCompleted: false } });
   // Stand-in where survey.js isn't shipped; survey.js replaces it where it is.
   await page.addInitScript(() => { window.GymSurvey = { isPending: () => true, close: () => {} }; });
   await page.evaluate(() => localStorage.removeItem("gym_tours_seen"));

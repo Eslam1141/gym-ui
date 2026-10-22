@@ -26,6 +26,20 @@ cd android && ./gradlew assembleDebug
 # -> android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Capacitor patch (`patches/`)
+
+`npm ci` runs `patch-package`, which patches `@capacitor/android`:
+`Bridge.setAllowedOriginRules` added `server.url` verbatim as a WebView
+origin rule, and a URL with a path (`.../app/`) is not a valid rule, so
+`addWebMessageListener` threw and Capacitor fell back to
+`addJavascriptInterface`, exposing `androidBridge` (plugin calls) to every
+frame, YouTube iframes included. The patch reduces it to
+`scheme://host[:port]` and logs if the fallback ever happens again
+(`adb logcat | grep "addWebMessageListener failed"`). On a Capacitor
+upgrade, check whether upstream fixed it; if `npm ci` fails to apply the
+patch, regenerate it with `npx patch-package @capacitor/android` (delete
+`node_modules/@capacitor/android/capacitor/build` first).
+
 ## Test unmerged web changes in the app
 
 `tools/dev-proxy.mjs` serves this checkout's web app under `/app/` and
@@ -108,10 +122,37 @@ over the DevTools protocol. In a debug build, call `requestAuthorization({write:
 Android's "Remove animations" (animator / transition animation scale = 0) does not set
 `prefers-reduced-motion` in the WebView. `MainActivity` reads `Settings.Global.ANIMATOR_DURATION_SCALE`
 and `TRANSITION_ANIMATION_SCALE`; if either is 0 it sets `html[data-reduce-motion="1"]` (otherwise clears
-it). It does so synchronously through the `EtqMotion` JS interface (read by `native-shell.js` at parse time,
-so the first paint is already still) and again by `evaluateJavascript` on every page load / first paint and on
-resume (the setting can change while the app is in the background). Web side: `GymMotion.reduced()` honours
+it). It hands the flag to the page synchronously as the one-shot `window.__etqMotion` boolean (set by the
+document-start script below, read and deleted by `native-shell.js` at parse time, so the first paint is already
+still) and again by `evaluateJavascript` on every page load / first paint and on
+resume (the setting can change while the app is in the background; resume also re-registers the script).
+Web side: `GymMotion.reduced()` honours
 the attribute, and `motion.css` ends with a generated mirror of every `prefers-reduced-motion: reduce` rule plus
 a rule that stops animations and transitions under the attribute. After editing any reduce block run
 `node tools/mirror-reduced-motion.mjs` (a Playwright test checks it with `--check`). Test on the emulator:
 `adb shell settings put global animator_duration_scale 0`, relaunch, then check the attribute over CDP.
+
+## Session vault and embedded frames (document-start script)
+
+The app-session refresh record lives in Android Keystore-backed storage (`SessionVault`). `native-shell.js`
+needs it synchronously before `sync.js` runs, which an async plugin call cannot give. It is NOT exposed through
+`addJavascriptInterface`: Android injects such objects into every frame, so a YouTube iframe (the app embeds
+them) could read the refresh token. Instead `MainActivity` registers a script with
+`WebViewCompat.addDocumentStartJavaScript` (`DocStartScript.build`) restricted to the origins `<server.url origin>`
+(production, or the dev URL incl. port) and `https://localhost` (bundled offline page). Origin rules mean a
+third-party frame never receives it, and the script also bails unless `window === window.top`. It sets
+one-shot `window.__etqVault` (JSON string literal of the record, `""` when empty) and `window.__etqMotion`;
+`native-shell.js` reads both at parse time and deletes them. `MainActivity` re-registers the script (remove + add the
+`ScriptHandler`) at startup, on resume, and after every `SessionVault.set/clear`, so each page load sees current values.
+
+- Marker absent (WebView without `DOCUMENT_START_SCRIPT`, which Capacitor itself already needs for its bridge
+  injection on current System WebViews, or a browser): the vault store is not installed and `sync.js` keeps
+  using `localStorage`, exactly as when the native bridge is missing.
+- Plugin calls (`SessionVault.set/clear`; there is deliberately no `get`) go through Capacitor's bridge
+  (8.5.3 `MessageHandler`). With `addWebMessageListener` it rejects non-main frames, but it falls back to
+  `addJavascriptInterface("androidBridge")` when that call throws. `Bridge.setAllowedOriginRules` adds
+  `server.url` verbatim (it has the `/app/` path), which is likely not a valid origin rule; on the device test
+  (WebView 155, dev URL) the bridge object was visible inside a YouTube iframe, i.e. the fallback looked active (cause not confirmed).
+  Replies still go only to the main frame, so a frame cannot read anything back, but it can post plugin calls.
+  Open follow-up (not in this change): make the bridge use the web-message listener.
+- Unit test: `./gradlew testDebugUnitTest` (`DocStartScriptTest`: quoting, `</script>`, U+2028/2029, origins).
