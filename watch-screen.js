@@ -61,7 +61,7 @@
     wtDial: ["Today's steps, active calories and sleep", "خطوات اليوم والسعرات النشطة والنوم"]
   });
 
-  var G = W.state().goals;
+  var G = W.state().goals;   // refreshed from state() on every render
   var KEY_SEEN = U.keys.seen, KEY_METRIC = U.keys.metric;
   var ENTER_MS = 800, DELTA_MS = 600, ENTER_DELAY = 150, STAGGER_MS = 120;
 
@@ -107,7 +107,8 @@
     if (m.id === "sleep") return U.fmtSleep(n);
     return U.fmtInt(n) + " " + s("bpm");
   }
-  function goalText(m) { return m.id === "sleep" ? "8 " + s("hr") : U.fmtInt(m.goal); }
+  function hoursText(min) { return String(min / 60); }
+  function goalText(m) { return m.id === "sleep" ? hoursText(m.goal) + " " + s("hr") : U.fmtInt(m.goal); }
 
   // ---------------- animation: one rAF loop for the dial ----------------
   // shown/ring remember what is on screen, so a rebuild or a refresh animates
@@ -189,7 +190,7 @@
     var defs = [
       { key: "steps", label: s("stepsLbl"), n: v.steps, goal: G.steps, off: off("steps"), fmt: U.fmtInt, unit: "", pct: "wtPct", gt: U.fmtInt(G.steps) },
       { key: "kcal", label: s("wtKcal"), n: v.kcal, goal: G.kcal, off: off("calories"), fmt: U.fmtInt, unit: "kcal", pct: "wtPctKcal", gt: U.fmtInt(G.kcal) },
-      { key: "sleep", label: s("wtSleepLast"), n: v.sleepMin, goal: G.sleepMin, off: off("sleep"), fmt: U.fmtSleep, units: true, pct: "wtPctSleep", gt: "8" }
+      { key: "sleep", label: s("wtSleepLast"), n: v.sleepMin, goal: G.sleepMin, off: off("sleep"), fmt: U.fmtSleep, units: true, pct: "wtPctSleep", gt: hoursText(G.sleepMin) }
     ];
     var d = dialSvg();
     var centerN = h("span", { class: "wt-c-n", "aria-hidden": "true" });
@@ -250,7 +251,12 @@
     var dial = h("div", { class: "wt-dial", id: "wtDial", role: "img", "aria-label": labelParts.join(". ") + "." },
       d.svg,
       h("div", { class: "wt-center", "aria-hidden": "true" }, centerN, h("span", { class: "wt-c-l" }, s("stepsLbl"))));
-    return card("wt-today", "wtToday", [dial, h("ul", { class: "wt-legend" }, rows)]);
+    var edit = h("button", { type: "button", class: "wt-btn wt-btn-quiet wt-edit-goals", id: "wtEditGoals", "data-fid": "goals",
+      on: { click: function () {
+        // a save rebuilds the card, so focus returns to the new button
+        W.editGoals().then(function () { var b = document.getElementById("wtEditGoals"); if (b) try { b.focus(); } catch (e) {} });
+      } } }, R("goalsEdit"));
+    return card("wt-today", "wtToday", [dial, h("ul", { class: "wt-legend" }, rows), edit]);
   }
 
   function hrCards(st) {
@@ -547,6 +553,7 @@
   function render(force, refocus) {
     if (screen.hidden) return;
     var st = W.state();
+    G = st.goals;
     var sig = JSON.stringify([st, U.li(), calm(), updating, notice, metricId, sel, ls(KEY_SEEN)]);
     if (!force && sig === lastSig) return;
     lastSig = sig;

@@ -38,14 +38,43 @@
   var h = GymDom.h;
 
   var KEY_ASK = "etqwatch_ask", KEY_ON = "etqwatch_on", KEY_CACHE = "etqwatch_cache", KEY_WEEK = "etqwatch_week";
-  var KEY_SEEN = "etqwatch_tabseen", KEY_METRIC = "etqwatch_metric";
+  var KEY_SEEN = "etqwatch_tabseen", KEY_METRIC = "etqwatch_metric", KEY_GOALS = "etqwatch_goals";
   var TYPES = ["steps", "calories", "heartRate", "restingHeartRate", "sleep", "weight"];
   // which cached value each Health Connect type feeds
   var VAL_OF = { steps: "steps", calories: "kcal", heartRate: "avgHr", restingHeartRate: "rhr", sleep: "sleepMin", weight: "weightKg" };
   var CACHE_MAX_MS = 30 * 24 * 3600 * 1000;
   var THROTTLE_MS = 60 * 1000;
-  // Display-only daily goals (not user settings yet): sleep in minutes.
-  var GOALS = { steps: 8000, kcal: 500, sleepMin: 480 };
+  // Daily goals the rings fill toward (sleep in minutes). The user's own values
+  // live in KEY_GOALS; anything missing or out of range falls back to the default.
+  var DEFAULT_GOALS = { steps: 8000, kcal: 500, sleepMin: 480 };
+  var GOAL_RANGE = {
+    steps: { min: 1000, max: 50000, step: 500 },
+    kcal: { min: 100, max: 2000, step: 50 },
+    sleepMin: { min: 240, max: 720, step: 30 }
+  };
+  var GOALS = Object.assign({}, DEFAULT_GOALS);
+  function clampGoal(key, v) {
+    var r = GOAL_RANGE[key], n = Number(v);
+    if (v === "" || v == null || !isFinite(n)) return DEFAULT_GOALS[key];
+    return Math.min(r.max, Math.max(r.min, Math.round(n / r.step) * r.step));
+  }
+  function loadGoals() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY_GOALS)); } catch (e) {}
+    if (!saved || typeof saved !== "object") saved = {};
+    Object.keys(DEFAULT_GOALS).forEach(function (k) { GOALS[k] = saved[k] == null ? DEFAULT_GOALS[k] : clampGoal(k, saved[k]); });
+  }
+  function setGoals(g) {
+    Object.keys(DEFAULT_GOALS).forEach(function (k) { GOALS[k] = clampGoal(k, g && g[k]); });
+    try { localStorage.setItem(KEY_GOALS, JSON.stringify(GOALS)); } catch (e) {}
+    renderAll();
+  }
+  function resetGoals() {
+    Object.assign(GOALS, DEFAULT_GOALS);
+    try { localStorage.removeItem(KEY_GOALS); } catch (e) {}
+    renderAll();
+  }
+  loadGoals();
   var DAYS = 7;
   var PLAY_URL = "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata";
 
@@ -94,6 +123,17 @@
     // ---- today strip, empty states and errors (B4) ----
     updated: ["Updated {time}", "آخر تحديث {time}"],
     stepsLbl: ["Steps", "الخطوات"],
+    goalsEdit: ["Edit goals", "تعديل الأهداف"],
+    goalsTitle: ["Daily goals", "الأهداف اليومية"],
+    goalsBody: ["The rings fill toward these. They stay on this phone.", "تمتلئ الحلقات نحو هذه الأهداف. وتبقى على هذا الهاتف."],
+    goalsSteps: ["Steps a day", "الخطوات في اليوم"],
+    goalsKcal: ["Active kcal a day", "السعرات النشطة في اليوم"],
+    goalsSleep: ["Sleep a night (hours)", "النوم في الليلة (ساعات)"],
+    goalsRange: ["{min} to {max}", "من {min} إلى {max}"],
+    goalsLess: ["Lower: {label}", "تقليل: {label}"],
+    goalsMore: ["Raise: {label}", "زيادة: {label}"],
+    goalsSave: ["Save goals", "حفظ الأهداف"],
+    goalsReset: ["Reset to defaults", "إعادة الأهداف الافتراضية"],
     kcalLbl: ["Active kcal", "السعرات النشطة"],
     restHrLbl: ["Resting heart rate", "نبض الراحة"],
     hrNote: ["Estimate from your watch. Not medical advice.", "تقدير من ساعتك. وليس نصيحة طبية."],
@@ -489,7 +529,8 @@
   }
 
   // ---------------- sheet (the shared .syd bottom sheet) ----------------
-  // kind: "disclose" (Continue resolves true), "install" and "confirm" (Disconnect resolves true)
+  // kind: "disclose" (Continue resolves true), "install" and "confirm" (Disconnect resolves true),
+  // "goals" (Save or Reset to defaults resolves true; the goals are already stored)
   function openSheet(kind) {
     if (sheet) return Promise.resolve(false);
     return new Promise(function (resolve) {
@@ -497,7 +538,37 @@
       var title = h("h2", { class: "syd-title", id: "wtTitle" },
         R(kind === "disclose" ? "discTitle" : kind === "install" ? "installHC" : "disconnectConfirmTitle"));
       var body, go, later;
-      if (kind === "disclose") {
+      if (kind === "goals") {
+        title.textContent = s("goalsTitle");
+        var inputs = {};
+        var rows = [["steps", "goalsSteps", 1], ["kcal", "goalsKcal", 1], ["sleepMin", "goalsSleep", 60]].map(function (d) {
+          var key = d[0], r = GOAL_RANGE[key], div = d[2], label = s(d[1]), id = "wtGoal-" + key;
+          var input = h("input", { type: "number", class: "wt-gf-in", id: id, inputmode: key === "sleepMin" ? "decimal" : "numeric",
+            min: String(r.min / div), max: String(r.max / div), step: String(r.step / div), value: String(GOALS[key] / div), "aria-describedby": id + "-r" });
+          inputs[key] = input;
+          var tidy = function () { input.value = String(clampGoal(key, input.value === "" ? "" : Number(input.value) * div) / div); };
+          var nudge = function (dir) {
+            var cur = input.value === "" ? GOALS[key] : Number(input.value) * div;
+            input.value = String(clampGoal(key, cur + dir * r.step) / div);
+          };
+          input.addEventListener("change", tidy);
+          input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } });
+          var less = h("button", { type: "button", class: "wt-step", "aria-label": s("goalsLess", { label: label }), on: { click: function () { nudge(-1); } } }, "\u2212");
+          var more = h("button", { type: "button", class: "wt-step", "aria-label": s("goalsMore", { label: label }), on: { click: function () { nudge(1); } } }, "+");
+          return h("div", { class: "wt-gf-row" },
+            h("label", { class: "wt-gf-l", for: id }, label),
+            h("div", { class: "wt-stepper", dir: "ltr" }, less, input, more),
+            h("span", { class: "wt-gf-r", id: id + "-r" },
+              s("goalsRange", { min: fmtInt(r.min / div), max: fmtInt(r.max / div) })));
+        });
+        body = [h("p", { class: "syd-body wt-p" }, R("goalsBody")), h("div", { class: "wt-gf" }, rows),
+          h("button", { type: "button", class: "wt-btn wt-btn-quiet", id: "wtGoalsReset", on: { click: function () { resetGoals(); close(true); } } }, R("goalsReset"))];
+        go = h("button", { type: "button", class: "syd-yes", id: "wtGo" }, R("goalsSave"));
+        later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, R("cancel"));
+        go.addEventListener("click", function () {
+          setGoals({ steps: Number(inputs.steps.value), kcal: Number(inputs.kcal.value), sleepMin: Number(inputs.sleepMin.value) * 60 });
+        });
+      } else if (kind === "disclose") {
         body = [
           h("p", { class: "syd-body wt-p" }, R("discIntro")),
           h("ul", { class: "wt-pts" }, ["discB1", "discB2", "discB3", "discB4"].map(function (k) { return h("li", {}, R(k)); })),
@@ -533,7 +604,7 @@
       function onKey(e) {
         if (e.key === "Escape") { e.stopPropagation(); close(false); return; }
         if (e.key !== "Tab") return;
-        var f = Array.prototype.filter.call(panel.querySelectorAll("button, a[href]"), function (n) { return !n.disabled && n.offsetParent !== null; });
+        var f = Array.prototype.filter.call(panel.querySelectorAll("button, a[href], input"), function (n) { return !n.disabled && n.offsetParent !== null; });
         if (!f.length) return;
         var first = f[0], lastEl = f[f.length - 1];
         if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { e.preventDefault(); lastEl.focus(); }
@@ -573,6 +644,7 @@
     return h("button", { type: "button", class: "wt-btn " + cls, id: id || null, on: { click: onClick } }, label);
   }
 
+  function editGoals() { return openSheet("goals"); }
   function fmtInt(n) { return Math.round(n).toLocaleString("en-US"); }
   function fmtSleep(min) {
     var hrs = Math.floor(min / 60), m = Math.round(min % 60);
@@ -656,7 +728,7 @@
       status: l ? l.status : (isOn() && active() ? "loading" : null),
       vals: l && l.vals ? Object.assign({}, l.vals) : {}, denied: l && l.denied ? l.denied.slice() : [], at: l ? l.at : 0,
       week: l && l.week ? l.week.map(function (x) { return Object.assign({}, x); }) : null,
-      goals: GOALS
+      goals: Object.assign({}, GOALS)
     };
   }
   function onChange(fn) { if (typeof fn === "function") listeners.push(fn); }
@@ -701,7 +773,7 @@
 
   window.GymWatch = {
     init: init, refresh: function () { return refresh(true); }, connect: connect,
-    state: state, onChange: onChange, manage: manage, disconnect: disconnectAsk, recheck: recheck,
+    state: state, onChange: onChange, editGoals: editGoals, manage: manage, disconnect: disconnectAsk, recheck: recheck,
     // for watch-screen.js: shared copy and formatting, so the two files never drift
     ui: { add: function (t) { Object.keys(t).forEach(function (k) { STR[k] = t[k]; }); }, raw: raw, s: s, R: R, rich: rich, icon: icon, btn: btn, svgEl: svgEl, fmtInt: fmtInt, fmtSleep: fmtSleep, fmtTime: fmtTime, li: li, playUrl: PLAY_URL, keys: { seen: KEY_SEEN, metric: KEY_METRIC } }
   };
