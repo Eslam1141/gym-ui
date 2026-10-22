@@ -77,12 +77,14 @@
     var card = document.getElementById("sessionCard");
     return !!(card && card.classList.contains("active"));
   }
+  function surveyDismissed() { try { return localStorage.getItem("gym_survey_dismissed") === "1"; } catch (e) { return false; } }
   function blocked() {
     var b = document.body.classList;
     if (b.contains("onboarding-open") || b.contains("survey-open")) return true;
     var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
     if (!me) return true;                               // /me not loaded yet
-    if (me.onboardingCompleted === false) return true;  // survey comes first
+    // survey comes first, unless the user said "Not now" to it (gym_survey_dismissed: survey.js)
+    if (me.onboardingCompleted === false && !surveyDismissed()) return true;
     if (workoutRunning()) return true;
     // another sheet/dialog is open (consent, calendar, video, menus...)
     var ds = document.querySelectorAll('[role="dialog"], dialog[open], #videoModal.show, .tb-menu');

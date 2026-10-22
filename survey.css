@@ -105,7 +105,6 @@ html[lang="ar"] .svy-q{ line-height:1.45; }
 .svy-field input[type="number"]::-webkit-inner-spin-button,
 .svy-field input[type="number"]::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
 [dir="rtl"] .svy-input-wrap input{ text-align:right; padding:0 64px 0 16px; }
-#svyAll{ font-size:var(--text-md); font-weight:500; }
 .svy-field input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 .svy-unit{
   position:absolute; inset-block:0; inset-inline-end:16px; display:flex; align-items:center;
@@ -134,6 +133,27 @@ html[lang="ar"] .svy-q{ line-height:1.45; }
   font:inherit; font-size:var(--text-base); font-weight:700; color:var(--paper);
 }
 .svy-note{ margin:0 0 6px; text-align:center; font-size:var(--text-xs); color:var(--paper-dim); }
+
+/* consent (step 0): the statement sits right above the buttons */
+.svy-consent{ gap:12px; }
+.svy-consent .svy-q{ outline:none; }
+.svy-clead{ margin:6px 0 0; font-size:var(--text-md); line-height:1.5; color:var(--paper); }
+.svy-cline{ margin:0; font-size:var(--text-base); line-height:1.55; color:var(--paper-dim); }
+html[lang="ar"] .svy-clead, html[lang="ar"] .svy-cline{ line-height:1.8; }
+.svy-cstate{
+  display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:auto; padding:14px 16px;
+  border-radius:var(--radius); border:1px solid var(--line);
+  border-inline-start:4px solid var(--accent); background:var(--panel);
+}
+.svy-cstate-text{ margin:0; font-size:var(--text-base); font-weight:700; line-height:1.5; color:var(--paper); }
+html[lang="ar"] .svy-cstate-text{ line-height:1.8; }
+.svy-clink{
+  display:inline-flex; align-items:center; min-height:44px; font-size:var(--text-sm); font-weight:700;
+  color:var(--accent-tint); text-decoration:underline; text-underline-offset:3px;
+}
+.svy-clink:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.svy-consent .svy-next{ margin-top:4px; }
+.svy-next:disabled, .svy-ghost:disabled{ opacity:.6; cursor:default; }
 
 /* saving / done */
 .svy-center{ align-items:center; justify-content:center; text-align:center; gap:14px; }
@@ -180,4 +200,7 @@ html[lang="ar"] .svy-sum-label{ letter-spacing:0; }
   transform:translate(-50%, -50%) rotate(45deg);
 }
 .guest-hint-x::after{ transform:translate(-50%, -50%) rotate(-45deg); }
+.setup-card .guest-hint-text{ display:flex; flex-direction:column; gap:2px; }
+.setup-title{ font-size:var(--text-base); font-weight:800; }
+.setup-sub{ color:var(--paper-dim); }
 .guest-hint-btn:focus-visible, .guest-hint-x:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
