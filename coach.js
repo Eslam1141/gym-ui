@@ -1720,7 +1720,7 @@
   // Allergies, Ramadan and Halal are not survey questions: the coach form
   // keeps its own fields for them.
   var SURVEY_FILLED_KEY = "gym_survey_filled"; // local only (see sync.js LOCAL_ONLY)
-  function applySurvey(a) {
+  function applySurvey(a, inbody) {
     var st = loadState();
     var wrote = {};
     function put(k, v) { st[k] = v; wrote[k] = v; }
@@ -1737,6 +1737,13 @@
     put("equipment", a.equipment);
     put("dietPreference", a.dietPreference || "balanced");
     put("experience", a.experience || "");
+    if (inbody && typeof inbody === "object") {
+      var any = false;
+      ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
+        if (typeof inbody[k] === "number" && isFinite(inbody[k])) { put(k, String(inbody[k])); any = true; }
+      });
+      if (any) put("inbodyOpen", true);
+    }
     saveJSON(SURVEY_FILLED_KEY, wrote);
     saveSynced(FORM_KEY, st);
   }

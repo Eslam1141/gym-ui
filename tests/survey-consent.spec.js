@@ -57,7 +57,7 @@ async function open(browser, b, opts) {
   const ls = Object.assign({ gym_tours_seen: { plan: 1, more: 1 } }, opts.ls);
   return openApp(browser, Object.assign({ signedIn: true, setup: b.setup }, opts, { ls }));
 }
-async function answerAll(page) {
+async function answerAll(page, inbody) {
   const tap = (name) => page.locator("#survey .svy-opt", { hasText: name }).first().click();
   await tap("Lose fat");
   await tap("Male");
@@ -68,6 +68,9 @@ async function answerAll(page) {
   await tap("Gym");
   await tap("Some walking");
   await page.click("#survey .svy-next"); // diet: Balanced
+  await expect(page.locator("#survey #svyQ")).toHaveText("Have InBody results?", T);
+  if (inbody) { await page.fill("#svyIb_bodyFatPct", String(inbody)); await page.click("#survey .svy-next"); }
+  else await page.getByRole("button", { name: "Skip" }).click();
 }
 
 test("consent comes first: nothing is sent until Agree, the PUT only after a successful POST", async ({ browser }) => {
@@ -88,6 +91,26 @@ test("consent comes first: nothing is sent until Agree, the PUT only after a suc
   expect(put).not.toHaveProperty("ramadan");
   expect(put.dietPreference).toBe("balanced");
   expect(put.age).toBe(30);
+  await context.close();
+});
+
+test("InBody step: only after consent; numbers stay out of the PUT, reach the coach form, and Withdraw clears them", async ({ browser }) => {
+  const b = backend();
+  const { context, page } = await open(browser, b);
+  await expect(page.locator("#survey #svyQ")).toHaveText("Before we start", T); // the InBody step is behind the same consent
+  await page.getByRole("button", { name: "Agree and continue" }).click();
+  await answerAll(page, 22);
+  await expect(page.locator("#survey .svy-check")).toBeVisible(T);
+  expect(idx(b, "POST", "/me/consents")).toBeLessThan(idx(b, "PUT", "/me/onboarding"));
+  expect(JSON.stringify(b.log.find((r) => r.m === "PUT").body)).not.toMatch(/inbody|bodyFat/i);
+  const form = await page.evaluate(() => JSON.parse(localStorage.getItem("gym_coach_form_draft")));
+  expect(form.bodyFatPct).toBe("22");
+  expect(form.inbodyOpen).toBe(true);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gym_survey_filled")).bodyFatPct)).toBe("22");
+  await page.evaluate(() => GymSurvey.afterWithdraw());
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("gym_coach_form_draft")));
+  expect(after.bodyFatPct).toBe("");
+  expect(after.inbodyOpen).toBe(false);
   await context.close();
 });
 
