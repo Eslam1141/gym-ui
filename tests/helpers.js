@@ -63,7 +63,7 @@ async function mockApi(context, s) {
   });
 }
 
-// opts: { setup (async (context, server) => ...: extra routes), termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
+// opts: { tours (true = leave the first-visit screen tours unseen), setup (async (context, server) => ...: extra routes), termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
@@ -90,6 +90,9 @@ async function openApp(browser, opts) {
       if (!o.signedIn && !o.sub) ls.setItem("gym_anon", "1");
       if (o.sub) ls.setItem("gym_user_sub", o.sub);
       if (o.checks) ls.setItem("gym_checks", JSON.stringify(o.checks));
+      // The first-visit screen tours (tour.js) cover the screen ~1.2 s after a signed-in boot and
+      // swallow clicks; only tour.spec.js (tours: true) wants them.
+      if (!o.tours) ls.setItem("gym_tours_seen", JSON.stringify({ plan: 1, coach: 1, food: 1, more: 1 }));
       Object.keys(o.ls || {}).forEach((k) => ls.setItem(k, JSON.stringify(o.ls[k])));
       if (o.signedIn) {
         sessionStorage.setItem("gymauth_session", JSON.stringify({
