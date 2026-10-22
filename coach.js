@@ -41,8 +41,8 @@
 
   var STR = {
     teaseTitle: ["Meet your AI coach", "تعرّف على مدرّبك الذكي"],
-    teaseBody: ["A diet and training plan calculated from your body numbers and goal — then filled in by Claude. Free with a Google account.",
-      "خطة تغذية وتمرين تُحسب من أرقام جسمك وهدفك، ثم يكملها كلود. مجانية مع حساب جوجل."],
+    teaseBody: ["A diet and training plan built from your body numbers and goal. Free with an account.",
+      "خطة غذاء وتمرين مبنية على أرقام جسمك وهدفك. مجاناً مع حساب."],
     teaseB1: ["Calorie & macro targets from your stats", "أهداف السعرات والماكروز من بياناتك"],
     teaseB2: ["A weekly split for your equipment & days", "تقسيم أسبوعي حسب معدّاتك وأيامك"],
     teaseB3: ["Swap-friendly meals for your diet", "وجبات قابلة للتبديل حسب نظامك"],
@@ -1714,33 +1714,52 @@
   }
 
   // Onboarding survey (survey.js): copy its answers into the coach form so
-  // the user isn't asked twice, and run the first plan from them.
+  // the user isn't asked twice, and run the first plan from them. The fields
+  // it wrote are remembered (SURVEY_FILLED_KEY) so withdrawing the survey
+  // consent can clear exactly those, and not anything the user typed since.
+  // Allergies, Ramadan and Halal are not survey questions: the coach form
+  // keeps its own fields for them.
+  var SURVEY_FILLED_KEY = "gym_survey_filled"; // local only (see sync.js LOCAL_ONLY)
   function applySurvey(a, inbody) {
     var st = loadState();
-    st.want = "both";
-    st.age = String(a.age);
-    st.sex = a.sex;
-    st.heightCm = String(a.heightCm);
-    st.weightKg = String(a.weightKg);
-    st.goalChecks = { lose_fat: a.goal === "lose_fat" || a.goal === "recomp",
-      gain_muscle: a.goal === "gain_muscle" || a.goal === "recomp", maintain: a.goal === "maintain" };
-    st.goal = deriveGoal(st.goalChecks);
-    st.activityLevel = a.activityLevel;
-    st.trainingDaysPerWeek = String(a.trainingDaysPerWeek);
-    st.equipment = a.equipment;
-    st.dietPreference = a.dietPreference || "balanced";
-    st.allergies = Array.isArray(a.allergies) ? a.allergies.slice(0, 10) : [];
-    st.experience = a.experience || "";
-    if (a.ramadan === true) { st.ramadan = true; st.ramadanManual = true; }
+    var wrote = {};
+    function put(k, v) { st[k] = v; wrote[k] = v; }
+    put("want", "both");
+    put("age", String(a.age));
+    put("sex", a.sex);
+    put("heightCm", String(a.heightCm));
+    put("weightKg", String(a.weightKg));
+    put("goalChecks", { lose_fat: a.goal === "lose_fat" || a.goal === "recomp",
+      gain_muscle: a.goal === "gain_muscle" || a.goal === "recomp", maintain: a.goal === "maintain" });
+    put("goal", deriveGoal(st.goalChecks));
+    put("activityLevel", a.activityLevel);
+    put("trainingDaysPerWeek", String(a.trainingDaysPerWeek));
+    put("equipment", a.equipment);
+    put("dietPreference", a.dietPreference || "balanced");
+    put("experience", a.experience || "");
     if (inbody && typeof inbody === "object") {
       var any = false;
       ["bodyFatPct", "skeletalMuscleMassKg", "visceralFatLevel", "bmrKcal"].forEach(function (k) {
-        if (typeof inbody[k] === "number" && isFinite(inbody[k])) { st[k] = String(inbody[k]); any = true; }
+        if (typeof inbody[k] === "number" && isFinite(inbody[k])) { put(k, String(inbody[k])); any = true; }
       });
-      if (any) st.inbodyOpen = true;
+      if (any) put("inbodyOpen", true);
     }
-    delete st._ramadanSuggested;
+    saveJSON(SURVEY_FILLED_KEY, wrote);
     saveSynced(FORM_KEY, st);
+  }
+  // Withdrawing the survey consent: put back the default of every field the
+  // survey filled, unless the user changed it since.
+  function clearSurvey() {
+    var wrote = loadJSON(SURVEY_FILLED_KEY, null);
+    try { localStorage.removeItem(SURVEY_FILLED_KEY); } catch (e) {}
+    if (!wrote) return;
+    var def = defaultState();
+    var st = Object.assign({}, def, loadJSON(FORM_KEY, {}));
+    Object.keys(wrote).forEach(function (k) {
+      if (JSON.stringify(st[k]) === JSON.stringify(wrote[k])) st[k] = def[k];
+    });
+    saveSynced(FORM_KEY, st);
+    refresh();
   }
   function runSurveyPlan() {
     var st = loadState();
@@ -1748,7 +1767,7 @@
     runAssessment(buildRequest(st), false);
   }
 
-  window.GymCoach = { retryWithoutExperience: retryWithoutExperience, applySurvey: applySurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
+  window.GymCoach = { retryWithoutExperience: retryWithoutExperience, applySurvey: applySurvey, clearSurvey: clearSurvey, runSurveyPlan: runSurveyPlan, refresh: refresh, currentProfile: currentProfile, newAssessment: openSub(refresh, renderForm), planSummary: planSummary, downscaleImage: downscaleImage, ramadan: ramadanMode, showResult: renderResult, myPlans: openSub(refresh, renderMyPlans), mapWorkout: mapWorkout };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

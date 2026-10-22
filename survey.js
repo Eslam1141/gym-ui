@@ -1,13 +1,21 @@
 /* survey.js — first-run survey for signed-in users (#survey).
  *
  * Opens once per account, when GET /me says onboardingCompleted:false.
- * One question per screen; answers go to PUT /api/v1/me/onboarding
- * (gym-be), then:
+ * Step 0 is a consent screen (lawyer review 2026-10-22): "Agree and continue"
+ * records POST /me/consents {type:"onboarding"}; nothing is sent to the
+ * server before that, and "Not now" sends nothing at all (the default
+ * starter plan stays; the survey stops auto-opening and a card on the Plan
+ * screen offers it again). One question per screen; answers go to
+ * PUT /api/v1/me/onboarding (gym-be), which answers 403 consent_required
+ * without an active consent (the consent screen then shows again), then:
  *   - the matching starter plan is selected right away (sex x gym/home);
  *   - the coach form is filled from the answers (GymCoach.applySurvey);
  *   - "Build my AI plan" runs a normal coach assessment (its consent step
  *     and the 5-a-day limit apply as usual).
  * Guests never see it: they get a small sign-in hint on the Plan screen.
+ *
+ * Allergies, Ramadan and Halal are deliberately not asked here (data
+ * minimisation); the coach form keeps its own fields for them.
  *
  * Draft answers live in localStorage gym_survey_draft (local-only, wiped
  * on sign-out with the other gym_* keys). */
@@ -15,11 +23,16 @@
   "use strict";
 
   var DRAFT_KEY = "gym_survey_draft";
-  var LATER_KEY = "etq_survey_later";     // sessionStorage: "Later" tapped
+  var DISMISS_KEY = "gym_survey_dismissed";     // "Not now" tapped: don't auto-open again (local only)
+  var CARD_KEY = "gym_survey_card_closed";      // the Plan-screen "Set up your plan" card was closed (local only)
+  // The consent wording below. Bump the version whenever that text or the
+  // list of questions changes: everyone is then asked again.
+  var CONSENT_TYPE = "onboarding";
+  var CONSENT_VERSION = "onboarding.v1";
   var HINT_KEY = "etq_guest_hint_closed"; // sessionStorage: guest hint closed
 
   var STR = {
-    later: ["Later", "لاحقاً"],
+    later: ["Not now", "ليس الآن"],
     back: ["Back", "رجوع"],
     next: ["Next", "التالي"],
     stepOf: ["{n} of {t}", "{n} من {t}"],
@@ -85,14 +98,6 @@
     diet_mediterranean: ["Mediterranean", "متوسطي"],
     diet_vegetarian: ["Vegetarian", "نباتي"],
     diet_vegan: ["Vegan", "نباتي صرف"],
-    diet_halal: ["Halal focus", "حلال"],
-    allergies: ["Food allergies (optional)", "حساسية من أطعمة (اختياري)"],
-    allergiesPh: ["e.g. nuts, milk", "مثلاً: مكسرات، حليب"],
-    // ramadan
-    qRam: ["Fasting this Ramadan?", "هل ستصوم رمضان؟"],
-    whyRam: ["We'll time meals and training around iftar.", "سنرتّب الوجبات والتمرين حول الإفطار."],
-    yes: ["Yes", "نعم"],
-    no: ["No", "لا"],
     // inbody (optional)
     qIb: ["Have InBody results?", "عندك نتيجة InBody؟"],
     whyIb: ["Optional. Makes your calories more accurate.", "اختياري. يجعل حساب سعراتك أدق."],
@@ -106,6 +111,21 @@
     ibPhoto: ["You can also read them from a photo later in Coach.", "تقدر كمان تقراها من صورة لاحقاً في المدرب."],
     skip: ["Skip", "تخطي"],
     errIb: ["Check the highlighted number.", "راجع الرقم المحدد."],
+    // consent (step 0; wording from the 2026-10-22 lawyer review, section 4)
+    cTitle: ["Before we start", "قبل أن نبدأ"],
+    cLine1: ["A few quick questions about your goal, body and training. Some answers, like your weight, are health information.",
+      "أسئلة سريعة عن هدفك وجسمك وتمرينك. بعض الإجابات، مثل وزنك، معلومات صحية."],
+    cLine2: ["We save them to your account (on our servers outside your country) to pick your starter plan and fill in your coach form. Nothing goes to the AI coach until you turn it on.",
+      "نحفظها في حسابك (على خوادمنا خارج بلدك) لنختار خطتك المبدئية ونملأ نموذج المدرّب. ولا يُرسَل شيء إلى المدرّب الذكي إلا بعد أن تشغّله."],
+    cLine3: ["Not now? You can still use the app. You can withdraw any time in More → Privacy & data.",
+      "لا تريد الآن؟ يمكنك استخدام التطبيق كالمعتاد. وتستطيع سحب موافقتك في أي وقت من المزيد ← الخصوصية والبيانات."],
+    cStatement: ["I agree that Etqadem saves these answers, including health information, for these purposes.",
+      "أوافق على أن يحفظ اتقدم هذه الإجابات، بما فيها المعلومات الصحية، لهذه الأغراض."],
+    cLink: ["How we use your answers", "كيف نستخدم إجاباتك"],
+    cAgree: ["Agree and continue", "أوافق وأتابع"],
+    cSaving: ["Saving…", "جارٍ الحفظ…"],
+    cErr: ["Couldn't save your choice. Check your connection and try again.", "تعذّر حفظ اختيارك. تحقّق من الاتصال وحاول مجددًا."],
+    checking: ["One moment…", "لحظة…"],
     // save + done
     saving: ["Saving your answers…", "جارٍ حفظ إجاباتك…"],
     saveErr: ["Couldn't save. Check your connection and try again.", "تعذّر الحفظ. تحقّق من الاتصال وحاول مجدداً."],
@@ -119,6 +139,10 @@
     buildAi: ["Build my AI plan", "ابنِ خطتي بالذكاء الاصطناعي"],
     buildAiNote: ["Uses 1 of today's 5 coach plans.", "يستخدم 1 من 5 خطط متاحة اليوم."],
     startStarter: ["Start with the starter plan", "ابدأ بالخطة المبدئية"],
+    // Plan-screen card after "Not now"
+    setupTitle: ["Set up your plan", "جهّز خطتك"],
+    setupText: ["A few quick questions to tailor your starter plan.", "أسئلة سريعة لتناسب الخطة المبدئية هدفك وجسمك."],
+    setupBtn: ["Start", "ابدأ"],
     // guest hint
     hintText: ["Sign in to get a plan built for you and a quick tour of each screen.", "سجّل الدخول لتحصل على خطة مبنية لك وجولة سريعة في كل شاشة."],
     hintBtn: ["Sign in", "تسجيل الدخول"],
@@ -156,17 +180,6 @@
   function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
   function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
 
-  // Ramadan question only around Ramadan: Hijri month 8 (Sha'ban) or 9.
-  function nearRamadan() {
-    try {
-      var fmt = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { month: "numeric" });
-      if (fmt.resolvedOptions().calendar !== "islamic-umalqura") return false;
-      var part = fmt.formatToParts(new Date()).filter(function (p) { return p.type === "month"; })[0];
-      var m = part ? parseInt(part.value, 10) : NaN;
-      return m === 8 || m === 9;
-    } catch (e) { return false; }
-  }
-
   // ---------------- steps ----------------
   // kind "choice": tap to answer and move on. kind "form": fields + Next.
   function choice(key, q, why, field, values, prefix, opts) {
@@ -184,7 +197,6 @@
       choice("activity", "qAct", "whyAct", "activityLevel", ["sedentary", "light", "moderate", "active", "athlete"], "act_"),
       { key: "diet", kind: "form", q: "qDiet", why: "whyDiet" }
     ];
-    if (nearRamadan()) list.push(choice("ramadan", "qRam", "whyRam", "ramadan", [true, false], "", { yesNo: true }));
     list.push({ key: "inbody", kind: "form", q: "qIb", why: "whyIb" });
     return list;
   }
@@ -195,7 +207,7 @@
     { k: "visceralFatLevel", label: "ibVisc", unit: "level", min: 1, max: 30, int: true },
     { k: "bmrKcal", label: "ibBmr", unit: "kcal", min: 500, max: 5000, int: true }
   ];
-  var DIETS = ["balanced", "high_protein", "low_carb", "keto", "mediterranean", "vegetarian", "vegan", "halal"];
+  var DIETS = ["balanced", "high_protein", "low_carb", "keto", "mediterranean", "vegetarian", "vegan"];
 
   // ---------------- state ----------------
   var root = null;      // #survey
@@ -204,13 +216,16 @@
   var STEPS = [];
   var opening = false;
   var lastFocus = null;
+  var view = "";        // "check" | "consent" | "q" | "save" | "done": what the card shows now
+  var consented = false; // an active onboarding consent for CONSENT_VERSION (this session's cache)
+  var redoConsent = null; // set when the PUT asked for the consent again: what to run after it
 
   function loadDraft() {
     try {
       var d = JSON.parse(lsGet(DRAFT_KEY));
       if (d && typeof d === "object" && d.a) return d;
     } catch (e) {}
-    return { step: 0, a: { dietPreference: "balanced", allergies: [] } };
+    return { step: 0, a: { dietPreference: "balanced" } };
   }
   function saveDraft() { lsSet(DRAFT_KEY, JSON.stringify(state)); }
 
@@ -228,8 +243,41 @@
     root.hidden = false;
     document.body.classList.add("survey-open");
     if (window.GymMotion && GymMotion.show) { root.hidden = true; GymMotion.show(root); }
-    render(0);
+    begin();
     opening = false;
+  }
+
+  // Step 0: unless the account already has the consent, ask for it before
+  // the first question. A failed lookup shows the consent screen (the POST
+  // is what really records it).
+  function begin() {
+    if (consented) { render(0); return; }
+    view = "check";
+    card.innerHTML = "";
+    card.appendChild(h("div", { class: "svy-body svy-center", role: "status" },
+      h("div", { class: "coach-spin", "aria-hidden": "true" }),
+      h("p", { class: "svy-why" }, s("checking"))));
+    lookupConsent().then(function (yes) {
+      if (!isOpen() || view !== "check") return;
+      consented = yes;
+      if (yes) render(0); else renderConsent(function () { render(1); });
+    });
+  }
+
+  function consentApi(method, body) {
+    var opts = { method: method };
+    if (body) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body); }
+    return window.GymHeader && GymHeader.api ? GymHeader.api("/me/consents", opts) : Promise.reject(new Error("no api"));
+  }
+  function lookupConsent() {
+    return consentApi("GET").then(function (res) {
+      if (!res.ok) return false;
+      return res.json().then(function (d) {
+        return ((d && d.consents) || []).some(function (c) {
+          return c && c.type === CONSENT_TYPE && !c.withdrawnAt && c.textVersion === CONSENT_VERSION;
+        });
+      });
+    }).catch(function () { return false; });
   }
 
   function close() {
@@ -237,11 +285,15 @@
     document.body.classList.remove("survey-open");
     if (window.GymMotion && GymMotion.hide) GymMotion.hide(root); else root.hidden = true;
     if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
+    view = "";
   }
 
+  // "Not now": nothing is sent. The default starter plan stays, the survey
+  // stops auto-opening, and the Plan screen shows a card to start it later.
   function later() {
-    ssSet(LATER_KEY, "1");
+    lsSet(DISMISS_KEY, "1");
     close();
+    renderSetup();
   }
 
   function ensureRoot() {
@@ -250,7 +302,7 @@
     card = h("div", { class: "svy-card m-ovl-card" });
     root.appendChild(card);
     root.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") { e.preventDefault(); if (state && state.step < STEPS.length) later(); }
+      if (e.key === "Escape") { e.preventDefault(); if (view === "consent" || view === "check" || (view === "q" && state && state.step < STEPS.length)) later(); }
     });
     document.body.appendChild(root);
   }
@@ -258,6 +310,7 @@
   // dir: 1 forward, -1 back, 0 none
   function render(dir) {
     card.innerHTML = "";
+    view = "q";
     if (state.step >= STEPS.length) { renderSave(); return; }
     var st = STEPS[state.step];
     var total = STEPS.length;
@@ -281,6 +334,44 @@
     card.appendChild(body);
     var f = body.querySelector(".svy-opt.on") || body.querySelector("input, .svy-opt, button");
     if (f) try { f.focus({ preventScroll: true }); } catch (e) {}
+  }
+
+  // next: what runs once the consent POST succeeded. A failed POST shows the error and stays here.
+  function renderConsent(next) {
+    view = "consent";
+    redoConsent = next;
+    card.innerHTML = "";
+    var err = h("p", { class: "svy-err", role: "alert" });
+    var agreeBtn = h("button", { type: "button", class: "svy-next", on: { click: function () {
+      agreeBtn.disabled = true; notNow.disabled = true; agreeBtn.textContent = s("cSaving"); err.textContent = "";
+      consentApi("POST", { type: CONSENT_TYPE, textVersion: CONSENT_VERSION, lang: lang() }).then(function (res) {
+        if (!res.ok) throw new Error("consent " + res.status);
+        consented = true;
+        document.dispatchEvent(new CustomEvent("etq:onboarding-consent-changed", { detail: { granted: true } }));
+        next();
+      }).catch(function () {
+        if (view !== "consent") return;
+        err.textContent = s("cErr");
+        agreeBtn.disabled = false; notNow.disabled = false; agreeBtn.textContent = s("cAgree");
+        // the card keeps the user's place; focus returns to the retry button
+        try { agreeBtn.focus({ preventScroll: true }); } catch (e) {}
+      });
+    } } }, s("cAgree"));
+    var notNow = h("button", { type: "button", class: "svy-ghost", on: { click: later } }, s("later"));
+    var link = h("a", { class: "svy-clink", href: "/privacy#" + (lang() === "ar" ? "ar-first-run" : "first-run"), target: "_blank", rel: "noopener" }, s("cLink"));
+    card.appendChild(h("div", { class: "svy-body svy-in svy-consent", style: "--svy-dir:1" },
+      h("h2", { class: "svy-q", id: "svyQ", tabindex: "-1" }, s("cTitle")),
+      h("p", { class: "svy-clead" }, s("cLine1")),
+      h("p", { class: "svy-cline" }, s("cLine2")),
+      h("p", { class: "svy-cline" }, s("cLine3")),
+      h("div", { class: "svy-cstate" },
+        h("p", { class: "svy-cstate-text" }, s("cStatement")),
+        link),
+      err,
+      agreeBtn,
+      notNow));
+    var t = card.querySelector("#svyQ");
+    if (t) try { t.focus({ preventScroll: true }); } catch (e) {}
   }
 
   function go(delta) {
@@ -367,7 +458,7 @@
     } else if (st.key === "diet") {
       var chips = h("div", { class: "svy-chips", role: "radiogroup", "aria-labelledby": "svyQ" });
       DIETS.forEach(function (d) {
-        var on = (state.a.dietPreference || "balanced") === d;
+        var on = (DIETS.indexOf(state.a.dietPreference) === -1 ? "balanced" : state.a.dietPreference) === d;
         chips.appendChild(h("button", { type: "button", class: "svy-chip" + (on ? " on" : ""), role: "radio", "aria-checked": on ? "true" : "false",
           on: { click: function (e) {
             state.a.dietPreference = d;
@@ -378,14 +469,8 @@
           } } }, s("diet_" + d)));
       });
       form.appendChild(chips);
-      form.appendChild(h("label", { class: "svy-field", for: "svyAll" },
-        h("span", { class: "svy-label" }, s("allergies")),
-        h("input", { id: "svyAll", type: "text", maxlength: "300", placeholder: s("allergiesPh"),
-          value: (state.a.allergies || []).join(", ") })));
       check = function () {
-        state.a.allergies = form.querySelector("#svyAll").value.split(/[,،]/)
-          .map(function (x) { return x.trim().slice(0, 40); }).filter(Boolean).slice(0, 10);
-        if (!state.a.dietPreference) state.a.dietPreference = "balanced";
+        if (DIETS.indexOf(state.a.dietPreference) === -1) state.a.dietPreference = "balanced";
         return "";
       };
     }
@@ -415,8 +500,7 @@
     return {
       goal: a.goal, sex: a.sex, age: a.age, heightCm: a.heightCm, weightKg: a.weightKg,
       experience: a.experience, trainingDaysPerWeek: a.trainingDaysPerWeek, equipment: a.equipment,
-      activityLevel: a.activityLevel, dietPreference: a.dietPreference || "balanced",
-      allergies: a.allergies || [], ramadan: a.ramadan === true
+      activityLevel: a.activityLevel, dietPreference: DIETS.indexOf(a.dietPreference) === -1 ? "balanced" : a.dietPreference
     };
   }
 
@@ -443,14 +527,26 @@
       ? GymHeader.api("/me/onboarding", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       : Promise.reject(new Error("no api"));
     req.then(function (res) {
-      if (!res.ok) throw new Error("onboarding " + res.status);
-      return res.json();
+      if (res.ok) return res.json();
+      return res.json().catch(function () { return null; }).then(function (b) {
+        var e = b && b.error;
+        var err = new Error("onboarding " + res.status);
+        err.consentRequired = res.status === 403 && !!e && (e.code || e) === "consent_required";
+        throw err;
+      });
     }).then(function () {
       applyLocally(body, state.a.inbody);
       lsDel(DRAFT_KEY);
+      lsDel(DISMISS_KEY);
       if (window.GymHeader && GymHeader.setMe) GymHeader.setMe({ onboardingCompleted: true });
       renderDone(body);
-    }).catch(function () {
+    }).catch(function (err) {
+      if (err && err.consentRequired) {
+        // The server has no active consent for us: ask again, then save.
+        consented = false;
+        renderConsent(function () { card.innerHTML = ""; renderSave(); });
+        return;
+      }
       card.innerHTML = "";
       card.appendChild(h("div", { class: "svy-body svy-center" },
         h("p", { class: "svy-err", role: "alert" }, s("saveErr")),
@@ -462,7 +558,10 @@
   function styleFor(eq) { return eq === "full_gym" ? "gym" : "cal"; }
 
   // Starter plan + coach form, so both are ready before the user leaves.
-  // InBody numbers go to the coach form only; gym-be's survey record doesn't hold them.
+  // The optional InBody numbers are not in the PUT (gym-be's survey record doesn't hold them), but they
+  // do reach the server: the coach form they are copied into is synced to the account (gym_coach_form_draft).
+  // They are covered by the same onboarding consent as every other answer (the consent step comes first,
+  // privacy policy 3.13 names them), and "Withdraw" clears them from the form like the rest.
   function applyLocally(a, inbody) {
     try { if (window.GymSetPlan) GymSetPlan(a.sex, styleFor(a.equipment)); } catch (e) {}
     try { if (window.GymCoach && GymCoach.applySurvey) GymCoach.applySurvey(a, inbody); } catch (e) {}
@@ -470,6 +569,7 @@
 
   function renderDone(a) {
     card.innerHTML = "";
+    view = "done";
     var styleLabel = s(styleFor(a.equipment) === "gym" ? "styleGym" : "styleHome");
     card.appendChild(h("div", { class: "svy-body svy-in svy-done", style: "--svy-dir:1" },
       h("div", { class: "svy-check", "aria-hidden": "true" }),
@@ -498,7 +598,7 @@
     var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
     if (!me || me.onboardingCompleted !== false) return;
     if (!(window.GymHeader && GymHeader.isAuthed())) return;
-    if (ssGet(LATER_KEY) === "1") return;
+    if (lsGet(DISMISS_KEY) === "1") return;
     if (document.body.classList.contains("onboarding-open")) return;
     open();
   }
@@ -529,21 +629,66 @@
     hero.insertAdjacentElement("afterend", hint);
   }
 
+  // ---------------- "Set up your plan" card (Plan screen, after "Not now") ----------------
+  function renderSetup() {
+    var old = document.getElementById("setupCard");
+    var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
+    var show = !!(me && me.onboardingCompleted === false && window.GymHeader && GymHeader.isAuthed()
+      && lsGet(DISMISS_KEY) === "1" && lsGet(CARD_KEY) !== "1");
+    if (!show) { if (old) old.remove(); return; }
+    var hero = document.querySelector("#screen-plan header.hero");
+    if (!hero) return;
+    if (old) {
+      if (old.getAttribute("data-lang") === lang()) return;
+      old.remove();
+    }
+    var cardEl = h("div", { id: "setupCard", class: "guest-hint setup-card", role: "note", "data-lang": lang() },
+      h("div", { class: "guest-hint-text" },
+        h("strong", { class: "setup-title" }, s("setupTitle")),
+        h("span", { class: "setup-sub" }, s("setupText"))),
+      h("button", { type: "button", class: "guest-hint-btn", on: { click: function () { open(); } } }, s("setupBtn")),
+      h("button", { type: "button", class: "guest-hint-x", "aria-label": s("close"), on: { click: function () {
+        lsSet(CARD_KEY, "1");
+        cardEl.remove();
+      } } }));
+    hero.insertAdjacentElement("afterend", cardEl);
+  }
+
+  // More > Privacy & data > First-run answers > Withdraw (privacy.js) calls
+  // this once the server deleted the consent and the answers: forget the
+  // draft, clear what the survey filled into the coach form, and stay quiet
+  // (no auto-open, no card). The starter plan stays.
+  function afterWithdraw() {
+    consented = false;
+    lsDel(DRAFT_KEY);
+    lsSet(DISMISS_KEY, "1");
+    lsSet(CARD_KEY, "1");
+    try { if (window.GymCoach && GymCoach.clearSurvey) GymCoach.clearSurvey(); } catch (e) {}
+    if (window.GymHeader && GymHeader.setMe) GymHeader.setMe({ onboardingCompleted: false });
+    renderSetup();
+  }
+
   function init() {
-    if (window.GymHeader && GymHeader.onChange) GymHeader.onChange(function () { maybeOpen(); renderHint(); });
+    document.addEventListener("gym:authchange", function () { consented = false; });
+    if (window.GymHeader && GymHeader.onChange) GymHeader.onChange(function () { maybeOpen(); renderHint(); renderSetup(); });
     // The sign-in screen may still be up when /me lands; try again once it closes.
-    new MutationObserver(function () { maybeOpen(); renderHint(); })
+    new MutationObserver(function () { maybeOpen(); renderHint(); renderSetup(); })
       .observe(document.body, { attributes: true, attributeFilter: ["class"] });
     // Re-translate on language change.
     new MutationObserver(function () {
-      if (isOpen() && state) { if (state.step < STEPS.length) render(0); }
+      if (isOpen() && state) {
+        if (view === "consent") renderConsent(redoConsent);
+        else if (view === "q" && state.step < STEPS.length) render(0);
+      }
       renderHint();
+      renderSetup();
     }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
     renderHint();
+    renderSetup();
     maybeOpen();
   }
 
-  window.GymSurvey = { open: open, close: close, isOpen: isOpen };
+  window.GymSurvey = { open: open, close: close, isOpen: isOpen, afterWithdraw: afterWithdraw };
 
   // Deferred scripts run before DOMContentLoaded; wait for it so header.js
   // (GymHeader), coach.js and app.js have all loaded.

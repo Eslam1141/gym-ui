@@ -313,6 +313,7 @@ html[data-reduce-motion="1"]{ --dur-fast:.01s; --dur-med:.01s; --dur-slow:.01s; 
 html[data-reduce-motion="1"] .home-link img{ transition:none; }
 html[data-reduce-motion="1"] .home-link:active img{ transform:none; }
 @media (hover:hover){ html[data-reduce-motion="1"] .home-link:hover img{ transform:none; } }
+html[data-reduce-motion="1"] .wm-chev{ transition:none; }
 html[data-reduce-motion="1"] #timerBar,
 html[data-reduce-motion="1"] #timerBar.show{ transition:none; transform:none; }
 html[data-reduce-motion="1"] #timerBar.done:not(.show){ transition-delay:0s; }
