@@ -383,8 +383,11 @@
   // never hides what is being read; it comes back SCROLL_REST_MS after the last scroll.
   function wireScrollDim() {
     var t = 0;
-    document.addEventListener("scroll", function () {
+    document.addEventListener("scroll", function (e) {
       if (open) return;
+      var el = e.target;
+      // a strip that only scrolls sideways (day chips) is not the page scrolling
+      if (el && el.nodeType === 1 && el.scrollHeight <= el.clientHeight + 1) return;
       fab.classList.add("scrolling");
       clearTimeout(t);
       t = setTimeout(function () { fab.classList.remove("scrolling"); }, SCROLL_REST_MS);

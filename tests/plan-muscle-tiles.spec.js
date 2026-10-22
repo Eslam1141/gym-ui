@@ -105,3 +105,58 @@ for (const lang of ["en", "ar"]) {
     await context.close();
   });
 }
+
+// ---- tap a tile: jump to that muscle's first exercise ----
+const flashed = (page) => page.evaluate(() => {
+  const f = document.querySelector(".ex-card.ex-flash");
+  return f ? f.querySelector(".ex-title .en").textContent.trim() : null;
+});
+const namesFor = (page, group) => page.evaluate((g) =>
+  [...document.querySelectorAll(".ex-card")].filter((c) => c.dataset.groups.split("|").includes(g))
+    .map((c) => c.querySelector(".ex-title .en").textContent.trim()), group);
+
+for (const [lang, dir] of [["en", "ltr"], ["ar", "rtl"]]) {
+  test("tap tile scrolls to and highlights its exercise (" + lang + ")", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, lang, viewport: { width: 360, height: 640 } });
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe(dir);
+    await expect(tiles(page).first()).toBeVisible(T);
+    const shoulders = page.locator("#dayMuscleTiles .mus-tile[data-group='Shoulders']");
+    const names = await namesFor(page, "Shoulders");
+    expect(names.length).toBeGreaterThan(0);
+    expect(await shoulders.getAttribute("aria-label")).toBe(lang === "ar" ? "انتقل إلى تمارين أكتاف" : "Go to Shoulders exercises");
+    await shoulders.click();
+    await expect.poll(() => flashed(page), T).toBe(names[0]);
+    const card = page.locator(".ex-card.ex-flash");
+    await expect(card).toBeInViewport();
+    expect(await card.evaluate((c) => document.activeElement === c)).toBe(true);
+    await expect.poll(() => card.evaluate((c) => c.getBoundingClientRect().top), T).toBeGreaterThanOrEqual(0);
+    await expect.poll(() => page.locator(".ex-card.ex-flash").count(), { timeout: 3000 }).toBe(0);   // pulse ends
+    await context.close();
+  });
+}
+
+test("keyboard: Enter and Space activate a tile; a second tap goes to the next exercise", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true });
+  await expect(tiles(page).first()).toBeVisible(T);
+  const chest = page.locator("#dayMuscleTiles .mus-tile[data-group='Shoulders']");
+  expect(await chest.evaluate((e) => e.tagName)).toBe("BUTTON");
+  const names = await namesFor(page, "Shoulders");
+  expect(names.length).toBeGreaterThan(1);
+  await chest.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => flashed(page), T).toBe(names[0]);
+  await chest.focus();
+  await page.keyboard.press("Space");
+  await expect.poll(() => flashed(page), T).toBe(names[1]);
+  await context.close();
+});
+
+test("reduced motion: no pulse animation, focus lands on the card", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: true, contextOptions: { reducedMotion: "reduce" } });
+  await tiles(page).last().click();
+  const card = page.locator(".ex-card.ex-flash");
+  await expect(card).toHaveCount(1, T);
+  expect(await card.evaluate((c) => getComputedStyle(c).animationName)).toBe("none");
+  expect(await card.evaluate((c) => document.activeElement === c)).toBe(true);
+  await context.close();
+});

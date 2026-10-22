@@ -550,6 +550,7 @@ const T = {
   warmup3:["<b>Ramp-up sets</b> — first lift only: bar ×10, ~50% ×5, ~70% ×3, ~85% ×1.","<b>مجموعات تدرّج</b> — للتمرين الأول فقط: بار فارغ ×10، ~50% ×5، ~70% ×3، ~85% ×1."],
   warmup4:["<b>Go.</b> Isolation moves need just one light set first.","<b>ابدأ.</b> تمارين العزل تكفيها مجموعة خفيفة واحدة قبلها."],
   viewFront:["Front","أمام"], viewBack:["Back","خلف"],
+  tileGo:["Go to {g} exercises","انتقل إلى تمارين {g}"],
   mapTitle:["Muscles this week","عضلات هذا الأسبوع"],
   mapSummary:["{two} of {n} trained twice, {one} once","تم تدريب {two} من {n} مرتين و{one} مرة واحدة"],
   mapOnce:["Trained once","تم التدريب مرة واحدة"], mapTwice:["Trained twice","تم التدريب مرتين"], mapNone:["not trained yet","لم تُدرَّب بعد"],
@@ -1361,6 +1362,26 @@ function muscleBits(ex, settleIdx){
   return { pic:`<span class="ex-mus${settle}" role="img" aria-label="${text}">${svg}${view}</span>`, chip:`<span class="ex-mus-chip">${text}</span>` };
 }
 
+// Tap a tile: scroll to (and flash) the day's first exercise for that group; tapping again moves to the next.
+let tileCursor = {};
+let flashTimer = 0;
+dayMuscleTiles.addEventListener("click", e=>{
+  const tile = e.target.closest(".mus-tile");
+  if(!tile) return;
+  const group = tile.dataset.group;
+  const cards = [...exList.querySelectorAll(".ex-card")].filter(c=>(c.dataset.groups || "").split("|").includes(group));
+  if(!cards.length) return;
+  const card = cards[(tileCursor[group] || 0) % cards.length];
+  tileCursor[group] = ((tileCursor[group] || 0) + 1) % cards.length;
+  card.scrollIntoView({ behavior: motionReduced() ? "auto" : "smooth", block: "start" });
+  card.focus({ preventScroll: true });
+  exList.querySelectorAll(".ex-flash").forEach(c=>c.classList.remove("ex-flash"));
+  void card.offsetWidth;   // restart the pulse on a repeat tap
+  card.classList.add("ex-flash");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(()=>card.classList.remove("ex-flash"), 1200);
+});
+
 // One tile per muscle group the day trains (catalog order); none for a rest day
 // or a day whose exercises carry no known tag.
 function renderMuscleTiles(day){
@@ -1374,8 +1395,10 @@ function renderMuscleTiles(day){
   MUSCLE_SHAPES.forEach(s=>{
     if(!used[s.group] || seen[s.group]) return;
     seen[s.group] = 1;
-    html += `<div class="mus-tile" data-group="${GymUI.esc(s.group)}">${GymMuscleArt.group(s.group, { sex })}<span>${GymUI.esc(activeLang === "ar" ? s.groupAr : s.group)}</span></div>`;
+    const gName = activeLang === "ar" ? s.groupAr : s.group;
+    html += `<button type="button" class="mus-tile" data-group="${GymUI.esc(s.group)}" aria-label="${GymUI.esc(t("tileGo").replace("{g}", gName))}">${GymMuscleArt.group(s.group, { sex })}<span>${GymUI.esc(gName)}</span></button>`;
   });
+  tileCursor = {};
   dayMuscleTiles.innerHTML = html;
   dayMuscleTiles.hidden = !html;
   if(html && animateCards && window.GymMotion) GymMotion.enter(dayMuscleTiles);   // no-op under reduced motion
@@ -1425,6 +1448,11 @@ function renderExercises(){
     const hasVid = !!ex.vid;
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
     const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
+    const exSh = window.GymMuscleArt ? exShapes(ex) : null;
+    if(exSh){
+      card.dataset.groups = [exSh.shape, exSh.shape2].filter(Boolean).map(s=>SHAPE_BY_ID[s].group).join("|");
+      card.tabIndex = -1;   // a tile tap moves focus here
+    }
 
     card.innerHTML = `
       <div class="ex-top">
