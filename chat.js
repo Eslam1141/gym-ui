@@ -38,6 +38,7 @@
     note: ["AI coach powered by Anthropic (US). Not medical advice.", "المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة). ليس نصيحة طبية."],
     privacy: ["Privacy", "الخصوصية"],
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
+    fabClose: ["Close the chat", "إغلاق الدردشة"],
     title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
     genPlan: ["Want a full plan? Generate one", "تريد خطة كاملة؟ أنشئ واحدة"],
@@ -252,7 +253,7 @@
   }
   function refreshFabVisibility() {
     if (!fab) return;
-    fab.hidden = open || timerActive();
+    fab.hidden = timerActive();   // stays up while the chat is open: it is the chat's "head"
   }
   function watchTimers() {
     ["timerBar", "miniTimer"].forEach(function (id) {
@@ -316,6 +317,7 @@
   function wireDrag() {
     var d = null, swallow = false;
     fab.addEventListener("pointerdown", function (e) {
+      if (open) return;   // while the chat is open the bubble is its head: tap only, no dragging
       if (e.pointerType === "mouse" && e.button !== 0) return;
       d = { id: e.pointerId, x: e.clientX, y: e.clientY, r: fab.getBoundingClientRect(), dx: 0, dy: 0, moved: false };
       try { fab.setPointerCapture(e.pointerId); } catch (err) {}
@@ -469,7 +471,7 @@
     input.placeholder = s("placeholder");
     noteEl.textContent = s("note") + " ";
     noteEl.appendChild(GymDom.policyLink("ai-coach", s("privacy"), true));
-    fab.setAttribute("aria-label", s("fabLabel"));
+    fab.setAttribute("aria-label", s(open ? "fabClose" : "fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
     photoBtn.setAttribute("aria-label", s("photoBtn"));
@@ -538,29 +540,60 @@
   }
   var SCREENS = ["plan", "coach", "food", "watch", "more"];   // the API's accepted "screen" values
   var openedFrom = "";   // the tab the sheet was opened over, captured at open time
-  // Messenger-style open: the panel grows out of the bubble. Needs the bubble's
-  // rect before it hides; with no bubble on screen (Coach tab, timer running)
-  // the plain slide-up is used.
-  function setBubbleOrigin(r) {
-    var panel = chat.querySelector(".coach-chat-panel");
-    if (!r || !r.width || !panel) { chat.classList.remove("bubble"); return; }
-    chat.style.setProperty("--co-x", Math.round(r.left + r.width / 2 - panel.offsetLeft) + "px");
-    chat.style.setProperty("--co-y", Math.round(r.top + r.height / 2 - panel.offsetTop) + "px");
-    chat.classList.add("bubble");
+  // Messenger chat-head open: the bubble travels (FLIP, transform only) from
+  // where it is parked to the top inline-end corner under the header, then the
+  // panel unfolds downward from a caret under it. Closing reverses it: the
+  // panel folds up into the head, then the head springs back to its parked
+  // spot. With no bubble on screen (Coach tab, timer running) the plain
+  // slide-up is used and the bubble is not involved.
+  var HEAD_GAP = 8;          // head's distance below the header
+  var HEAD_TO_PANEL = 12;    // head's bottom edge to the panel's top edge (the caret fills it)
+  var FOLD_MS = 240;         // the panel folds up this long before the head leaves
+  var flyTimer = 0, returnTimer = 0;
+  // Runs mutate() (which moves the bubble by changing classes) and animates the
+  // jump: start from where it was, transition the transform back to none.
+  function flyFab(mutate, ms) {
+    var first = fab.getBoundingClientRect();
+    fab.style.transition = "none";
+    fab.style.transform = "";
+    mutate();
+    if (prefersReducedMotion() || !first.width) { fab.style.transition = ""; return; }
+    var last = fab.getBoundingClientRect();
+    fab.style.transform = "translate(" + Math.round(first.left - last.left) + "px," + Math.round(first.top - last.top) + "px)";
+    void fab.offsetWidth;
+    fab.style.transition = "";
+    fab.classList.add("flying");
+    fab.style.transform = "";
+    clearTimeout(flyTimer);
+    flyTimer = setTimeout(function () { fab.classList.remove("flying"); }, ms);
   }
   function showChat() {
     var tab = document.body.getAttribute("data-tab");
     openedFrom = SCREENS.indexOf(tab) >= 0 ? tab : "";
-    var fabRect = fab.hidden ? null : fab.getBoundingClientRect();
+    var viaHead = !fab.hidden && fab.getBoundingClientRect().width > 0;
+    var panel = chat.querySelector(".coach-chat-panel");
+    clearTimeout(returnTimer);
+    if (viaHead) {
+      var top = Math.round(headerBottom() + HEAD_GAP);
+      fab.style.setProperty("--head-top", top + "px");
+      chat.style.setProperty("--panel-top", (top + (fab.offsetWidth || 56) + HEAD_TO_PANEL) + "px");
+    }
+    chat.classList.toggle("bubble", viaHead);
     open = true;
     chat.hidden = false;
+    void panel.offsetHeight;   // commit the closed state so the panel transitions in
     requestAnimationFrame(function () { chat.classList.add("show"); });
     fab.setAttribute("aria-expanded", "true");
+    fab.setAttribute("aria-label", s("fabClose"));
+    if (viaHead && !fab.classList.contains("head")) flyFab(function () { fab.classList.add("head"); }, 520);
     refreshFabVisibility();
     renderHistory();
     renderChips();
-    setBubbleOrigin(fabRect);   // after the content, so the panel's height (and top) is final
     setTimeout(function () { if (open) try { input.focus({ preventScroll: true }); } catch (e) {} }, 60);
+  }
+  function returnFab() {
+    if (open || !fab.classList.contains("head")) return;
+    flyFab(function () { fab.classList.remove("head"); }, 460);
   }
   function closeChat() {
     open = false;
@@ -568,7 +601,13 @@
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; }
     chat.classList.remove("show");
     fab.setAttribute("aria-expanded", "false");
-    setTimeout(function () { if (!open) chat.hidden = true; }, 320);   // after the panel's --dur-med slide-out
+    fab.setAttribute("aria-label", s("fabLabel"));
+    setTimeout(function () { if (!open) chat.hidden = true; }, 320);   // after the panel's fold-up
+    clearTimeout(returnTimer);
+    if (fab.classList.contains("head")) {
+      if (prefersReducedMotion()) returnFab();
+      else returnTimer = setTimeout(returnFab, FOLD_MS);
+    }
     refreshFabVisibility();
     // Hiding the panel would drop focus to <body>; hand it back to the opener.
     var ae = document.activeElement;
@@ -1016,6 +1055,7 @@
   function wire() {
     renderStatic();
     fab.addEventListener("click", function () {
+      if (open) { closeChat(); return; }
       if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
       openChat();
     });
