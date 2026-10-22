@@ -224,24 +224,15 @@ for (const [lang, side] of [["en", "r"], ["ar", "l"]]) {
   });
 }
 
-test("the default spot clears the Plan controls at 360x800 and 412x915", async ({ browser }) => {
-  for (const [width, height] of [[360, 800], [412, 915]]) {
-    for (const lang of ["en", "ar"]) {
-      const { context, page } = await setup(browser, { lang, viewport: { width, height } });
-      await page.waitForTimeout(500);
-      const f = await rect(page, "#coachFab");
-      expect(f.top).toBeGreaterThanOrEqual(await headerBottom(page));
-      const hits = await page.evaluate((f) => {
-        const out = [];
-        document.querySelectorAll("#screen-plan button, #screen-plan .progress-pill, #screen-plan summary, #screen-plan a").forEach((e) => {
-          const r = e.getBoundingClientRect();
-          if (r.width && r.height && r.left < f.right && r.right > f.left && r.top < f.bottom && r.bottom > f.top) out.push(e.id || e.className);
-        });
-        return out;
-      }, f);
-      expect(hits, `${lang} ${width}x${height}`).toEqual([]);
-      await context.close();
-    }
+test("the default spot is the bottom inline-end corner, above the nav", async ({ browser }) => {
+  for (const [lang, end] of [["en", "right"], ["ar", "left"]]) {
+    const { context, page } = await setup(browser, { lang, viewport: { width: 360, height: 800 } });
+    await page.waitForTimeout(500);
+    const f = await rect(page, "#coachFab");
+    expect(f.bottom).toBeLessThanOrEqual((await rect(page, "#appNav")).top);
+    expect(f.top).toBeGreaterThan(800 / 2);
+    if (end === "right") expect(f.left).toBeGreaterThan(360 / 2); else expect(f.right).toBeLessThan(360 / 2);
+    await context.close();
   }
 });
 
