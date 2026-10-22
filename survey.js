@@ -80,6 +80,16 @@
     eq_full_gym: ["Gym", "جيم"],
     eq_home_minimal: ["Home, with some equipment", "البيت، مع بعض الأدوات"],
     eq_bodyweight: ["No equipment", "بدون أدوات"],
+    // home tools (only after "Home, with some equipment")
+    qTools: ["What do you have at home?", "ماذا لديك في البيت؟"],
+    whyTools: ["Pick all that apply. Pick nothing and we use bodyweight moves only.", "اختر كل ما عندك. وإن لم تختر شيئاً نستخدم تمارين وزن الجسم فقط."],
+    tool_dumbbell: ["Dumbbells", "دمبل"],
+    tool_band: ["Resistance bands", "أحزمة مقاومة"],
+    tool_bench: ["Bench or chair", "بنش أو كرسي"],
+    tool_table: ["Sturdy table", "طاولة ثابتة"],
+    tool_pullup_bar: ["Pull-up bar", "بار عقلة"],
+    tool_kettlebell: ["Kettlebell", "كيتل بيل"],
+    tool_jump_rope: ["Jump rope", "حبل قفز"],
     // activity
     qAct: ["How active is your day?", "ما مدى نشاطك اليومي؟"],
     whyAct: ["Outside the gym. Adjusts your calories.", "خارج الجيم. يعدّل سعراتك."],
@@ -136,6 +146,9 @@
     styleGym: ["Gym", "جيم"],
     styleHome: ["Home / bodyweight", "منزلي / وزن الجسم"],
     daysN: ["{n} days a week", "{n} أيام في الأسبوع"],
+    yourSplit: ["Your split", "تقسيمتك"],
+    splitN: ["{n}-day split", "تقسيمة {n} أيام"],
+    whereHome: ["Home", "المنزل"],
     buildAi: ["Build my AI plan", "ابنِ خطتي بالذكاء الاصطناعي"],
     buildAiNote: ["Uses 1 of today's 5 coach plans.", "يستخدم 1 من 5 خطط متاحة اليوم."],
     startStarter: ["Start with the starter plan", "ابدأ بالخطة المبدئية"],
@@ -197,6 +210,11 @@
       choice("activity", "qAct", "whyAct", "activityLevel", ["sedentary", "light", "moderate", "active", "athlete"], "act_"),
       { key: "diet", kind: "form", q: "qDiet", why: "whyDiet" }
     ];
+    // The tools question only exists for home training, and only when splits.js loaded.
+    if (state && state.a.equipment === "home_minimal" && homeTools().length) {
+      list.splice(list.indexOf(list.filter(function (x) { return x.key === "equipment"; })[0]) + 1, 0,
+        { key: "tools", kind: "form", q: "qTools", why: "whyTools" });
+    }
     list.push({ key: "inbody", kind: "form", q: "qIb", why: "whyIb" });
     return list;
   }
@@ -207,6 +225,11 @@
     { k: "visceralFatLevel", label: "ibVisc", unit: "level", min: 1, max: 30, int: true },
     { k: "bmrKcal", label: "ibBmr", unit: "kcal", min: 500, max: 5000, int: true }
   ];
+  // The home tools the split generator knows ("none" means no tools, so it is not a choice here).
+  function homeTools() {
+    var all = window.GymSplits && GymSplits.HOME_TOOLS;
+    return Array.isArray(all) ? all.filter(function (k) { return k !== "none"; }) : [];
+  }
   var DIETS = ["balanced", "high_protein", "low_carb", "keto", "mediterranean", "vegetarian", "vegan"];
 
   // ---------------- state ----------------
@@ -234,8 +257,8 @@
   function open() {
     if (isOpen() || opening) return;
     opening = true;
-    STEPS = steps();
     state = loadDraft();
+    STEPS = steps();
     if (!(state.step >= 0)) state.step = 0;
     if (state.step >= STEPS.length) state.step = STEPS.length - 1; // resume on the last question
     ensureRoot();
@@ -375,6 +398,8 @@
   }
 
   function go(delta) {
+    if (state.a.equipment !== "home_minimal") delete state.a.homeTools;
+    STEPS = steps();
     state.step = Math.max(0, state.step + delta);
     saveDraft();
     render(delta);
@@ -455,6 +480,23 @@
         state.a.inbody = out;
         return "";
       };
+    } else if (st.key === "tools") {
+      var picked = Array.isArray(state.a.homeTools) ? state.a.homeTools.slice() : [];
+      var tchips = h("div", { class: "svy-chips", role: "group", "aria-labelledby": "svyQ" });
+      homeTools().forEach(function (k) {
+        var on = picked.indexOf(k) !== -1;
+        tchips.appendChild(h("button", { type: "button", class: "svy-chip" + (on ? " on" : ""), role: "checkbox", "aria-checked": on ? "true" : "false",
+          on: { click: function (e) {
+            var i = picked.indexOf(k);
+            if (i === -1) picked.push(k); else picked.splice(i, 1);
+            e.currentTarget.classList.toggle("on", i === -1);
+            e.currentTarget.setAttribute("aria-checked", i === -1 ? "true" : "false");
+            state.a.homeTools = picked.slice();
+            saveDraft();
+          } } }, s("tool_" + k)));
+      });
+      form.appendChild(tchips);
+      check = function () { state.a.homeTools = picked.slice(); return ""; };
     } else if (st.key === "diet") {
       var chips = h("div", { class: "svy-chips", role: "radiogroup", "aria-labelledby": "svyQ" });
       DIETS.forEach(function (d) {
@@ -535,11 +577,11 @@
         throw err;
       });
     }).then(function () {
-      applyLocally(body, state.a.inbody);
+      var split = applyLocally(body, state.a.inbody);
       lsDel(DRAFT_KEY);
       lsDel(DISMISS_KEY);
       if (window.GymHeader && GymHeader.setMe) GymHeader.setMe({ onboardingCompleted: true });
-      renderDone(body);
+      renderDone(body, split);
     }).catch(function (err) {
       if (err && err.consentRequired) {
         // The server has no active consent for us: ask again, then save.
@@ -562,12 +604,25 @@
   // do reach the server: the coach form they are copied into is synced to the account (gym_coach_form_draft).
   // They are covered by the same onboarding consent as every other answer (the consent step comes first,
   // privacy policy 3.13 names them), and "Withdraw" clears them from the form like the rest.
+  // Returns the generated split ({days: [day, ...], ...}) or null (2 days = Classic, or splits.js missing).
+  // homeTools are not in the PUT; the split choice stores them on this device.
   function applyLocally(a, inbody) {
+    var split = null;
     try { if (window.GymSetPlan) GymSetPlan(a.sex, styleFor(a.equipment)); } catch (e) {}
+    try {
+      if (window.GymSplits && GymSplits.applyChoice) {
+        split = GymSplits.applyChoice({
+          days: a.trainingDaysPerWeek,
+          where: a.equipment === "full_gym" ? "gym" : "home",
+          tools: a.equipment === "home_minimal" ? (state.a.homeTools || []) : []
+        }) || null;
+      }
+    } catch (e) {}
     try { if (window.GymCoach && GymCoach.applySurvey) GymCoach.applySurvey(a, inbody); } catch (e) {}
+    return split;
   }
 
-  function renderDone(a) {
+  function renderDone(a, split) {
     card.innerHTML = "";
     view = "done";
     var styleLabel = s(styleFor(a.equipment) === "gym" ? "styleGym" : "styleHome");
@@ -576,9 +631,13 @@
       h("h2", { class: "svy-q", id: "svyQ" }, s("doneTitle")),
       h("p", { class: "svy-why" }, s("doneSub")),
       h("div", { class: "svy-summary" },
-        h("span", { class: "svy-sum-label" }, s("starter")),
-        h("span", { class: "svy-sum-val" }, s("sex_" + a.sex) + " · " + styleLabel),
-        h("span", { class: "svy-sum-meta" }, s("goal_" + a.goal) + " · " + s("daysN", { n: a.trainingDaysPerWeek }))),
+        h("span", { class: "svy-sum-label" }, s(split ? "yourSplit" : "starter")),
+        h("span", { class: "svy-sum-val" }, split
+          ? s("splitN", { n: split.days.length }) + " · " + s(a.equipment === "full_gym" ? "styleGym" : "whereHome")
+          : s("sex_" + a.sex) + " · " + styleLabel),
+        h("span", { class: "svy-sum-meta" }, split
+          ? s("goal_" + a.goal) + " · " + s("sex_" + a.sex)
+          : s("goal_" + a.goal) + " · " + s("daysN", { n: a.trainingDaysPerWeek }))),
       h("button", { type: "button", class: "svy-next", on: { click: function () {
         close();
         if (window.GymUI && GymUI.navigate) GymUI.navigate("coach");
