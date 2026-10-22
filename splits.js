@@ -102,46 +102,64 @@
     nb_diamond: L("Diamond Push-ups", "PPTj-MW2tcs", "triceps_lateral", null, "medium", ["none"], "secondary", "8-12", 60),
     nb_hinge1: L("Single-Leg Hip Hinge", "JQZqPsmeesc", "hamstrings", null, "medium", ["none"], "secondary", "8-12/leg", 45),
     nb_slidecurl: L("Towel Sliding Hamstring Curl", "cjtsLDniFpk", "hamstrings", null, "medium", ["none"], "secondary", "8-12", 60),
-    mcx_bear: L("Bear Crawl", "-9L3rTrYo4Q", "core_obliques", "shoulder_front", "medium", ["none"], "hold", "30s", 45)
+    mcx_bear: L("Bear Crawl", "-9L3rTrYo4Q", "core_obliques", "shoulder_front", "medium", ["none"], "hold", "30s", 45),
+    // gap-filling moves (2026-10-22), each with its owner-approved clip; see the `x` pools below
+    gm_yt: L("Prone Y-T Raise", "X-b1S-rQc9k", "shoulder_rear", null, "easy", ["none"], "isolation", "12-15", 30),
+    gm_inclpush: L("Hands-Elevated Push-ups", "yAbg3_pJKvw", "chest_lower", "chest_mid", "easy", ["none"], "secondary", "10-12", 60),
+    gm_hipabd: L("Side-Lying Hip Abduction", "-rDiQXjeXO0", "glutes", null, "easy", ["none"], "isolation", "15-20/leg", 30),
+    gm_sissy: L("Sissy Squat", "_cWFxUEfV7o", "quads", null, "hard", ["none"], "secondary", "8-12", 60),
+    gm_sideplank: L("Side Plank", "44ND4bOB-T0", "core_obliques", null, "medium", ["none"], "hold", "20-30s", 30),
+    gm_declpush: L("Decline Push-ups", "xoX1nSewXgA", "chest_upper", null, "medium", ["none"], "secondary", "8-12", 60),
+    gm_soleus: L("Bent-Knee Calf Raise", "uJ7QH7pExh0", "calves", null, "easy", ["none"], "isolation", "15-20", 30),
+    gm_towelrow: L("Doorway Towel Row", "SkFBcrHVGn4", "back_mid", null, "medium", ["none"], "secondary", "8-12", 60),
+    gm_bandcurl: L("Resistance Band Curl", "AaA7Yj3zHiU", "biceps_short", "biceps_long", "easy", ["band"], "isolation", "12-15", 45),
+    gm_bandpulldown: L("Resistance Band Lat Pulldown", "8zv8Pray4-w", "back_lats", null, "easy", ["band"], "secondary", "10-12", 60),
+    gm_pullup: L("Pull-ups", "I3K-IbszbuI", "back_lats", null, "hard", ["pullup_bar"], "compound", "5-8", 120),
+    gm_bandlat: L("Band Lateral Raise", "iQlrRrZTrBs", "shoulder_side", null, "easy", ["band"], "isolation", "15-20", 30),
+    gm_bandohext: L("Band Overhead Triceps Extension", "Yi_zNoIsNcc", "triceps_long", null, "easy", ["band"], "isolation", "12-15", 45),
+    gm_bandrevcurl: L("Band Reverse-Grip Curl", "ze32_Pas8ho", "biceps_long", null, "easy", ["band"], "isolation", "12-15", 45),
+    gm_pullover: L("Dumbbell Pullover", "jQjWlIwG4sI", "back_lats", null, "medium", ["dumbbell"], "secondary", "10-12", 60)
   };
 
   // ---- parts: one slot target each, with moves ranked best first. `f` re-ranks for the women's
   // versions (dumbbell-led, like DAYS_FEMALE); `fb` is the next-best part of the same muscle. ----
   var PARTS = {
-    chest_upper: { r: ["mub_incline"], fb: ["chest_mid"] },
-    chest_mid: { r: ["mua_bench", "ctb_dbbench", "ctb_pushup", "cta_fly"], fb: [] },
-    back_lats: { r: ["mua_pulldown", "mcx_row"], fb: ["back_mid", "back_lower"] },
-    back_mid: { r: ["pv_cablerow", "mua_row", "bbb_tbar", "mub_row", "fua_row", "mcx_row"], fb: ["back_lats", "back_lower"] },
+    chest_upper: { r: ["mub_incline"], fb: ["chest_mid"], x: ["gm_declpush"] },
+    chest_mid: { r: ["mua_bench", "ctb_dbbench", "ctb_pushup", "cta_fly"], fb: [], x: ["gm_inclpush"], xn: 2 },
+    back_lats: { r: ["mua_pulldown", "mcx_row"], fb: ["back_mid", "back_lower"], x: ["gm_pullup", "gm_bandpulldown", "gm_pullover"], xn: 2 },
+    back_mid: { r: ["pv_cablerow", "mua_row", "bbb_tbar", "mub_row", "fua_row", "mcx_row"], fb: ["back_lats", "back_lower"], x: ["gm_towelrow"] },
     back_lower: { r: ["mcx_superman"], fb: [] },
     shoulder_front: { r: ["mua_ohp", "mub_arnold", "mcp_pike"], fb: [] },
-    shoulder_side: { r: ["mua_lateral"], fb: ["shoulder_rear", "shoulder_front"] },
-    shoulder_rear: { r: ["mua_facepull", "mub_pullapart"], fb: ["shoulder_side", "shoulder_front"] },
-    biceps_long: { r: ["bba_inclcurl", "mub_hammer"], fb: ["biceps_short", "biceps_bw"] },
-    biceps_short: { r: ["mua_curl", "fua_arms"], fb: ["biceps_long", "biceps_bw"] },
+    shoulder_side: { r: ["mua_lateral"], fb: ["shoulder_rear", "shoulder_front"], x: ["gm_bandlat"] },
+    shoulder_rear: { r: ["mua_facepull", "mub_pullapart"], fb: ["shoulder_side", "shoulder_front"], x: ["gm_yt"] },
+    biceps_long: { r: ["bba_inclcurl", "mub_hammer"], fb: ["biceps_short", "biceps_bw"], x: ["gm_bandrevcurl", "gm_bandcurl"] },
+    biceps_short: { r: ["mua_curl", "fua_arms"], fb: ["biceps_long", "biceps_bw"], x: ["gm_bandcurl"] },
     biceps_bw: { r: ["nb_towelcurl"], fb: [] },
     // the biceps + triceps superset; with no dumbbell the builder splits the slot into biceps_any + triceps_any
     arms: { r: ["fua_arms"], fb: [] },
     biceps_any: { r: [], fb: ["biceps_short", "biceps_long", "biceps_bw"] },
     triceps_any: { r: [], fb: ["triceps_long", "triceps_lateral", "triceps_bw"] },
-    triceps_long: { r: ["cta_ohext", "fua_arms"], fb: ["triceps_lateral", "triceps_bw"] },
+    triceps_long: { r: ["cta_ohext", "fua_arms"], fb: ["triceps_lateral", "triceps_bw"], x: ["gm_bandohext"] },
     triceps_lateral: { r: ["mua_pushdown", "mub_dips"], fb: ["triceps_bw", "triceps_long"] },
     triceps_bw: { r: ["nb_diamond"], fb: [] },
     quads_squat: { r: ["mla_squat", "mlb_hack", "mla_legpress", "fla_goblet", "flb_sumo", "mcl_squat"], f: ["fla_goblet", "flb_sumo", "mla_legpress", "mlb_hack", "mla_squat", "mcl_squat"], fb: ["quads_uni"] },
     quads_uni: { r: ["bbb_bss", "fla_lunge", "mcl_lunge"], fb: ["quads_squat"] },
-    quads_iso: { r: ["mlb_legext"], fb: ["quads_uni", "quads_squat"] },
+    // no template has a quads_iso slot yet (every plan has exactly one squat and one lunge day), so
+    // Sissy Squat is in the library and the custom builder but not scheduled; see docs/split-gaps
+    quads_iso: { r: ["mlb_legext"], fb: ["quads_uni", "quads_squat"], x: ["gm_sissy"] },
     ham_hinge: { r: ["mla_rdl", "fla_rdl", "mlb_sldl"], f: ["fla_rdl", "mlb_sldl", "mla_rdl"], fb: ["ham_curl", "ham_hinge_bw"] },
     ham_curl: { r: ["mla_legcurl", "mlb_seatcurl"], fb: ["ham_hinge", "ham_curl_bw"] },
     ham_hinge_bw: { r: ["nb_hinge1"], fb: [] },
     ham_curl_bw: { r: ["nb_slidecurl"], fb: [] },
     glute_main: { r: ["mla_bridge", "mcl_bridge"], fb: ["glute_iso"] },
     glute_dual: { r: ["flb_sumo"], fb: ["glute_main", "glute_iso"] },
-    glute_iso: { r: ["mlb_kickback", "mla_bridge", "mcl_bridge"], fb: ["glute_main"] },
+    glute_iso: { r: ["mlb_kickback", "mla_bridge", "mcl_bridge"], fb: ["glute_main"], x: ["gm_hipabd"], xn: 2 },
     calf_stand: { r: ["mla_calf"], fb: ["calf_seat"] },
-    calf_seat: { r: ["mlb_calf", "mla_calf"], fb: [] },
+    calf_seat: { r: ["mlb_calf", "mla_calf"], fb: [], x: ["gm_soleus"], xn: 2 },
     core_upper: { r: ["mcp_plank", "mcp_hollow"], fb: ["core_lower"] },
     core_hollow: { r: ["mcp_hollow"], fb: ["core_upper", "core_lower"] },
     core_lower: { r: ["mla_core", "flb_legraise", "fla_deadbug", "mcp_hollow", "mcx_flutter"], fb: ["core_upper"] },
-    core_obliques: { r: ["mlb_core", "mcx_bear"], fb: ["core_lower", "core_upper"] }
+    core_obliques: { r: ["mlb_core", "mcx_bear"], fb: ["core_lower", "core_upper"], x: ["gm_sideplank"], xn: 2 }
   };
   // The region (muscle tag) each part trains, for `gaps`.
   var PART_REGION = {
@@ -154,32 +172,24 @@
   };
 
   // Moves the library does not have that would close a part (clips the owner must supply);
-  // from tools/split-gaps.mjs. Used only to name the fix in `gaps`.
+  // from tools/split-gaps.mjs. Used only to name the fix in `gaps`. The library moves in a part's
+  // `x` pool are named too, as the tool to tick.
   function F(en, tools) { return { en: en, tools: tools }; }
   var FILLS = {
-    chest_upper: [F("Decline (Feet-Elevated) Push-ups", ["none"])],
-    back_lats: [F("Pull-ups", ["pullup_bar"]), F("Band Lat Pulldown", ["band"])],
-    back_mid: [F("Doorway Towel Row", ["none"]), F("Band Row", ["band"])],
-    shoulder_side: [F("Band Lateral Raise", ["band"])],
-    shoulder_rear: [F("Prone Y-T Raise", ["none"]), F("Dumbbell Rear Delt Fly", ["dumbbell"])],
-    biceps_long: [F("Band Curl", ["band"])],
-    biceps_short: [F("Chin-ups", ["pullup_bar"]), F("Band Curl", ["band"])],
-    biceps_any: [F("Band Curl", ["band"])],
-    arms: [F("Band Curl", ["band"]), F("Dumbbell Overhead Triceps Extension", ["dumbbell"])],
-    triceps_long: [F("Bodyweight Triceps Extension", ["table"]), F("Dumbbell Overhead Triceps Extension", ["dumbbell"]), F("Band Overhead Triceps Extension", ["band"])],
+    back_mid: [F("Band Row", ["band"])],
+    shoulder_rear: [F("Dumbbell Rear Delt Fly", ["dumbbell"])],
+    biceps_short: [F("Chin-ups", ["pullup_bar"])],
+    arms: [F("Dumbbell Overhead Triceps Extension", ["dumbbell"])],
+    triceps_long: [F("Bodyweight Triceps Extension", ["table"]), F("Dumbbell Overhead Triceps Extension", ["dumbbell"])],
     triceps_lateral: [F("Band Triceps Pushdown", ["band"])],
-    quads_iso: [F("Sissy Squat", ["none"])],
     ham_hinge: [F("Kettlebell Romanian Deadlift", ["kettlebell"])],
-    calf_seat: [F("Bent-Knee Calf Raise (soleus)", ["none"])],
-    core_obliques: [F("Side Plank", ["none"]), F("Band Pallof Press", ["band"])]
+    core_obliques: [F("Band Pallof Press", ["band"])]
   };
   var REGION_FILLS = {
-    chest_lower: [F("Hands-Elevated Push-ups", ["none"]), F("Chest Dips", ["machine"])]
+    chest_lower: [F("Chest Dips", ["machine"])]
   };
-  // regions whose parts are named differently (hamstrings = hinge + curl, quads = squat/lunge/extension)
+  // regions whose parts are named differently (hamstrings = hinge + curl)
   REGION_FILLS.hamstrings = FILLS.ham_hinge;
-  REGION_FILLS.quads = FILLS.quads_iso;
-  REGION_FILLS.calves = FILLS.calf_seat;
 
   // ---- templates ----
   // A slot is "part:sets". The builder fills it with the best allowed move of that part,
@@ -201,7 +211,9 @@
   var PUSH = ["chest_mid:3", "chest_upper:2", "shoulder_front:2", "shoulder_side:2", "triceps_long:2", "triceps_lateral:2"];
   var PULL_A = ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:2", "biceps_short:2", "back_lower:2"];
   var PULL_B = ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:2", "biceps_short:2"];
-  function D(key, label, labelAr, en, ar, m, f) { return { key: key, label: label, labelAr: labelAr, muscles: en, musclesAr: ar, m: m, f: f }; }
+  // t: parts to leave out when the day would exceed the exercise cap (the week trains them on another day
+  // too); "a>b" folds a's sets into b's exercise so the weekly volume stays
+  function D(key, label, labelAr, en, ar, m, f, t) { return { key: key, label: label, labelAr: labelAr, muscles: en, musclesAr: ar, m: m, f: f, t: t }; }
   var TEMPLATES = {
     3: {
       days: [
@@ -210,23 +222,23 @@
         D("fullB", "Full Body B", "كامل الجسم ب", "Full body", "الجسم كامل",
           ["chest_mid:3", "back_mid:2", "ham_hinge:4", "glute_dual:4", "arms:4", "calf_seat:4", "core_hollow:4"], { sets: { chest_mid: 2, glute_dual: 5 } }),
         D("fullC", "Full Body C", "كامل الجسم ج", "Full body", "الجسم كامل",
-          ["back_lats:2", "back_mid:2", "quads_uni:4", "glute_iso:4", "shoulder_front:3", "arms:4", "shoulder_rear:2", "chest_upper:3"], { sets: { glute_iso: 5 } })
+          ["back_lats:2", "back_mid:2", "quads_uni:4", "glute_iso:4", "shoulder_front:3", "arms:4", "shoulder_rear:2", "chest_upper:3"], { sets: { glute_iso: 5 } }, ["back_mid>back_lats"])
       ]
     },
     4: {
       days: [
         D("upperA", "Upper A", "علوي أ", UPPER_EN, UPPER_AR,
-          ["chest_mid:3", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:3"]),
+          ["chest_mid:3", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:3"], null, ["shoulder_side"]),
         D("lowerA", "Lower A", "سفلي أ", LOWER_EN, LOWER_AR, LOWER_A, LOWER_A_F),
         D("upperB", "Upper B", "علوي ب", UPPER_EN, UPPER_AR,
-          ["chest_mid:4", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "shoulder_rear:2"]),
+          ["chest_mid:4", "back_lats:3", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "shoulder_rear:2"], null, ["back_mid>back_lats"]),
         D("lowerB", "Lower B", "سفلي ب", LOWER_EN, LOWER_AR, LOWER_B, LOWER_B_F)
       ]
     },
     5: {
       days: [
         D("upper", "Upper", "علوي", UPPER_EN, UPPER_AR,
-          ["chest_mid:3", "back_lats:2", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:2"]),
+          ["chest_mid:3", "back_lats:2", "back_mid:2", "shoulder_front:2", "shoulder_side:2", "arms:4", "chest_upper:2"], null, ["chest_upper"]),
         D("lower", "Lower", "سفلي", LOWER_EN, LOWER_AR, LOWER_A, LOWER_A_F),
         D("push", "Push", "دفع", PUSH_EN, PUSH_AR, PUSH),
         D("pull", "Pull", "سحب", PULL_EN, PULL_AR, ["back_lats:2", "back_mid:2", "shoulder_rear:2", "biceps_long:3", "biceps_short:3", "back_lower:2"]),
@@ -260,13 +272,18 @@
     if (f.add) f.add.forEach(function (s) { slots.push(parseSlot(s)); });
     return slots;
   }
+  // the part's fills: its `x` library moves first (tool to tick), then the moves still missing
+  function fillList(part) {
+    var x = ((PARTS[part] || {}).x || []).map(function (id) { return { en: LIB[id].en, tools: LIB[id].tools }; });
+    return x.concat(FILLS[part] || []);
+  }
   function cheapestFill(part, have) {
     var list = FILLS[part] || [];
     var fit = list.filter(function (x) { return fits(x.tools, have); });
     return fit.length ? fit[0] : null;
   }
   function tickFor(part) {
-    var list = FILLS[part] || [];
+    var list = fillList(part);
     for (var i = 0; i < list.length; i++) if (list[i].tools[0] !== "none") return { en: list[i].en, tools: list[i].tools };
     return null;
   }
@@ -283,8 +300,11 @@
 
     function allowed(partId) {
       var p = PARTS[partId];
-      var ids = (sex === "female" && p.f) || p.r;
-      return ids.filter(function (id) { return fits(LIB[id].tools, have); });
+      var ids = ((sex === "female" && p.f) || p.r).filter(function (id) { return fits(LIB[id].tools, have); });
+      // `x` moves join only when the tools leave fewer than `xn` (default 1) moves: they close a gap
+      // or a single-move rut and never change a plan that already has enough variety
+      if (p.x && ids.length < (p.xn || 1)) ids = ids.concat(p.x.filter(function (id) { return fits(LIB[id].tools, have); }));
+      return ids;
     }
     function pickFrom(ids, dayEx) {
       var best = null;
@@ -317,13 +337,22 @@
       });
     }
 
-    TEMPLATES[days].days.forEach(function (dd) {
+    // `skip`: parts left out of the day (see D's `t`)
+    function buildDay(dd, skip) {
       var dayEx = [];
       var slots = [];
       daySlots(dd, sex).forEach(function (slot) {
         // no dumbbell for the biceps + triceps superset: train each on its own
         if (slot.part === "arms" && !allowed("arms").length) slots.push({ part: "biceps_any", sets: slot.sets }, { part: "triceps_any", sets: slot.sets });
         else slots.push(slot);
+      });
+      skip.forEach(function (sk) { // "from" drops a slot; "from>to" also moves its sets onto the "to" slot
+        var pr = sk.split(">");
+        var from = slots.filter(function (s) { return s.part === pr[0]; })[0];
+        var to = pr[1] && slots.filter(function (s) { return s.part === pr[1]; })[0];
+        if (!from) return;
+        if (to) to.sets += from.sets;
+        slots.splice(slots.indexOf(from), 1);
       });
       slots.forEach(function (slot) {
         var own = allowed(slot.part);
@@ -354,6 +383,18 @@
         }
         gap("unfilled", dd.key, slot.part, null);
       });
+      return dayEx;
+    }
+    TEMPLATES[days].days.forEach(function (dd) {
+      var usedBefore = JSON.parse(JSON.stringify(used)), gapsBefore = gaps.length;
+      var dayEx = buildDay(dd, []);
+      // Splitting the arms superset (no dumbbell) can leave a day one exercise over the cap once every
+      // slot has its own move: rebuild the day without the part the week trains on another day (`t`)
+      if (dd.t && dayEx.length > (days === 3 ? 8 : 7)) {
+        used = usedBefore;
+        gaps.length = gapsBefore;
+        dayEx = buildDay(dd, dd.t);
+      }
       out.push({
         id: "sp" + days + where[0] + sex[0] + "_" + dd.key, label: dd.label, labelAr: dd.labelAr,
         muscles: dd.muscles, musclesAr: dd.musclesAr, exercises: dayEx
@@ -379,7 +420,7 @@
         gaps.push({ kind: "frequency", day: null, part: null, region: r, group: REGIONS[r], used: null, days: n, needs: null, tick: null });
         return;
       }
-      var list = REGION_FILLS[r] || FILLS[r] || [];
+      var list = REGION_FILLS[r] || fillList(r);
       var fit = list.filter(function (x) { return fits(x.tools, have); })[0];
       var tick = fit ? null : list.filter(function (x) { return x.tools[0] !== "none"; })[0];
       gaps.push({ kind: "region", day: null, part: null, region: r, group: REGIONS[r], used: null, days: n, needs: fit ? fit.en : (tick ? tick.en : null), tick: tick ? tick.tools : null });
