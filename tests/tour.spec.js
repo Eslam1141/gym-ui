@@ -1,5 +1,6 @@
 // First-visit tips (tour.js): they must run, and "Replay tips" must work,
-// even though /me says onboardingCompleted:false while no survey ships.
+// while /me says onboardingCompleted:false (the survey isn't done) unless a
+// survey is actually about to open. Works with or without survey.js.
 const { test, expect } = require("@playwright/test");
 const { openApp } = require("./helpers");
 
@@ -12,8 +13,11 @@ async function replayFromMenu(page) {
   await page.click("#tbMenuTips");
 }
 
-test("no survey in this build: tips start on Plan and Replay shows them again", async ({ browser }) => {
-  const { context, page } = await openApp(browser, { signedIn: true, server: { onboardingCompleted: false } });
+test("no survey pending: tips start on Plan and Replay shows them again", async ({ browser }) => {
+  // gym_survey_dismissed = "Not now" was tapped (no-op where survey.js isn't shipped).
+  const { context, page } = await openApp(browser, {
+    signedIn: true, server: { onboardingCompleted: false }, ls: { gym_survey_dismissed: 1 }
+  });
   await expect(tourCard(page)).toBeVisible({ timeout: 10000 });
   await page.click("#tour .tour-skip");
   await expect(page.locator("#tour")).toBeHidden();
@@ -26,11 +30,15 @@ test("no survey in this build: tips start on Plan and Replay shows them again", 
 
 test("a pending survey holds the automatic tips, but Replay still works", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true, server: { onboardingCompleted: false } });
-  // survey.js is not on main yet; stand in for one that is about to open.
-  await page.addInitScript(() => { window.GymSurvey = { isPending: () => true }; });
+  // Stand-in where survey.js isn't shipped; survey.js replaces it where it is.
+  await page.addInitScript(() => { window.GymSurvey = { isPending: () => true, close: () => {} }; });
   await page.evaluate(() => localStorage.removeItem("gym_tours_seen"));
   await page.reload();
   await page.waitForFunction(() => window.GymTour && window.GymHeader && GymHeader.me && GymHeader.me());
+  // Close the survey without "Not now": it stays pending.
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => GymSurvey.close());
+  expect(await page.evaluate(() => GymSurvey.isPending())).toBe(true);
   await page.waitForTimeout(3000);
   await expect(page.locator("#tour")).toHaveCount(0);
 
