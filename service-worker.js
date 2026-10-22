@@ -83,6 +83,22 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// A web-push notification tap: reuse an open window (the app routes the url
+// itself, see notifications.js) instead of opening a duplicate.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const url = new URL(data.url || "./", self.registration.scope).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const win = list.find((c) => "focus" in c);
+      if (!win) return self.clients.openWindow(url);
+      win.postMessage({ type: "gym:route", url });
+      return win.focus();
+    })
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 

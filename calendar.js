@@ -365,8 +365,23 @@
     // Reuse the same completion-map fetch renderMonth() already issues for
     // this month instead of firing a second, identical request.
     renderMonth().then(function (map) {
-      if (map && focusDate) renderDayDetail(fmtDate(focusDate), map);
+      if (!map || !focusDate) return;
+      var key = fmtDate(focusDate);
+      var cell = grid && grid.querySelector('.cal-grid-cell[data-date="' + key + '"]');
+      if (cell) cell.classList.add("selected");
+      renderDayDetail(key, map);
     });
+  }
+
+  // Deep link (notifications.js): open the month overlay on one day, with that
+  // day's detail and its log / rest-day actions showing. false for a bad date.
+  function focusDay(key) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+    if (!m) return false;
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    if (isNaN(d.getTime()) || fmtDate(d) !== key) return false;
+    openModal(d);
+    return true;
   }
   function closeModal() {
     if (!modal) return;
@@ -531,6 +546,7 @@
     onCheckChanged: onCheckChanged,
     refresh: refresh,
     reload: reload,
+    focusDay: focusDay,
     localEntry: function (date) { return computeLocalCompletion(date, date)[date]; }
   };
 
