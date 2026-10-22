@@ -204,7 +204,93 @@ test("a blocked localStorage does not break dragging", async ({ browser }) => {
   await context.close();
 });
 
-test("RTL: the default spot is the bottom inline-end corner (left), and a drag to the right edge sticks", async ({ browser }) => {
+// The header pill (#topBar signed in, #topPrefs signed out) is fixed at the top; the bubble must stay below it.
+const headerBottom = (page) => page.evaluate(() => Math.max(0, ...["topBar", "topPrefs"].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.height > 0 ? r.bottom : 0; })));
+
+for (const [lang, side] of [["en", "r"], ["ar", "l"]]) {
+  test(`a saved spot above the header pill is clamped below it (${lang})`, async ({ browser }) => {
+    const { context, page } = await setup(browser, { lang, ls: { gymcoach_bubble_pos: { side, bottom: 5000 } } });
+    await expect(fab(page)).toBeVisible();
+    await page.waitForTimeout(450);
+    const hb = await headerBottom(page);
+    expect(hb).toBeGreaterThan(40);
+    expect((await rect(page, "#coachFab")).top).toBeGreaterThanOrEqual(hb);
+    await page.setViewportSize({ width: 360, height: 640 }); // re-clamped on resize
+    await page.waitForTimeout(100);
+    expect((await rect(page, "#coachFab")).top).toBeGreaterThanOrEqual(await headerBottom(page));
+    await dragTo(page, 200, -500); // a drag past the top stops under the pill too
+    expect((await rect(page, "#coachFab")).top).toBeGreaterThanOrEqual(await headerBottom(page));
+    await context.close();
+  });
+}
+
+test("the default spot clears the Plan controls at 360x800 and 412x915", async ({ browser }) => {
+  for (const [width, height] of [[360, 800], [412, 915]]) {
+    for (const lang of ["en", "ar"]) {
+      const { context, page } = await setup(browser, { lang, viewport: { width, height } });
+      await page.waitForTimeout(500);
+      const f = await rect(page, "#coachFab");
+      expect(f.top).toBeGreaterThanOrEqual(await headerBottom(page));
+      const hits = await page.evaluate((f) => {
+        const out = [];
+        document.querySelectorAll("#screen-plan button, #screen-plan .progress-pill, #screen-plan summary, #screen-plan a").forEach((e) => {
+          const r = e.getBoundingClientRect();
+          if (r.width && r.height && r.left < f.right && r.right > f.left && r.top < f.bottom && r.bottom > f.top) out.push(e.id || e.className);
+        });
+        return out;
+      }, f);
+      expect(hits, `${lang} ${width}x${height}`).toEqual([]);
+      await context.close();
+    }
+  }
+});
+
+test("scrolling dims the bubble, and it comes back after the scroll stops", async ({ browser }) => {
+  const { context, page } = await setup(browser);
+  await expect(fab(page)).not.toHaveClass(/scrolling/);
+  await page.mouse.move(100, 400);
+  await page.mouse.wheel(0, 300);
+  await expect(fab(page)).toHaveClass(/scrolling/);
+  await page.waitForTimeout(350);
+  const dimmed = await fab(page).evaluate((el) => { const s = getComputedStyle(el); return { op: +s.opacity, tf: s.transform, pe: s.pointerEvents }; });
+  expect(dimmed.op).toBeLessThan(0.6);
+  expect(dimmed.tf).not.toBe("none");
+  expect(dimmed.pe).not.toBe("none");
+  await expect(fab(page)).not.toHaveClass(/scrolling/, { timeout: 1500 });
+  await page.waitForTimeout(350);
+  expect(+(await fab(page).evaluate((el) => getComputedStyle(el).opacity))).toBe(1);
+  await context.close();
+});
+
+test("scrolling dim with reduced motion fades only, no scale", async ({ browser }) => {
+  const { context, page } = await setup(browser);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.mouse.move(100, 400);
+  await page.mouse.wheel(0, 300);
+  await expect(fab(page)).toHaveClass(/scrolling/);
+  await page.waitForTimeout(350);
+  const s = await fab(page).evaluate((el) => { const c = getComputedStyle(el); return { op: +c.opacity, tf: c.transform }; });
+  expect(s.op).toBeLessThan(0.6);
+  expect(s.tf).toBe("none");
+  await context.close();
+});
+
+test("page bottom padding lets the last Plan element scroll fully above a bubble parked at the bottom", async ({ browser }) => {
+  const { context, page } = await setup(browser, { ls: { gymcoach_bubble_pos: { side: "r", bottom: 0 } } });
+  await page.waitForTimeout(450);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(900);
+  const last = await page.evaluate(() => {
+    const kids = [...document.querySelectorAll("#screen-plan *")].filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.width > 0 && e.checkVisibility(); }); // closed <details> content is not shown
+    return Math.max(...kids.map((e) => e.getBoundingClientRect().bottom));
+  });
+  const f = await rect(page, "#coachFab");
+  expect(f.bottom).toBeLessThanOrEqual((await rect(page, "#appNav")).top);
+  expect(last).toBeLessThanOrEqual(f.top);
+  await context.close();
+});
+
+test("RTL: the default spot is the inline-end edge (left), and a drag to the right edge sticks", async ({ browser }) => {
   const { context, page } = await setup(browser, { lang: "ar" });
   expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
   const r = await rect(page, "#coachFab");
