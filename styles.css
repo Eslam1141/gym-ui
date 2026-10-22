@@ -877,6 +877,19 @@ body:has(.celebrate-card.show){ --toast-lift:124px; }
   transform:translateY(100%); transition:transform var(--dur-med) var(--ease-out);
 }
 #coachChat.show .coach-chat-panel{ transform:translateY(0); }
+/* Messenger-style: grows out of / shrinks back into the bubble (origin set from its rect in chat.js) */
+#coachChat.bubble .coach-chat-panel{
+  transform-origin:var(--co-x, 50%) var(--co-y, 100%); transform:scale(.1); opacity:0;
+  transition:transform var(--dur-med) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+#coachChat.bubble.show .coach-chat-panel{
+  transform:none; opacity:1;
+  transition:transform var(--dur-med) var(--ease-spring), opacity var(--dur-fast) var(--ease);
+}
+@media (prefers-reduced-motion:reduce){
+  #coachChat.bubble .coach-chat-panel,
+  #coachChat.bubble.show .coach-chat-panel{ transform:none; transition:opacity .15s linear; }
+}
 .coach-chat-panel.dragging{ transition:none; }
 .coach-chat-head{ touch-action:none; }
 
