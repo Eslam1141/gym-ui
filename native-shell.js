@@ -12,20 +12,26 @@
  *    on Plan, with a toast) exits the app.
  *  - Session store: window.GymSessionStore {get,set,clear} (read by sync.js)
  *    keeps the app-session refresh record in Android Keystore-backed storage
- *    (native SessionVault plugin). get() is synchronous: the value is read once
- *    at parse time through window.EtqSessionVault.getSync (a JS interface
- *    MainActivity installs before the page loads), so it exists before the
- *    deferred sync.js runs. set/clear write through to the plugin in order.
- *    A leftover localStorage "gymauth_refresh" is moved into the vault. Not
- *    defined on the web or if the native pieces are missing (sync.js then
- *    uses localStorage).
+ *    (native SessionVault plugin). get() is synchronous: native pushes the value
+ *    into the page with a document-start script (WebViewCompat
+ *    .addDocumentStartJavaScript, scoped to the app's own origins and the top
+ *    frame only) that sets window.__etqVault = "<record JSON>" ("" = empty
+ *    vault). It is read once at parse time and deleted from window right away,
+ *    so it exists before the deferred sync.js runs. There is deliberately no
+ *    JavascriptInterface for it: those reach third-party iframes (YouTube).
+ *    set/clear write through to the plugin in order (native re-registers the
+ *    script then, for the next load). A leftover localStorage
+ *    "gymauth_refresh" is moved into the vault. Not defined on the web, or if
+ *    the marker is absent (a WebView without DOCUMENT_START_SCRIPT, or the
+ *    plugin missing): sync.js then keeps using localStorage.
  *  - System bar icons: Capacitor core SystemBars.setStyle follows the APP theme
  *    (data-theme), not the phone's: dark app = style DARK (light icons), light
  *    app = style LIGHT (dark icons). Re-applied whenever data-theme changes.
  *  - Remove animations: html[data-reduce-motion="1"] mirrors Android's animator /
  *    transition animation scale = 0 (WebView does not set prefers-reduced-motion
- *    for it). Set here from the EtqMotion JS interface and kept current by
- *    MainActivity (page load, resume).
+ *    for it). Native sets window.__etqMotion (true/false) with the same document-start
+ *    script (read once at parse time, then deleted) and keeps the attribute
+ *    current by evaluateJavascript (page load, resume).
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -52,17 +58,24 @@
     try { return validRec(JSON.parse(raw)); } catch (e) { return null; }
   }
 
+  // Read at parse time, before anything else can look at it, then removed.
+  var vaultMarker, motionMarker;
+  try {
+    vaultMarker = window.__etqVault; motionMarker = window.__etqMotion;
+    delete window.__etqVault; delete window.__etqMotion;
+  } catch (e) {}
+
   function installSessionStore() {
     if (sessionInstalled) return;
     var c = cap();
     if (!c) return;
     var vault = plugin(c, "SessionVault");
-    var sync = window.EtqSessionVault;
-    if (!vault || !sync || typeof sync.getSync !== "function") return; // keep sync.js's localStorage store
+    // One-shot marker from the native document-start script; take it and remove it.
+    var raw = vaultMarker;
+    if (!vault || typeof raw !== "string") return; // keep sync.js's localStorage store
     sessionInstalled = true;
 
-    var cache = null;
-    try { cache = parseRec(sync.getSync()); } catch (e) { cache = null; }
+    var cache = parseRec(raw);
 
     // Writes are chained so a clear() right after a set() cannot be overtaken.
     var chain = Promise.resolve();
@@ -218,19 +231,19 @@
 
   // ---- "Remove animations" (see header): the Android shell mirrors the phone's
   // animation scale 0 into html[data-reduce-motion="1"] (motion.js / motion.css
-  // key off it). Read synchronously here so the first paint is already still;
-  // MainActivity re-sets or clears it on every page load and on resume. ----
+  // key off it). The marker is read at parse time so the first paint is already
+  // still; MainActivity re-sets or clears the attribute on every page load and
+  // on resume. ----
   function syncReduceMotion() {
     try {
-      var m = window.EtqMotion;
-      if (!m || typeof m.reduced !== "function") return;
-      if (m.reduced()) document.documentElement.setAttribute("data-reduce-motion", "1");
+      if (typeof motionMarker !== "boolean") return;
+      if (motionMarker) document.documentElement.setAttribute("data-reduce-motion", "1");
       else document.documentElement.removeAttribute("data-reduce-motion");
     } catch (e) {}
   }
   syncReduceMotion();
 
-  window.GymNativeShell = { init: init, syncReduceMotion: syncReduceMotion, handleBack: handleBack, exitApp: exitApp };
+  window.GymNativeShell = { init: init, handleBack: handleBack, exitApp: exitApp };
   installSessionStore();
   init();
 })();

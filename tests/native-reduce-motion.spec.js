@@ -82,19 +82,33 @@ test("an animation the no-preference rules would start does not run under the at
   await context.close();
 });
 
-test("native-shell.js reads EtqMotion synchronously and keeps the attribute in step", async ({ browser }) => {
-  const { context, page } = await open(browser);
-  const on = await page.evaluate(() => {
-    window.EtqMotion = { reduced: () => true };
-    GymNativeShell.syncReduceMotion();
-    return document.documentElement.getAttribute("data-reduce-motion");
+async function openWithMarker(browser, marker) {
+  const context = await browser.newContext({
+    ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}), serviceWorkers: "block"
   });
-  expect(on).toBe("1");
-  const off = await page.evaluate(() => {
-    window.EtqMotion = { reduced: () => false };
-    GymNativeShell.syncReduceMotion();
-    return document.documentElement.hasAttribute("data-reduce-motion");
-  });
-  expect(off).toBe(false);
+  await context.addInitScript((m) => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android", Plugins: { SplashScreen: { hide: () => {} } } };
+    if (m !== undefined) window.__etqMotion = m;
+  }, marker);
+  const page = await context.newPage();
+  await page.goto("/index.html");
+  await page.waitForFunction(() => window.GymNativeShell);
+  return { context, page };
+}
+
+test("native-shell.js reads the one-shot __etqMotion marker at parse time and removes it", async ({ browser }) => {
+  let r = await openWithMarker(browser, true);
+  expect(await r.page.evaluate(() => document.documentElement.getAttribute("data-reduce-motion"))).toBe("1");
+  expect(await r.page.evaluate(() => "__etqMotion" in window)).toBe(false);
+  await r.context.close();
+  r = await openWithMarker(browser, false);
+  expect(await r.page.evaluate(() => document.documentElement.hasAttribute("data-reduce-motion"))).toBe(false);
+  expect(await r.page.evaluate(() => "__etqMotion" in window)).toBe(false);
+  await r.context.close();
+});
+
+test("no marker (old WebView / browser): attribute untouched; the legacy EtqMotion interface is not used", async ({ browser }) => {
+  const { context, page } = await openWithMarker(browser, undefined);
+  expect(await page.evaluate(() => document.documentElement.hasAttribute("data-reduce-motion"))).toBe(false);
   await context.close();
 });
