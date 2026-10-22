@@ -41,6 +41,10 @@
   var ASK_AGAIN_MS = 7 * 24 * 3600 * 1000;
   var CACHE_MAX_MS = 30 * 24 * 3600 * 1000;
   var THROTTLE_MS = 60 * 1000;
+  // Display-only daily goals for the rings on the strip (not user settings yet).
+  var GOALS = { steps: 8000, kcal: 500 };
+  var COUNT_MS = 800;      // first appearance: count up from 0 and fill the rings
+  var DELTA_MS = 600;      // a refresh that changed a value: move from what is shown
   var PLAY_URL = "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata";
 
   var STR = {
@@ -63,19 +67,20 @@
     discB3: ["**It stays on this phone.** We don't send it to our servers, the AI coach or anyone else. We never sell it or use it for ads.",
       "**تبقى على هذا الهاتف.** لا نرسلها إلى خوادمنا ولا إلى المدرّب الذكي ولا إلى أي جهة أخرى. ولا نبيعها ولا نستخدمها في الإعلانات."],
     discB4: ["**You're in control.** Next, Android will ask you to allow each type. Change or disconnect any time in Profile → Watch & Health Connect, or in Health Connect.",
-      "**القرار قرارك.** بعد ذلك سيطلب منك أندرويد السماح بكل نوع على حدة. ويمكنك التغيير أو الفصل في أي وقت من الملف الشخصي ← الساعة الذكية و<span dir=\"ltr\">Health Connect</span>، أو من <span dir=\"ltr\">Health Connect</span>."],
+      "**القرار قرارك.** بعد ذلك سيطلب منك أندرويد السماح بكل نوع على حدة. ويمكنك التغيير أو الفصل في أي وقت من الملف الشخصي ← الساعة الذكية و\u00A0<span dir=\"ltr\">Health Connect</span>، أو من <span dir=\"ltr\">Health Connect</span>."],
     discNote: ["Watch numbers are estimates, not medical advice.", "أرقام الساعة تقديرية وليست نصيحة طبية."],
     discContinue: ["Continue", "متابعة"],
     discNotNow: ["Not now", "ليس الآن"],
     discPrivacyLink: ["Read the privacy policy", "اقرأ سياسة الخصوصية"],
 
     // ---- Profile row (B3) ----
-    rowTitle: ["Watch & Health Connect", "الساعة الذكية و<span dir=\"ltr\">Health Connect</span>"],
+    rowTitle: ["Watch & Health Connect", "الساعة الذكية و\u00A0<span dir=\"ltr\">Health Connect</span>"],
     rowOff: ["Not connected", "غير متصلة"],
     rowOn: ["Connected. Last updated {time}", "متصلة. آخر تحديث {time}"],
     rowOnNow: ["Connected", "متصلة"],
     rowConnect: ["Connect", "ربط"],
-    rowManage: ["Manage permissions", "إدارة الأذونات"],
+    rowManage: ["Open Health Connect", "فتح <span dir=\"ltr\">Health Connect</span>"],
+    manageHint: ["Then tap App permissions → Etqadem.", "ثم اضغط «أذونات التطبيقات» ← اتقدم."],
     rowDisconnect: ["Disconnect", "فصل الساعة"],
     disconnectConfirmTitle: ["Disconnect your watch?", "فصل الساعة؟"],
     disconnectConfirmBody: ["We'll stop reading and delete the watch values saved on this phone. To remove the permission completely, open Health Connect.",
@@ -93,7 +98,7 @@
     sleepLbl: ["Last night's sleep", "نوم الليلة الماضية"],
     hrNote: ["Estimate from your watch. Not medical advice.", "تقدير من ساعتك. وليس نصيحة طبية."],
     noData: ["No data from your watch yet. Open your watch app to sync.", "لا توجد بيانات من ساعتك بعد. افتح تطبيق ساعتك للمزامنة."],
-    partial: ["Some types are off. Turn them on in Manage permissions to see them.", "بعض الأنواع غير مفعّلة. فعّلها من «إدارة الأذونات» لتظهر هنا."],
+    partial: ["Some types are off. Open Health Connect, then tap App permissions → Etqadem to turn them on.", "بعض الأنواع غير مفعّلة. افتح <span dir=\"ltr\">Health Connect</span> ثم اضغط «أذونات التطبيقات» ← اتقدم لتفعيلها."],
     installHC: ["Install or update Health Connect", "تثبيت أو تحديث <span dir=\"ltr\">Health Connect</span>"],
     installHCBody: ["Your watch app saves data in Health Connect. Install it from Google Play, or update it if it's already there, then come back.",
       "يحفظ تطبيق ساعتك بياناته في <span dir=\"ltr\">Health Connect</span>. ثبّته من <span dir=\"ltr\">Google Play</span>، أو حدّثه إن كان مثبّتًا، ثم ارجع إلينا."],
@@ -104,7 +109,7 @@
     openSettings: ["Open Health Connect settings", "فتح إعدادات <span dir=\"ltr\">Health Connect</span>"],
 
     // ---- not in the lawyer's tables ----
-    installGo: ["Open Google Play", "فتح Google Play"],
+    installGo: ["Open Google Play", "فتح <span dir=\"ltr\">Google Play</span>"],
     checkAgain: ["Check again", "تحقق مرة أخرى"],
     tryAgain: ["Try again", "حاول مرة أخرى"],
     loading: ["Reading your watch data...", "جارٍ قراءة بيانات ساعتك..."],
@@ -112,11 +117,13 @@
     avgHr: ["avg {n} today", "المتوسط {n} اليوم"],
     cellNoData: ["No data", "لا توجد بيانات"],
     cellOff: ["Not allowed", "غير مسموح"],
+    goalSteps: ["{pct}% of {goal}", "{pct}% من {goal}"],
+    goalKcal: ["{pct}% of {goal} kcal", "{pct}% من {goal} سعرة"],
     hr: ["h", "س"],
     min: ["m", "د"],
     connected: ["Watch connected", "تم ربط الساعة"],
-    connectErr: ["Couldn't connect to Health Connect. Try again in a moment.", "تعذّر الاتصال بـ Health Connect. حاول بعد قليل."],
-    openErr: ["Couldn't open Health Connect. Open it from your phone's settings.", "تعذّر فتح Health Connect. افتحه من إعدادات هاتفك."]
+    connectErr: ["Couldn't connect to Health Connect. Try again in a moment.", "تعذّر الاتصال بـ<span dir=\"ltr\">Health Connect</span>. حاول بعد قليل."],
+    openErr: ["Couldn't open Health Connect. Open it from your phone's settings.", "تعذّر فتح <span dir=\"ltr\">Health Connect</span>. افتحه من إعدادات هاتفك."]
   };
 
   function li() { return GymDom.lang() === "ar" ? 1 : 0; }
@@ -127,13 +134,16 @@
     return v;
   }
   // plain text (toasts, labels)
-  function s(key, params) { return raw(key, params).replace(/\*\*/g, "").replace(/<\/?span[^>]*>/g, ""); }
+  function s(key, params) {
+    return raw(key, params).replace(/\*\*/g, "")
+      .replace(/<span dir="ltr">(.+?)<\/span>/g, function (_, m) { return "\u2066" + m.replace(/ /g, "\u00A0") + "\u2069"; });
+  }
   // **bold** and <span dir="ltr">…</span> to elements
   function rich(v) {
     var out = [], re = /\*\*(.+?)\*\*|<span dir="ltr">(.+?)<\/span>/g, at = 0, m;
     while ((m = re.exec(v))) {
       if (m.index > at) out.push(v.slice(at, m.index));
-      out.push(m[1] != null ? h("strong", {}, rich(m[1])) : h("span", { dir: "ltr" }, m[2]));
+      out.push(m[1] != null ? h("strong", {}, rich(m[1])) : h("span", { dir: "ltr", class: "wt-ltr" }, m[2]));
       at = re.lastIndex;
     }
     if (at < v.length) out.push(v.slice(at));
@@ -315,10 +325,11 @@
     var myGen = gen;
     var cached = readCache();
     var dayKey = GymDate.key();
+    var hadLast = !!last;
     if (!last) last = cached && cached.day === dayKey
       ? { status: "loading", vals: cached.vals, denied: cached.denied || [], at: cached.at }
       : { status: "loading", vals: cached ? { weightKg: cached.vals.weightKg } : {}, denied: [], at: 0 };
-    renderAll();
+    if (!hadLast) renderAll();
     inflight = call("checkAuthorization", { read: TYPES }).then(function (a) {
       var ok = (a && a.readAuthorized) || [];
       var denied = TYPES.filter(function (t) { return ok.indexOf(t) < 0; });
@@ -404,7 +415,7 @@
     if (sheet) return Promise.resolve(false);
     return new Promise(function (resolve) {
       var opener = document.activeElement;
-      var title = h("h2", { class: "syd-title", id: "wtTitle", tabindex: "-1" },
+      var title = h("h2", { class: "syd-title", id: "wtTitle" },
         R(kind === "disclose" ? "discTitle" : kind === "install" ? "installHC" : "disconnectConfirmTitle"));
       var body, go, later;
       if (kind === "disclose") {
@@ -425,7 +436,7 @@
         go = h("button", { type: "button", class: "syd-yes", id: "wtGo" }, R("rowDisconnect"));
         later = h("button", { type: "button", class: "syd-no", id: "wtLater" }, R("cancel"));
       }
-      var panel = h("div", { class: "syd-panel wt-panel m-ovl-card", role: "dialog", "aria-modal": "true", "aria-labelledby": "wtTitle" },
+      var panel = h("div", { class: "syd-panel wt-panel m-ovl-card", role: "dialog", "aria-modal": "true", "aria-labelledby": "wtTitle", tabindex: "-1" },
         title, body, h("div", { class: "syd-actions" }, go, later));
       var backdrop = h("div", { class: "syd-backdrop" });
       var root = h("div", { class: "syd wt-sheet m-ovl", id: "watchSheet" }, backdrop, panel);
@@ -456,7 +467,7 @@
       document.body.appendChild(root);
       sheet = root;
       GymMotion.show(root);
-      title.focus();
+      panel.focus();   // the dialog itself (no ring, see watch.css); the title is not interactive
     });
   }
 
@@ -495,12 +506,130 @@
     } catch (e) { return ""; }
   }
 
-  function cell(ic, caption, value, unit, sub) {
-    return h("div", { class: "wt-cell" + (value == null ? " is-empty" : "") },
-      icon(ic),
-      h("div", { class: "wt-val" }, value == null ? "—" : value, value != null && unit ? h("span", { class: "wt-unit" }, unit) : null),
-      h("div", { class: "wt-cap" }, caption),
-      sub ? h("div", { class: "wt-sub" }, sub) : null);
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    return n;
+  }
+
+  // ---- motion: count-up, goal rings, idle life (transform/opacity only) ----
+  // shown/ring remember what is on screen, so a rebuild or a refresh animates
+  // only the difference; t0 is when the strip first appeared with values.
+  var anim = { shown: {}, ring: {}, t0: 0, epoch: 0, tasks: [] };
+  var live = { card: null, io: null, inView: true };
+  function staggerMs() {
+    var v = getComputedStyle(document.documentElement).getPropertyValue("--dur-stagger").trim();
+    var n = parseFloat(v);
+    return isNaN(n) ? 90 : (/ms$/.test(v) ? n : n * 1000) * 2;
+  }
+  function calm() { return !!(window.GymMotion && GymMotion.reduced()); }
+  function forgetAnim() { anim.shown = {}; anim.ring = {}; anim.t0 = 0; }
+  function ease(p) { return 1 - Math.pow(1 - p, 4); }
+
+  // One metric cell: icon (inside a goal ring when it has a goal), value, caption, sub line.
+  // o: { key, ic, cap, n, fmt, unit, sub, goal, goalKey, off, i, cls, beat }
+  function cell(o) {
+    var step = staggerMs();
+    var empty = o.n == null, quiet = calm();
+    var entering = false, el = 0;
+    if (!quiet && !empty) {
+      if (!anim.t0) anim.t0 = performance.now();
+      el = performance.now() - anim.t0;
+      entering = el < COUNT_MS + 4 * step;
+    }
+    var to = empty ? null : o.n;
+    var from = empty || quiet ? to : (anim.shown[o.key] != null ? anim.shown[o.key] : 0);
+    var hasRing = !!o.goal && !empty && !o.off;
+    var ringTo = hasRing ? Math.min(to / o.goal, 1) : null;     // capped at a full ring
+    var ringFrom = !hasRing || quiet ? ringTo : (anim.ring[o.key] != null ? anim.ring[o.key] : 0);
+    var goalText = function (v) { return s(o.goalKey, { pct: Math.round(v / o.goal * 100), goal: fmtInt(o.goal) }); };
+
+    var numEl = h("span", { class: "wt-n" });
+    // digits stay big; letters between them ("h", "m") drop to the unit style
+    var put = function (v) {
+      var txt = o.fmt(v);
+      numEl.textContent = "";
+      if (!o.units) { numEl.textContent = txt; return; }
+      txt.split(/(\d+)/).forEach(function (part) {
+        if (part) numEl.appendChild(/\d/.test(part) ? document.createTextNode(part) : h("span", { class: "wt-unit wt-unit-in" }, part));
+      });
+    };
+    if (empty) numEl.textContent = "—"; else put(from);
+    var subEl = hasRing ? h("div", { class: "wt-sub" }, goalText(from)) : (o.sub ? h("div", { class: "wt-sub" }, o.sub) : null);
+    var ico = h("span", { class: "wt-ico" });
+    var arc = null;
+    if (hasRing) {
+      arc = svgEl("circle", { class: "wt-ring-arc", cx: 14, cy: 14, r: 12, pathLength: 100, "stroke-dasharray": 100, "stroke-dashoffset": 100 - 100 * ringFrom });
+      var ring = svgEl("svg", { class: "wt-ring", viewBox: "0 0 28 28", "aria-hidden": "true" });
+      ring.appendChild(svgEl("circle", { class: "wt-ring-track", cx: 14, cy: 14, r: 12 }));
+      ring.appendChild(arc);
+      ico.appendChild(ring);
+    }
+    ico.appendChild(icon(o.ic));
+    var node = h("div", { class: "wt-cell" + (empty ? " is-empty" : "") + (o.cls ? " " + o.cls : "") + (entering ? " wt-in" : ""), "data-key": o.key },
+      ico,
+      h("div", { class: "wt-val" }, numEl, !empty && o.unit ? h("span", { class: "wt-unit" }, o.unit) : null),
+      h("div", { class: "wt-cap" }, o.cap),
+      subEl);
+    if (entering) node.style.animationDelay = (o.i * step - el) + "ms";
+    if (o.beat && !empty) node.style.setProperty("--wt-beat", Math.min(1.6, Math.max(.8, 60 / o.beat)).toFixed(2) + "s");
+
+    if (empty) { delete anim.shown[o.key]; delete anim.ring[o.key]; return node; }
+    anim.shown[o.key] = from;
+    if (hasRing) anim.ring[o.key] = ringFrom; else delete anim.ring[o.key];
+    if (from !== to || ringFrom !== ringTo) {
+      anim.tasks.push({
+        node: node, from: from, to: to, rFrom: ringFrom, rTo: ringTo,
+        delay: entering ? Math.max(0, o.i * step - el) : 0,
+        dur: entering ? Math.max(300, COUNT_MS - Math.max(0, el - o.i * step)) : DELTA_MS,
+        paint: function (v, r) {
+          anim.shown[o.key] = v;
+          put(v);
+          if (subEl && hasRing) subEl.textContent = goalText(v);
+          if (arc) { anim.ring[o.key] = r; arc.setAttribute("stroke-dashoffset", 100 - 100 * r); }
+        }
+      });
+    }
+    return node;
+  }
+
+  // One rAF loop for the whole strip; ends by itself, or when a newer render replaces it.
+  function runTasks() {
+    var tasks = anim.tasks, ep = anim.epoch;
+    anim.tasks = [];
+    if (!tasks.length) return;
+    var t0 = performance.now();
+    (function frame() {
+      if (ep !== anim.epoch) return;
+      var now = performance.now(), left = 0;
+      tasks.forEach(function (k) {
+        if (!k.node.isConnected) return;
+        var p = Math.min(1, Math.max(0, (now - t0 - k.delay) / k.dur));
+        if (p < 1) left++;
+        var e = ease(p);
+        k.paint(Math.round(k.from + (k.to - k.from) * e), k.rTo == null ? null : k.rFrom + (k.rTo - k.rFrom) * e);
+      });
+      if (left) requestAnimationFrame(frame);
+    })();
+  }
+
+  // Idle life (heartbeat, moon drift) runs only while the strip is on screen, the
+  // page is visible and motion is allowed; the CSS defines no animation otherwise.
+  function syncLive() {
+    if (live.card) live.card.classList.toggle("wt-live", !calm() && !document.hidden && live.inView);
+  }
+  function unbindLive() {
+    if (live.io) { live.io.disconnect(); live.io = null; }
+    live.card = null;
+  }
+  function bindLive(card) {
+    unbindLive();
+    live.card = card; live.inView = true;
+    if (typeof IntersectionObserver === "function") {
+      live.io = new IntersectionObserver(function (es) { live.inView = es[es.length - 1].isIntersecting; syncLive(); });
+      live.io.observe(card);
+    }
+    syncLive();
   }
 
   function renderPlan() {
@@ -508,13 +637,16 @@
     if (!mount) return;
     mount.textContent = "";
     mount.hidden = true;
-    if (!active()) return;
+    anim.epoch++; anim.tasks = [];     // a newer paint supersedes any running count-up
+    unbindLive();
+    if (!active()) { forgetAnim(); return; }
     var node = null;
     if (isOn()) node = stripNode();
-    else if (askDue() && lsGet(KEY_ASK) !== "yes") node = askNode();
+    else { forgetAnim(); if (askDue() && lsGet(KEY_ASK) !== "yes") node = askNode(); }
     if (!node) return;
     mount.appendChild(node);
     mount.hidden = false;
+    if (node.querySelector(".wt-cell[data-key]")) { bindLive(node); runTasks(); }
   }
 
   function askNode() {
@@ -538,10 +670,12 @@
       h("h3", { class: "wt-title", id: "wtStripT" }, R("stripTitle")),
       h("span", { class: "wt-meta", role: "status", "aria-live": "polite" }, meta)));
     if (!st || (st.status === "loading" && !st.at)) {
+      forgetAnim();
       card.appendChild(h("div", { class: "wt-grid wt-skel", "aria-hidden": "true" }, [0, 1, 2, 3].map(function () { return h("div", { class: "wt-cell wt-skel-cell" }); })));
       return card;
     }
     if (st.status === "denied") {
+      forgetAnim();
       card.appendChild(h("p", { class: "wt-text wt-note", role: "status" }, R("accessRemoved")));
       card.appendChild(h("div", { class: "wt-actions" },
         btn(s("rowConnect"), "wt-btn-primary", connect, "wtReconnect"),
@@ -552,12 +686,12 @@
     var off = function (t) { return st.denied.indexOf(t) >= 0; };
     var sub = function (t, hasValue) { return off(t) ? s("cellOff") : (hasValue ? null : s("cellNoData")); };
     var heartOff = off("restingHeartRate");
+    var hrSub = heartOff ? s("cellOff") : (v.avgHr != null && !off("heartRate") ? s("avgHr", { n: v.avgHr }) : (v.rhr != null ? null : s("cellNoData")));
     card.appendChild(h("div", { class: "wt-grid" },
-      cell("steps", s("stepsLbl"), v.steps != null ? fmtInt(v.steps) : null, null, sub("steps", v.steps != null)),
-      cell("kcal", s("kcalLbl"), v.kcal != null ? fmtInt(v.kcal) : null, null, sub("calories", v.kcal != null)),
-      cell("heart", s("restHrLbl"), v.rhr != null ? String(v.rhr) : null, s("bpm"),
-        heartOff ? s("cellOff") : (v.avgHr != null && !off("heartRate") ? s("avgHr", { n: v.avgHr }) : (v.rhr != null ? null : s("cellNoData")))),
-      cell("sleep", s("sleepLbl"), v.sleepMin != null ? fmtSleep(v.sleepMin) : null, null, sub("sleep", v.sleepMin != null))));
+      cell({ key: "steps", ic: "steps", cap: s("stepsLbl"), n: v.steps, fmt: fmtInt, goal: GOALS.steps, goalKey: "goalSteps", off: off("steps"), sub: sub("steps", v.steps != null), i: 0 }),
+      cell({ key: "kcal", ic: "kcal", cap: s("kcalLbl"), n: v.kcal, fmt: fmtInt, goal: GOALS.kcal, goalKey: "goalKcal", off: off("calories"), sub: sub("calories", v.kcal != null), i: 1 }),
+      cell({ key: "rhr", ic: "heart", cap: s("restHrLbl"), n: v.rhr, fmt: String, unit: s("bpm"), sub: hrSub, i: 2, cls: "wt-heart", beat: v.avgHr || v.rhr }),
+      cell({ key: "sleep", ic: "sleep", cap: s("sleepLbl"), n: v.sleepMin, fmt: fmtSleep, units: true, sub: sub("sleep", v.sleepMin != null), i: 3, cls: "wt-moon" })));
     if (v.rhr != null || v.avgHr != null) card.appendChild(h("p", { class: "wt-foot" }, R("hrNote")));
     if (st.status === "empty") {
       card.appendChild(h("p", { class: "wt-text wt-note" }, R("noData")));
@@ -593,7 +727,8 @@
       h("div", { class: "wt-card" },
         h("p", { class: "wt-text" }, desc),
         weight != null ? h("p", { class: "wt-text wt-weight" }, s("latestWeight", { kg: weight })) : null,
-        h("div", { class: "wt-actions" }, actions))));
+        h("div", { class: "wt-actions" }, actions),
+        on ? h("p", { class: "wt-text wt-hint" }, s("manageHint")) : null)));
     mount.hidden = false;
   }
 
@@ -608,8 +743,14 @@
     if (wired) return;
     wired = true;
     document.addEventListener("visibilitychange", function () {
+      syncLive();
       if (!document.hidden && active() && isOn()) refresh(false);
     });
+    try {   // "Remove animations" (data-reduce-motion) or the OS setting flipped: repaint calm / alive
+      new MutationObserver(renderPlan).observe(document.documentElement, { attributes: true, attributeFilter: ["data-reduce-motion"] });
+      var mq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+      if (mq && mq.addEventListener) mq.addEventListener("change", renderPlan);
+    } catch (e) {}
     function watchHidden(id, fn) {
       var n = document.getElementById(id);
       if (!n || typeof MutationObserver !== "function") return;
