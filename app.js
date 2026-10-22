@@ -1129,6 +1129,8 @@ window.GymApp.dayName = function(dayId){
   const day = findDay(dayId);
   return day ? dayLabel(day) : "";
 };
+// Localised label of the day the Plan screen is showing (the coach bubble's suggestions use it).
+window.GymApp.activeDayName = function(){ return window.GymApp.dayName(activeDay); };
 
 function t(key){ const e = T[key]; return e ? (e[activeLang === "ar" ? 1 : 0]) : key; }
 function exName(ex){ return activeLang === "ar" ? (AR_EX[ex.en] || ex.en) : ex.en; }

@@ -49,7 +49,7 @@ async function setup(browser, { lang = "en", theme = "dark", granted = false } =
   await app.page.evaluate(() => document.dispatchEvent(new CustomEvent("gym:authchange")));
   return { ...app, cs };
 }
-const openFab = async (page) => { await page.click('#appNav button[data-tab="coach"]'); await page.click("#coachFab"); }; // the FAB only shows on the Coach tab
+const openFab = async (page) => { await page.click('#appNav button[data-tab="more"]'); await page.click("#coachFab"); }; // the bubble is hidden on the Coach tab
 const sheet = (page) => page.locator("dialog.cc-sheet[open]");
 const consentErr = { error: { code: "consent_required", message: "x" } };
 const startPlan = async (page) => {

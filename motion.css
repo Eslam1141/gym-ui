@@ -320,6 +320,7 @@ html[data-reduce-motion="1"] .wm-chev{ transition:none; }
 html[data-reduce-motion="1"] #timerBar,
 html[data-reduce-motion="1"] #timerBar.show{ transition:none; transform:none; }
 html[data-reduce-motion="1"] #timerBar.done:not(.show){ transition-delay:0s; }
+html[data-reduce-motion="1"] #coachFab.scrolling{ transform:none; }
 html[data-reduce-motion="1"] *,
 html[data-reduce-motion="1"] *::before,
 html[data-reduce-motion="1"] *::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }

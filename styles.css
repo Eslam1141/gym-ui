@@ -701,7 +701,7 @@ body:has(#alarmBanner:not([hidden])) .screen{ padding-bottom:calc(var(--nav-h) +
 
 /* back-to-top */
 #toTop{
-  position:fixed; inset-inline-end:16px; bottom:calc(78px + var(--sab)); z-index:60;
+  position:fixed; inset-inline-start:16px; bottom:calc(78px + var(--sab)); z-index:60; /* opposite corner from the coach bubble */
   width:44px; height:44px; border-radius:50%;
   background:var(--rust); color:#fff; border:none; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
@@ -774,52 +774,61 @@ body:has(#timerBar.show) #toTop{ opacity:0; pointer-events:none; }
 }
 
 /* ---- floating AI-coach chat bubble ---- */
-/* opposite corner from #toTop (inset-inline-start vs -end) so they never
-   collide; JS hides it while a rest timer is showing (#timerBar/#miniTimer
-   already own that space) or the chat drawer itself is open. */
+/* Opens the coach chat as a sheet over Plan, Food and More. Default spot is the
+   bottom inline-end corner above the nav (thumb reach; #toTop takes the other one).
+   Hence the.screen's bottom padding (nav + 88px) lets the last content scroll clear of a
+   bubble parked at the bottom. chat.js lets the user
+   drag it: it sets .moved + data-side (l|r) + an inline `bottom`, and animates
+   the snap with a transform. z-index 65 keeps it under the nav, dialogs and toasts. */
 #coachFab{
-  position:fixed; inset-inline-start:calc(16px + env(safe-area-inset-left)); z-index:65;
+  position:fixed; inset-inline-end:calc(16px + env(safe-area-inset-right)); z-index:65;
   bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px);
-  width:56px; height:56px; border-radius:50%; padding:0; cursor:pointer;
+  width:56px; height:56px; border-radius:50%; padding:0; cursor:grab;
   background:var(--primary); border:2px solid var(--surface-2);
   display:flex; align-items:center; justify-content:center;
+  touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
   box-shadow:var(--elev-2), 0 0 0 1px var(--line);
-  transition:transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  transition:transform var(--dur-fast) var(--ease), opacity var(--dur-med) var(--ease), background var(--dur-fast) var(--ease);
+  animation:fabIn var(--dur-med) var(--ease-spring) backwards;
 }
+@keyframes fabIn{ from{ opacity:0; transform:scale(.6); } to{ opacity:1; transform:none; } }
 #coachFab:hover{ background:var(--primary-hover); }
 #coachFab:active{ background:var(--primary-pressed); }
 #coachFab[hidden]{ display:none; }
 #coachFab:active{ transform:scale(.92); }
-#coachFab svg{ width:32px; height:32px; }
+#coachFab:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; }
+#coachFab svg{ width:32px; height:32px; pointer-events:none; }
+/* scrolling: shrink and fade, still tappable; chat.js drops the class ~600ms after the last scroll */
+#coachFab.scrolling{ transform:scale(.8); opacity:.45; }
+@media (prefers-reduced-motion:reduce){ #coachFab.scrolling{ transform:none; } }
+#coachFab.moved[data-side="l"]{ inset-inline:auto; left:calc(16px + env(safe-area-inset-left)); }
+#coachFab.moved[data-side="r"]{ inset-inline:auto; right:calc(16px + env(safe-area-inset-right)); }
+#coachFab.dragging{ cursor:grabbing; transition:none; animation:none; box-shadow:var(--elev-3, var(--elev-2)), 0 0 0 1px var(--line); }
+#coachFab.settling{ transition:transform var(--dur-med) var(--ease-spring); }
 
-#coachFabTip{
-  position:fixed; inset-inline-start:calc(16px + env(safe-area-inset-left)); z-index:65;
-  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 86px);
-  max-width:200px; background:var(--panel); border:1px solid var(--line);
-  border-radius:var(--radius); padding:10px 12px; font-size:var(--text-sm); line-height:1.45;
-  color:var(--paper); box-shadow:var(--elev-2); cursor:pointer;
-  opacity:0; transform:translateY(10px) scale(.96);
-  transition:opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
-}
-#coachFabTip[hidden]{ display:none; }
-#coachFabTip.show{ opacity:1; transform:none; }
-
-/* P1-4: the nutrition-coach FAB is a context mismatch anywhere but the Coach
-   screen (e.g. floating over a strength-training set-logging card on Plan).
-   Scope it purely by the body[data-tab] the nav already maintains, on top
-   of chat.js's own open/timer-active hide logic — whichever hides it wins. */
-body:not([data-tab="coach"]) #coachFab,
-body:not([data-tab="coach"]) #coachFabTip{ display:none; }
+/* Hidden where it would be in the way or redundant: on the Coach tab itself,
+   under the first-visit tour, the survey, sign-in, any open dialog or sheet,
+   the rest alarm, the celebration card and the workout builder (it has its own save bar). chat.js also hides it
+   while the rest timer shows or the chat is open. */
+body[data-tab="coach"] #coachFab,
+body.tour-open #coachFab,
+body.survey-open #coachFab,
+body:has(.m-ovl:not([hidden])) #coachFab,
+body:has(.syd) #coachFab,
+body:has(dialog[open]) #coachFab,
+body:has(.wb-screen) #coachFab,
+body:has(.wb-scrim) #coachFab,
+body:has(#alarmBanner:not([hidden])) #coachFab,
+body:has(.celebrate-card.show) #coachFab{ display:none; }
 
 @media (min-width:900px){
-  /* the bottom nav becomes a fixed left rail at this width (#appNav, below) —
-     these were still anchored to the viewport edge and ended up rendered
-     underneath the rail (z-index 120 vs 65), invisible and unclickable.
-     Physical left/right + [dir=rtl] flip, matching the other rail-anchored fixed elements. */
-  #coachFab{ bottom:24px; left:calc(var(--side-w) + 16px); right:auto; }
-  #coachFabTip{ bottom:90px; left:calc(var(--side-w) + 16px); right:auto; }
-  [dir="rtl"] #coachFab{ left:auto; right:calc(var(--side-w) + 16px); }
-  [dir="rtl"] #coachFabTip{ left:auto; right:calc(var(--side-w) + 16px); }
+  /* the bottom nav becomes a fixed rail on the inline-start edge (#appNav,
+     below): the default spot stays on the free end, and a bubble parked on the
+     rail's side sits beside the rail, never under it. */
+  #coachFab{ bottom:24px; }
+  #coachFab.moved[data-side="l"]{ left:calc(var(--side-w) + 16px); }
+  [dir="rtl"] #coachFab.moved[data-side="l"]{ left:calc(16px + env(safe-area-inset-left)); }
+  [dir="rtl"] #coachFab.moved[data-side="r"]{ right:calc(var(--side-w) + 16px); }
 }
 
 /* ---- shared toast / undo bar (toast.js, P1-8, §4.6) ---- */
@@ -859,13 +868,27 @@ body:has(.celebrate-card.show){ --toast-lift:124px; }
 #coachChat.show #coachChatBackdrop{ opacity:1; }
 .coach-chat-panel{
   position:absolute; left:0; right:0; bottom:0; margin:0 auto;
-  width:100%; max-width:440px; max-height:80vh; max-height:80dvh;
+  width:100%; max-width:440px; max-height:90vh; max-height:90dvh;
   background:var(--bg-alt); border:1px solid var(--line); border-radius:20px 20px 0 0;
   display:flex; flex-direction:column; overflow:hidden;
   box-shadow:0 -12px 40px rgba(0,0,0,.5);
   transform:translateY(100%); transition:transform var(--dur-med) var(--ease-out);
 }
 #coachChat.show .coach-chat-panel{ transform:translateY(0); }
+.coach-chat-panel.dragging{ transition:none; }
+.coach-chat-head{ touch-action:none; }
+
+/* screen-aware suggestions: ordinary messages the user can send with one tap */
+.coach-chat-chips{ display:flex; flex-wrap:wrap; gap:8px; padding:8px 14px 0; flex:none; }
+.coach-chat-chips[hidden]{ display:none; }
+.coach-chat-chip{
+  min-height:44px; padding:0 14px; border-radius:999px; cursor:pointer; font-family:inherit; font-size:var(--text-sm);
+  background:var(--panel2); border:1px solid var(--line-strong); color:var(--paper); text-align:start;
+  transition:background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.coach-chat-chip:hover{ background:var(--panel); }
+.coach-chat-chip:active{ transform:scale(.97); }
+.coach-chat-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
 .coach-chat-head{ display:flex; align-items:center; gap:10px; padding:14px; border-bottom:1px solid var(--line); flex:none; }
 .coach-chat-head-icon{
@@ -1088,8 +1111,7 @@ body.onboarding-open .wrap,
 body.onboarding-open #timerBar,
 body.onboarding-open #miniTimer,
 body.onboarding-open #toTop,
-body.onboarding-open #coachFab,
-body.onboarding-open #coachFabTip{ display:none !important; }
+body.onboarding-open #coachFab{ display:none !important; }
 .ob-inner{
   position:relative; width:100%; max-width:380px; text-align:center;
   display:flex; flex-direction:column; align-items:center; gap:14px;
@@ -1363,7 +1385,7 @@ body.onboarding-open #appNav{ display:none !important; }
   body:has(#timerBar.show) .screen{ padding-bottom:168px; }
   #timerBar{ inset-inline-start:var(--side-w); bottom:24px; } /* centred in the content area beside the rail */
   #alarmBanner{ inset-inline-start:calc(var(--side-w) + 12px); bottom:24px; }
-  #toTop{ bottom:24px; }
+  #toTop{ bottom:24px; inset-inline-start:calc(var(--side-w) + 16px); } /* beside the rail, which sits on the start edge */
   .screen .wrap{ max-width:720px; }
 
   [dir="rtl"] #appNav{ left:auto; right:0; border-right:none; border-left:1px solid var(--line); }
@@ -2191,7 +2213,6 @@ body:has(.wb-sheet-wrap) #appNav{ visibility:hidden; }
   background:transparent; border:none; color:var(--muted); cursor:pointer; border-radius:var(--radius);
 }
 .wb-live{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-body:has(.wb-screen) #coachFab, body:has(.wb-screen) #coachFabTip{ display:none; }
 
 @media (min-width:900px){ .wb-savebar{ bottom:0; } }
 
@@ -2214,7 +2235,7 @@ body:has(.wb-screen) #coachFab, body:has(.wb-screen) #coachFabTip{ display:none;
 /* ---- Print / "Download PDF" — only the Coach result, in ink-friendly B/W ---- */
 @media print{
   #bgfx, #appNav, #timerBar, #miniTimer, #toTop, #onboarding,
-  #coachFab, #coachFabTip, #coachChat,
+  #coachFab, #coachChat,
   #screen-plan, #screen-more, #videoModal, #calendarStrip, #calendarModal,
   .coach-actions, .coach-links, .coach-res-head .coach-pacer, .coach-tip-btn{ display:none !important; }
   html, body{ background:#fff !important; color:#000 !important; }

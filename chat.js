@@ -1,13 +1,16 @@
 /* chat.js — floating live nutrition/fitness chat bubble.
  *
- * A small circular "AI coach" button, visible on every screen except while
- * the workout timer is running, that opens a lightweight chat drawer backed
- * by POST /assistant/chat. Idle, it occasionally shows a short static tip
- * (no network call). Anonymous taps prompt sign-in, same as the Coach tab.
+ * A small circular "AI coach" button on Plan, Food and More (not on the Coach
+ * tab, and not while the workout timer runs, a dialog is up or the tour,
+ * survey or sign-in screen is open) that opens the chat as a sheet over the
+ * current screen, backed by POST /assistant/chat. The button can be dragged;
+ * it snaps to the nearest side edge and the spot is remembered per device.
+ * Anonymous taps prompt sign-in, same as the Coach tab.
  *
  * Local keys (NOT synced — deliberately not gym_-prefixed, device-local):
  *   gymcoach_chat_history   the visible transcript (trimmed), restored on reopen;
  *                           gymcoach_ is wiped by sync.js on sign-out / account switch
+ *   gymcoach_bubble_pos     where the user parked the button: {side:"l"|"r", bottom:px}
  */
 (function () {
   "use strict";
@@ -22,10 +25,11 @@
   var HIST_MAX = 30;      // kept for display
   var SEND_WINDOW = 8;    // most recent turns actually sent to the API
   var MSG_MAX = 600;      // mirrors the backend's per-message cap
-  var TIP_FIRST_MS = 9000;
-  var TIP_INTERVAL_MS = 75000;
-  var TIP_SHOW_MS = 7000;   // auto-hide delay when the mouse never touches it
-  var TIP_LEAVE_MS = 1200;  // grace delay once the cursor actually leaves it
+  var POS_KEY = "gymcoach_bubble_pos";
+  var DRAG_PX = 6;         // less movement than this is a tap, not a drag
+  var SCROLL_REST_MS = 600; // the bubble restores this long after scrolling stops
+  var EDGE_GAP = 12;       // space kept between the button and the screen edge / nav
+  var SWIPE_CLOSE_PX = 90; // sheet swipe-down distance that closes it
 
   // ---------------- i18n ----------------
   if (!window.GymDom) throw new Error("chat.js: dom.js must load first");
@@ -56,6 +60,13 @@
     gram: ["g", "جم"],
     slotbreakfast: ["Breakfast", "فطار"], slotlunch: ["Lunch", "غداء"], slotdinner: ["Dinner", "عشاء"],
     slotsnack: ["Snack", "سناك"], slotsuhoor: ["Suhoor", "سحور"], slotiftar: ["Iftar", "إفطار"],
+    chipPlan: ["Help me with my {day} workout", "ساعدني في تمرين {day}"],
+    chipPlan2: ["Suggest a swap for an exercise", "اقترح بديلاً لتمرين"],
+    chipFood: ["Add a meal for me", "أضف لي وجبة"],
+    chipFood2: ["What should I eat to reach my protein?", "ماذا آكل لأصل لهدف البروتين؟"],
+    chipMore: ["Explain my plan settings", "اشرح لي إعدادات خطتي"],
+    chipMore2: ["Which training days suit me?", "ما أنسب أيام التمرين لي؟"],
+    chipsLabel: ["Ideas for this screen", "أفكار لهذه الشاشة"],
     photoBtn: ["Add a meal photo", "أضف صورة وجبة"],
     photoTake: ["Take photo", "التقاط صورة"],
     photoPick: ["Choose from gallery", "اختيار من المعرض"],
@@ -92,17 +103,6 @@
   var PM_MAX = 10;         // server cap on proposedMeals
   var FOOD_WAIT_MS = 4000; // never hold the chat request longer than this for the food brief
   function fmt(t, params) { return t.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? params[k] : ""; }); }
-
-  var TIPS = [
-    ["Protein at every meal helps curb cravings and preserves muscle in a deficit.", "تناول بروتين في كل وجبة يقلّل الرغبة الشديدة في الطعام ويحافظ على العضلات أثناء نقص السعرات."],
-    ["Aim for 7–9 hours of sleep — recovery drives most of your progress.", "احرص على 7-9 ساعات نوم — الاستشفاء هو محرك معظم تقدّمك."],
-    ["Progressive overload beats a perfect program: add a little weight or a rep each week.", "الزيادة التدريجية أهم من برنامج مثالي: أضف وزناً أو تكراراً بسيطاً كل أسبوع."],
-    ["Hydration affects strength and focus — sip water through the day, not just at the gym.", "الترطيب يؤثر على القوة والتركيز — اشرب الماء طوال اليوم لا فقط في الجيم."],
-    ["A short walk after meals can help blood sugar and digestion.", "المشي القصير بعد الوجبات يساعد سكر الدم والهضم."],
-    ["Fiber-rich carbs (oats, veggies, legumes) keep you fuller for the same calories.", "الكارب الغني بالألياف (شوفان، خضار، بقوليات) يشبعك أكثر بنفس عدد السعرات."],
-    ["Consistency beats intensity — a doable plan you repeat wins over a perfect one you quit.", "الثبات أهم من الشدة — خطة قابلة للتنفيذ تكررها أفضل من خطة مثالية تتوقف عنها."],
-    ["Warm up the specific lift, not just cardio — light sets of the first exercise reduce injury risk.", "سخّن للتمرين المحدد لا الكارديو فقط — مجموعات خفيفة من أول تمرين تقلّل خطر الإصابة."]
-  ];
 
   function mascotIcon() {
     return window.EtqademMascot
@@ -146,16 +146,14 @@
   var history = loadJSON(HIST_KEY, []); // [{role:'user'|'assistant', content}]
   var open = false;
   var sending = false;
-  var tipTimer = null;
-  var tipHideTimer = null;
 
-  var fab, fabTip, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
+  var fab, chips, chat, backdrop, closeBtn, msgsEl, announceEl, form, input, sendBtn, iconHost, titleEl, noteEl;
   var photoBtn, photoMenu, photoTake, photoPick, photoCamera, photoGallery, photoChip, photoThumb, photoChipText, photoChipTip, photoRemove;
   var noticeEl, noticeText, noticeOk, noticeCancel, noticePolicy;
 
   function els() {
     fab = document.getElementById("coachFab");
-    fabTip = document.getElementById("coachFabTip");
+    chips = document.getElementById("coachChatChips");
     chat = document.getElementById("coachChat");
     backdrop = document.getElementById("coachChatBackdrop");
     closeBtn = document.getElementById("coachChatClose");
@@ -183,7 +181,7 @@
     noticeOk = document.getElementById("coachPhotoNoticeOk");
     noticeCancel = document.getElementById("coachPhotoNoticeCancel");
     noticePolicy = document.getElementById("coachPhotoNoticePrivacy");
-    return !!(fab && chat && form && input);
+    return !!(fab && chips && chat && form && input);
   }
 
   // The input is never disabled while a reply is pending (a disabled input
@@ -254,9 +252,7 @@
   }
   function refreshFabVisibility() {
     if (!fab) return;
-    var hide = open || timerActive() || document.body.classList.contains("onboarding-open");
-    fab.hidden = hide;
-    if (hide && fabTip) hideTip();
+    fab.hidden = open || timerActive();
   }
   function watchTimers() {
     ["timerBar", "miniTimer"].forEach(function (id) {
@@ -266,38 +262,206 @@
     });
   }
 
-  // ---------------- idle tips ----------------
-  function showTip() {
-    if (open || !fab || fab.hidden || !fabTip) return;
-    var pick = TIPS[Math.floor(Math.random() * TIPS.length)];
-    fabTip.textContent = pick[lang() === "ar" ? 1 : 0];
-    fabTip.hidden = false;
-    requestAnimationFrame(function () { fabTip.classList.add("show"); });
-    if (tipHideTimer) clearTimeout(tipHideTimer);
-    tipHideTimer = setTimeout(hideTip, TIP_SHOW_MS);
+  // ---------------- movable button ----------------
+  var pos = null; // {side, bottom}; kept in memory too, so a blocked localStorage still keeps the spot until reload
+  function loadPos() {
+    var p = loadJSON(POS_KEY, null);
+    return p && (p.side === "l" || p.side === "r") && isFinite(p.bottom) ? p : null;
   }
-  function hideTip() {
-    if (!fabTip) return;
-    fabTip.classList.remove("show");
-    setTimeout(function () { if (!fabTip.classList.contains("show")) fabTip.hidden = true; }, 220);
+  function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+  // Bottom edge of the sticky header pill (#topBar when signed in, #topPrefs
+  // when not), measured so the safe-area inset and the pill's real height are
+  // included; 64 is the fallback when neither is on screen.
+  function headerBottom() {
+    var bottom = 0;
+    ["topBar", "topPrefs"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      if (r.height > 0 && r.width > 0) bottom = Math.max(bottom, r.bottom);
+    });
+    return bottom || 64;
   }
-  // A mouse hovering the tip means the user is mid-read — pause the auto-hide
-  // countdown entirely while hovered (no fixed cap: read at your own pace)
-  // and only resume dismissing it a moment after the cursor actually leaves.
-  function pauseTipHide() {
-    if (tipHideTimer) { clearTimeout(tipHideTimer); tipHideTimer = null; }
+  // Where the button may sit: above the bottom nav, below the top bar, and
+  // (on desktop, where the nav is a side rail) beside the rail, never over it.
+  function bounds() {
+    var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var size = fab.offsetWidth || 56;
+    var nav = document.getElementById("appNav");
+    var nr = nav ? nav.getBoundingClientRect() : null;
+    var rail = !!nr && nr.width > 0 && nr.width < vw / 2;
+    var rtl = document.documentElement.dir === "rtl";
+    var minBottom = rail ? 24 : (nr && nr.height ? vh - nr.top + EDGE_GAP : EDGE_GAP);
+    var topLimit = headerBottom() + EDGE_GAP;
+    return {
+      vw: vw, vh: vh, size: size, minBottom: minBottom, topLimit: topLimit,
+      maxBottom: Math.max(minBottom, vh - topLimit - size),
+      minX: rail && !rtl ? nr.right : 0,
+      maxX: rail && rtl ? nr.left - size : vw - size
+    };
   }
-  function resumeTipHide() {
-    if (tipHideTimer) clearTimeout(tipHideTimer);
-    tipHideTimer = setTimeout(hideTip, TIP_LEAVE_MS);
+  function applyPos() {
+    var p = pos;
+    if (!p) { fab.classList.remove("moved"); fab.removeAttribute("data-side"); fab.style.bottom = ""; return; }
+    var b = bounds();
+    fab.classList.add("moved");
+    fab.setAttribute("data-side", p.side);
+    fab.style.bottom = clamp(p.bottom, b.minBottom, b.maxBottom) + "px";
   }
-  function startTipCycle() {
-    setTimeout(function () {
-      showTip();
-      tipTimer = setInterval(showTip, TIP_INTERVAL_MS);
-    }, TIP_FIRST_MS);
+  // Pointer events cover touch and mouse. A press that moves less than
+  // DRAG_PX stays a tap (the native click opens the chat); a real drag moves
+  // the button with a transform, then on release snaps it to the nearer side
+  // edge (FLIP: jump to the final spot, animate the transform back to zero)
+  // and swallows the click that follows so a drag never opens the chat.
+  function wireDrag() {
+    var d = null, swallow = false;
+    fab.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      d = { id: e.pointerId, x: e.clientX, y: e.clientY, r: fab.getBoundingClientRect(), dx: 0, dy: 0, moved: false };
+      try { fab.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    fab.addEventListener("pointermove", function (e) {
+      if (!d || e.pointerId !== d.id) return;
+      var dx = e.clientX - d.x, dy = e.clientY - d.y;
+      if (!d.moved) {
+        if (Math.sqrt(dx * dx + dy * dy) < DRAG_PX) return;
+        d.moved = true;
+        fab.classList.remove("settling");
+        fab.classList.add("dragging");
+      }
+      var b = bounds();
+      d.dx = clamp(dx, b.minX - d.r.left, b.maxX - d.r.left);
+      d.dy = clamp(dy, b.topLimit - d.r.top, b.vh - b.minBottom - b.size - d.r.top);
+      fab.style.transform = "translate(" + d.dx + "px," + d.dy + "px)";
+    });
+    function finish(e) {
+      if (!d || e.pointerId !== d.id) return;
+      var cur = d;
+      d = null;
+      try { fab.releasePointerCapture(e.pointerId); } catch (err) {}
+      fab.classList.remove("dragging");
+      if (!cur.moved) return;
+      swallow = true;
+      setTimeout(function () { swallow = false; }, 100);
+      var b = bounds();
+      var left = cur.r.left + cur.dx, top = cur.r.top + cur.dy;
+      var side = left + b.size / 2 < (b.minX + b.maxX + b.size) / 2 ? "l" : "r";
+      pos = { side: side, bottom: Math.round(clamp(b.vh - top - b.size, b.minBottom, b.maxBottom)) };
+      saveJSON(POS_KEY, pos);
+      fab.style.transform = "";
+      applyPos();
+      if (e.type === "pointercancel" || prefersReducedMotion()) return;
+      var f = fab.getBoundingClientRect();
+      fab.style.transition = "none";
+      fab.style.transform = "translate(" + (left - f.left) + "px," + (top - f.top) + "px)";
+      void fab.offsetWidth;
+      fab.style.transition = "";
+      fab.classList.add("settling");
+      fab.style.transform = "";
+      setTimeout(function () { fab.classList.remove("settling"); }, 400);
+    }
+    fab.addEventListener("pointerup", finish);
+    fab.addEventListener("pointercancel", finish);
+    fab.addEventListener("click", function (e) {
+      if (!swallow) return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }, true);
+    window.addEventListener("resize", applyPos);
+    window.addEventListener("orientationchange", applyPos);
+    // the header pill appears, disappears and changes size after load (sign-in,
+    // language switch), so a restored spot is re-clamped whenever it does
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(applyPos);
+      ["topBar", "topPrefs"].forEach(function (id) { var el = document.getElementById(id); if (el) ro.observe(el); });
+    }
+    pos = loadPos();
+    applyPos();
+    wireScrollDim();
+  }
+  // While the page scrolls the button shrinks and fades (CSS .scrolling) so it
+  // never hides what is being read; it comes back SCROLL_REST_MS after the last scroll.
+  function wireScrollDim() {
+    var t = 0;
+    document.addEventListener("scroll", function (e) {
+      if (open) return;
+      var el = e.target;
+      // a strip that only scrolls sideways (day chips) is not the page scrolling
+      if (el && el.nodeType === 1 && el.scrollHeight <= el.clientHeight + 1) return;
+      fab.classList.add("scrolling");
+      clearTimeout(t);
+      t = setTimeout(function () { fab.classList.remove("scrolling"); }, SCROLL_REST_MS);
+    }, { capture: true, passive: true });
   }
 
+  // ---------------- screen-aware suggestions ----------------
+  // The chat API takes no "which screen" field, so the screen shows up as
+  // tappable suggestions that send an ordinary message.
+  function chipTexts() {
+    var tab = document.body.getAttribute("data-tab");
+    if (tab === "plan") {
+      var day = window.GymApp && GymApp.activeDayName ? GymApp.activeDayName() : "";
+      return (day ? [fmt(s("chipPlan"), { day: day })] : []).concat(s("chipPlan2"));
+    }
+    if (tab === "food") return [s("chipFood"), s("chipFood2")];
+    if (tab === "more") return [s("chipMore"), s("chipMore2")];
+    return [];
+  }
+  function renderChips() {
+    chips.innerHTML = "";
+    var list = chipTexts();
+    chips.hidden = !list.length;
+    chips.setAttribute("aria-label", s("chipsLabel"));
+    list.forEach(function (text) {
+      chips.appendChild(h("button", { type: "button", class: "coach-chat-chip", on: { click: function () {
+        if (!sending) sendMessage(text);
+      } } }, text));
+    });
+  }
+
+  // Tab stays inside the open sheet; the page behind it is not reachable.
+  function trapTab(e) {
+    var nodes = chat.querySelectorAll("button, input, a[href], [tabindex]");
+    var list = [];
+    nodes.forEach(function (n) {
+      if (n.disabled || n.tabIndex < 0 || n.closest("[hidden]") || n.type === "file") return;
+      list.push(n);
+    });
+    if (!list.length) return;
+    var first = list[0], last = list[list.length - 1], ae = document.activeElement;
+    if (e.shiftKey && (ae === first || !chat.contains(ae))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (ae === last || !chat.contains(ae))) { e.preventDefault(); first.focus(); }
+  }
+
+  // Dragging the sheet's header down (phone layout) closes it.
+  function wireSwipe() {
+    var panel = chat.querySelector(".coach-chat-panel"), head = chat.querySelector(".coach-chat-head");
+    var sw = null;
+    head.addEventListener("pointerdown", function (e) {
+      if (e.target.closest("button") || window.innerWidth >= 900) return;
+      sw = { id: e.pointerId, y: e.clientY, dy: 0 };
+      try { head.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    head.addEventListener("pointermove", function (e) {
+      if (!sw || e.pointerId !== sw.id) return;
+      sw.dy = Math.max(0, e.clientY - sw.y);
+      panel.classList.add("dragging");
+      panel.style.transform = "translateY(" + sw.dy + "px)";
+    });
+    function end(e) {
+      if (!sw || e.pointerId !== sw.id) return;
+      var dy = sw.dy;
+      sw = null;
+      panel.classList.remove("dragging");
+      if (dy > SWIPE_CLOSE_PX && e.type === "pointerup") {
+        panel.style.transform = "translateY(100%)";
+        closeChat();
+        setTimeout(function () { panel.style.transform = ""; }, 340);
+      } else panel.style.transform = "";
+    }
+    head.addEventListener("pointerup", end);
+    head.addEventListener("pointercancel", end);
+  }
   // ---------------- drawer ----------------
   function renderStatic() {
     titleEl.textContent = s("title");
@@ -362,6 +526,7 @@
 
   function pushHistory(role, content) {
     history.push({ role: role, content: content });
+    if (role === "user") chips.hidden = true;
     if (history.length > HIST_MAX) history = history.slice(history.length - HIST_MAX);
     saveJSON(HIST_KEY, history);
   }
@@ -378,7 +543,8 @@
     fab.setAttribute("aria-expanded", "true");
     refreshFabVisibility();
     renderHistory();
-    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    renderChips();
+    setTimeout(function () { if (open) try { input.focus({ preventScroll: true }); } catch (e) {} }, 60);
   }
   function closeChat() {
     open = false;
@@ -834,19 +1000,15 @@
     renderStatic();
     fab.addEventListener("click", function () {
       if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
-      hideTip();
       openChat();
     });
-    fabTip.addEventListener("click", function () {
-      hideTip();
-      if (!isAuthed()) { if (window.GymUI) GymUI.promptSignIn(); return; }
-      openChat();
-    });
-    fabTip.addEventListener("mouseenter", pauseTipHide);
-    fabTip.addEventListener("mouseleave", resumeTipHide);
     closeBtn.addEventListener("click", closeChat);
     backdrop.addEventListener("click", closeChat);
-    document.addEventListener("keydown", function (e) { if (open && e.key === "Escape") { if (!photoMenu.hidden) closeMenu(); else closeChat(); } });
+    document.addEventListener("keydown", function (e) {
+      if (!open) return;
+      if (e.key === "Escape") { if (!photoMenu.hidden) closeMenu(); else closeChat(); }
+      else if (e.key === "Tab") trapTab(e);
+    });
     // Tapping Send must not move focus off the input, or the soft keyboard
     // closes. Only mousedown: preventDefault on touchstart/pointerdown would
     // also cancel the tap's click (Chrome sends mousedown before the click).
@@ -865,7 +1027,8 @@
     wirePhoto();
     watchTimers();
     refreshFabVisibility();
-    startTipCycle();
+    wireDrag();
+    wireSwipe();
 
     document.addEventListener("gym:lang-changed", renderStatic);
     // Sign-out wipes the stored transcript (ui.js / sync.js, on a later tick):

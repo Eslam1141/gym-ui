@@ -19,7 +19,6 @@
     planStart: ["Start the timer when you begin. It keeps running if you switch screens.", "شغّل المؤقت عند البدء. يستمر حتى لو انتقلت لشاشة أخرى."],
     planRest: ["Tick each set as you finish it and the rest timer starts. You can also tap Rest.", "علّم كل مجموعة عند إنهائها ليبدأ مؤقت الراحة. ويمكنك أيضاً الضغط على راحة."],
     coachForm: ["Your answers are here. Tap the button to get a diet and training plan.", "إجاباتك هنا. اضغط الزر لتحصل على خطة غذاء وتمرين."],
-    coachFab: ["Ask the coach a quick question from any screen.", "اسأل المدرب سؤالاً سريعاً من أي شاشة."],
     foodTotals: ["Your calories and protein for the day.", "سعراتك وبروتينك لليوم."],
     foodSearch: ["Search local foods and log a portion.", "ابحث عن أكلات محلية وسجّل الكمية."],
     foodDate: ["Switch days to see or fix past meals.", "غيّر اليوم لترى وجبات سابقة أو تعدّلها."],
@@ -37,8 +36,7 @@
       { sel: ["#exList .ex-card [data-rest]", "#exList .ex-card"], text: "planRest" }
     ],
     coach: [
-      { sel: ["#coachBody form .coach-primary", "#coachBody form", "#coachBody .coach-primary"], text: "coachForm" },
-      { sel: ["#coachFab"], text: "coachFab" }
+      { sel: ["#coachBody form .coach-primary", "#coachBody form", "#coachBody .coach-primary"], text: "coachForm" }
     ],
     food: [
       { sel: ["#foodTotalsHost > *", "#foodTotalsHost"], text: "foodTotals" },
