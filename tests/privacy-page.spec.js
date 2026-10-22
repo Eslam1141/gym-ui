@@ -218,8 +218,8 @@ test("More > Privacy & data: policy row, #export link and #withdraw links, same 
   expect(await href(pol)).toBe("/privacy");
   expect(await pol.getAttribute("target")).toBeNull();
   const links = page.locator("#morePrivacy a.pv-link");
-  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("href")))).toEqual(["/privacy#export", "/privacy#withdraw", "/privacy#withdraw"]);
-  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("target")))).toEqual([null, null, null]);
+  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("href")))).toEqual(["/privacy#export", "/privacy#withdraw", "/privacy#withdraw", "/privacy#first-run"]);
+  expect(await links.evaluateAll((as) => as.map((a) => a.getAttribute("target")))).toEqual([null, null, null, null]);
   // the delete sheet keeps its /delete-account details link
   await page.evaluate(() => document.getElementById("pvDelete").click());
   expect(await href(page.locator(".pv-retain a"))).toBe("/delete-account");
