@@ -35,8 +35,8 @@ const EXPECTED_REGION_GAPS = {
   "all home tools": ["chest_lower"],
   gym: ["chest_lower"]
 };
-// New no-equipment moves (2026-10-22). Their video is empty on purpose until the owner supplies one.
-const NO_VIDEO_YET = ["nb_towelcurl", "nb_diamond", "nb_hinge1", "nb_slidecurl"];
+// New no-equipment moves (2026-10-22) and their owner-approved clips (2026-10-22).
+const NEW_NB_CLIPS = { nb_towelcurl: "leaEyx33mHw", nb_diamond: "PPTj-MW2tcs", nb_hinge1: "JQZqPsmeesc", nb_slidecurl: "cjtsLDniFpk" };
 
 function stats(plan) {
   const regionDays = {}, groupSets = {}, groupDay = {};
@@ -76,8 +76,8 @@ test("exercise objects match the shape app.js renders", () => {
   const p = S.buildPlan({ days: 6, where: "gym", sex: "male" });
   p.days.forEach((d) => d.exercises.forEach((e) => {
     expect(Object.keys(e).filter((k) => !["shape2"].includes(k)).sort()).toEqual(["en", "id", "rest", "reps", "sets", "shape", "tier", "tools", "vid"].sort());
-    if (!NO_VIDEO_YET.includes(e.id)) expect(e.vid, e.id).toBeTruthy();
-    else expect(e.vid, e.id).toBe("");
+    expect(e.vid, e.id).toBeTruthy();
+    if (NEW_NB_CLIPS[e.id]) expect(e.vid, e.id).toBe(NEW_NB_CLIPS[e.id]);
     expect(["easy", "medium", "hard"]).toContain(e.tier);
   }));
 });
@@ -196,11 +196,11 @@ test("bodyweight only: a full split, no empty day, gaps listed", () => {
   expect(more.gaps.length).toBeLessThan(base.gaps.length);
 });
 
-test("new no-equipment moves: in app.js with EN + AR names, no video, tools none", () => {
-  NO_VIDEO_YET.forEach((id) => {
+test("new no-equipment moves: in app.js with EN + AR names, approved clip, tools none", () => {
+  Object.keys(NEW_NB_CLIPS).forEach((id) => {
     const m = S.library[id];
     expect(m && m.tools, id).toEqual(["none"]);
-    expect(m.vid, id).toBe("");
+    expect(m.vid, id).toBe(NEW_NB_CLIPS[id]);
     const ar = appSrc.match(new RegExp(`"${m.en}":"([^"]+)"`));
     expect(ar && /[؀-ۿ]/.test(ar[1]), `${id} has no Arabic name in AR_EX`).toBe(true);
   });
