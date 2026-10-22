@@ -518,3 +518,119 @@ test("data stays fresh: the screen repaints when a refresh brings new values", a
   await expect(page.locator(".wt-c-n")).toHaveText("9,500");
   await context.close();
 });
+
+test.describe("goals", () => {
+  const edit = (page) => page.locator("#wtEditGoals");
+  const dlg = (page) => page.locator("#watchSheet [role=dialog]");
+  const field = (page, k) => page.locator("#wtGoal-" + k);
+
+  test("web explainer and non-ring states have no goals control", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: false });
+    await goWatch(page);
+    await expect(page.locator("#wtWebCard")).toBeVisible();
+    await expect(edit(page)).toHaveCount(0);
+    await context.close();
+  });
+
+  test("editing goals changes the ring percentages, persists across reload, and Reset restores defaults", async ({ browser }) => {
+    const { context, page } = await connected(browser);
+    await settled(page);
+    await expect(leg(page, "steps")).toContainText("103% of 8,000");
+    await expect(leg(page, "kcal")).toContainText("82% of 500 kcal");
+    await expect(leg(page, "sleep")).toContainText("88% of 8 h");
+    await edit(page).click();
+    await expect(dlg(page)).toBeFocused();
+    await field(page, "steps").fill("16500");
+    await field(page, "kcal").fill("1000");
+    await page.getByRole("button", { name: /Raise: Sleep a night/ }).click();   // 8 -> 8.5
+    await expect(field(page, "sleepMin")).toHaveValue("8.5");
+    await page.click("#wtGo");
+    await expect(dlg(page)).toHaveCount(0);
+    await expect(edit(page)).toBeFocused();
+    await page.clock.runFor(1500);
+    await expect(leg(page, "steps")).toContainText("50% of 16,500");
+    await expect(leg(page, "kcal")).toContainText("41% of 1,000 kcal");
+    await expect(leg(page, "sleep")).toContainText("82% of 8.5 h");
+    expect(JSON.parse(await lsGet(page, "etqwatch_goals"))).toEqual({ steps: 16500, kcal: 1000, sleepMin: 510 });
+
+    await page.reload();
+    await stubHealth(page, { health: { data: WEEK_DATA } });
+    await goWatch(page);
+    await settled(page);
+    await expect(leg(page, "steps")).toContainText("50% of 16,500");
+
+    await edit(page).click();
+    await expect(field(page, "steps")).toHaveValue("16500");
+    await page.click("#wtGoalsReset");
+    await expect(dlg(page)).toHaveCount(0);
+    await page.clock.runFor(1500);
+    await expect(leg(page, "steps")).toContainText("103% of 8,000");
+    await expect(leg(page, "sleep")).toContainText("88% of 8 h");
+    expect(await lsGet(page, "etqwatch_goals")).toBeNull();
+    await context.close();
+  });
+
+  test("out-of-range input clamps and snaps; bad stored data falls back to defaults", async ({ browser }) => {
+    const { context, page } = await connected(browser);
+    await settled(page);
+    await edit(page).click();
+    await field(page, "steps").fill("999999");
+    await field(page, "kcal").fill("3");
+    await field(page, "sleepMin").fill("20");
+    await page.click("#wtGo");
+    expect(JSON.parse(await lsGet(page, "etqwatch_goals"))).toEqual({ steps: 50000, kcal: 100, sleepMin: 720 });
+    await page.clock.runFor(1500);
+    await edit(page).click();
+    await field(page, "steps").fill("1234");
+    await field(page, "steps").blur();
+    await expect(field(page, "steps")).toHaveValue("1000");
+    await field(page, "sleepMin").fill("1");
+    await field(page, "sleepMin").blur();
+    await expect(field(page, "sleepMin")).toHaveValue("4");
+    await page.click("#wtLater");
+    await page.evaluate(() => localStorage.setItem("etqwatch_goals", "{not json"));
+    await page.reload();
+    await stubHealth(page, { health: { data: WEEK_DATA } });
+    await goWatch(page);
+    await settled(page);
+    await expect(leg(page, "steps")).toContainText("of 8,000");
+    await context.close();
+  });
+
+  test("dialog: Escape closes and returns focus, Tab stays inside, Cancel discards", async ({ browser }) => {
+    const { context, page } = await connected(browser);
+    await settled(page);
+    await edit(page).click();
+    await field(page, "steps").fill("20000");
+    await page.keyboard.press("Escape");
+    await expect(dlg(page)).toHaveCount(0);
+    await expect(edit(page)).toBeFocused();
+    expect(await lsGet(page, "etqwatch_goals")).toBeNull();
+    await edit(page).click();
+    for (let i = 0; i < 14; i++) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => !!document.activeElement.closest("#watchSheet"))).toBe(true);
+    }
+    await expect(dlg(page)).toHaveAttribute("aria-modal", "true");
+    await expect(page.locator('label[for="wtGoal-steps"]')).toHaveText("Steps a day");
+    await context.close();
+  });
+
+  for (const theme of ["light", "dark"]) {
+    test(`Arabic / RTL, ${theme}: strings, no overflow, goals applied`, async ({ browser }) => {
+      const { context, page } = await connected(browser, { lang: "ar", theme });
+      await settled(page);
+      await expect(edit(page)).toHaveText("تعديل الأهداف");
+      await edit(page).click();
+      await expect(dlg(page)).toContainText("الأهداف اليومية");
+      expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
+      const fits = await dlg(page).evaluate((n) => n.scrollWidth <= n.clientWidth + 1 && [...n.querySelectorAll(".wt-step, .wt-gf-in")].every((b) => b.offsetHeight >= 44));
+      expect(fits).toBe(true);
+      await field(page, "steps").fill("4000");
+      await page.click("#wtGo");
+      await page.clock.runFor(1500);
+      await expect(leg(page, "steps")).toContainText("205% من 4,000");
+      await context.close();
+    });
+  }
+});
