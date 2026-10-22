@@ -406,5 +406,20 @@
     }
   }
 
-  window.GymCheckin = { renderCard: renderCard };
+  // Deep link (notifications.js): opens the check-in form on the Coach tab.
+  // Resolves "ok", or why it can't: "done" (this week's is submitted),
+  // "baseline" (no plan yet) or "unavailable" (signed out / offline).
+  function open() {
+    return fetchStatus().then(function (status) {
+      if (!status) return "unavailable";
+      if (status.submitted) return "done";
+      if (!status.latest && !hasLocalBaseline()) return "baseline";
+      if (window.GymUI) GymUI.navigate("coach");
+      // navigate() starts coach.js's own refresh; mount the form after it.
+      setTimeout(openForm, 0);
+      return "ok";
+    });
+  }
+
+  window.GymCheckin = { renderCard: renderCard, open: open };
 })();

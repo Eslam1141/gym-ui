@@ -78,15 +78,13 @@ for (const lang of ["en", "ar"]) {
 test("sign-in methods tile counts linked accounts toward both providers", async ({ browser }) => {
   const { context, page } = await openAdmin(browser);
   const rows = page.locator(".adm-t-prov .adm-bars > div");
-  await expect(rows).toHaveCount(4);
-  await expect(rows.nth(0)).toContainText("Total users");
-  await expect(rows.nth(0)).toContainText("1,234 · 100%");
-  await expect(rows.nth(1)).toContainText("Can use Google");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText("E-mail");
+  await expect(rows.nth(0)).toContainText("334 · 27%");
+  await expect(rows.nth(1)).toContainText("Google");
   await expect(rows.nth(1)).toContainText("934 · 76%");
-  await expect(rows.nth(2)).toContainText("Can use email");
-  await expect(rows.nth(2)).toContainText("334 · 27%");
-  await expect(rows.nth(3)).toContainText("Both linked");
-  await expect(rows.nth(3)).toContainText("34 · 3%");
+  await expect(rows.nth(2)).toContainText("Both");
+  await expect(rows.nth(2)).toContainText("34 · 3%");
   const w = await rows.nth(1).locator("i").evaluate((i) => i.style.width);
   expect(w).toBe("76%");
   await context.close();
@@ -95,7 +93,7 @@ test("sign-in methods tile counts linked accounts toward both providers", async 
 test("tiles carry data-driven deltas and the Arabic page renders RTL", async ({ browser }) => {
   const { context, page } = await openAdmin(browser, { lang: "ar" });
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.locator(".adm-t-prov")).toContainText("يمكنهم استخدام Google");
+  await expect(page.locator(".adm-t-prov")).toContainText("كلاهما");
   await expect(page.locator(".adm-delta").first()).toContainText("هذا الأسبوع");
   expect(await gridIsGapFree(page)).toBe(true);
   await context.close();

@@ -20,7 +20,8 @@
      closeup(id, {sex, secondary}) cropped SVG string with `id` lit (+ secondary
                                    in a lighter tint when it is on the same view)
      group(name, {sex})           cropped SVG string with every region of the group lit
-     figure(view, {sex, lit})     the whole figure for one view
+     figure(view, {sex, lit, levels})  the whole figure for one view; `levels` is
+                                   {id: 1|2}: 2 lit like `lit`, 1 in the lighter tint
    Lit regions are <g class="ma-hi|ma-hi2" data-region="id">; the rest are ma-m.
 */
 (function () {
@@ -445,6 +446,8 @@
     if (!DEF[view]) return "";
     var lit = {};
     ((o && o.lit) || []).forEach(function (r) { if (viewOf(r) === view) lit[r] = "ma-hi"; });
+    var lv = (o && o.levels) || {};
+    Object.keys(lv).forEach(function (r) { if (lv[r] && viewOf(r) === view) lit[r] = lv[r] > 1 ? "ma-hi" : "ma-hi2"; });
     return render(view, sexOf(o), lit, null);
   }
 

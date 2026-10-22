@@ -3,12 +3,12 @@
 // Mirrors data.preview in gym-be/internal/plans/plans.seed.json.
 const DAYS_PREVIEW = [
   { id:"preview", label:"Full-Body Starter", muscles:"Full body", exercises:[
-    {id:"pv_legpress", en:"Leg Press", sets:3, reps:"10-12", rest:120, vid:"nDh_BlnLCGc", shape:"quads", tier:"easy"},
-    {id:"pv_dbbench", en:"Dumbbell Bench Press", sets:3, reps:"8-12", rest:90, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium"},
-    {id:"pv_cablerow", en:"Seated Cable Row", sets:3, reps:"10-12", rest:90, vid:"8QuMq1GMMng", shape:"back_mid", tier:"easy"},
-    {id:"pv_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
-    {id:"pv_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy"},
-    {id:"pv_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:45, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
+    {id:"pv_legpress", en:"Leg Press", sets:3, reps:"10-12", rest:120, vid:"nDh_BlnLCGc", shape:"quads", tier:"easy", tools:["machine"]},
+    {id:"pv_dbbench", en:"Dumbbell Bench Press", sets:3, reps:"8-12", rest:90, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"pv_cablerow", en:"Seated Cable Row", sets:3, reps:"10-12", rest:90, vid:"8QuMq1GMMng", shape:"back_mid", tier:"easy", tools:["cable"]},
+    {id:"pv_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"pv_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy", tools:["machine"]},
+    {id:"pv_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:45, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium", tools:["none"]},
   ]},
 ];
 // 4-day split on a 7-day week (2026-10-14): Upper, Lower, rest, Back + Biceps +
@@ -21,38 +21,38 @@ const DAYS_PREVIEW = [
 // Biceps + Calves, then Chest + Triceps) share no movement.
 const DAYS_MALE = [
   { id:"m_upper", label:"Upper", muscles:"Chest, Back, Shoulders", exercises:[
-    {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard"},
-    {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
-    {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
-    {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium"},
-    {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
+    {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard", tools:["barbell", "bench"]},
+    {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium", tools:["cable"]},
+    {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium", tools:["machine"]},
+    {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy", tools:["dumbbell"]},
+    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy", tools:["band"]},
   ]},
   { id:"m_lower", label:"Lower", muscles:"Quads, Hamstrings, Glutes, Abs", exercises:[
-    {id:"mla_squat", en:"Barbell Back Squat", sets:4, reps:"6-8", rest:150, vid:"tNUq6b5t11Q", shape:"quads", tier:"hard"},
-    {id:"mla_rdl", en:"Barbell Romanian Deadlift", sets:3, reps:"8-10", rest:90, vid:"zdip4iexlxg", shape:"hamstrings", shape2:"back_lower", tier:"hard"},
-    {id:"bbb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:75, vid:"uODWo4YqbT8", shape:"quads", tier:"hard"},
-    {id:"mla_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy"},
-    {id:"mlb_legext", en:"Leg Extension", sets:3, reps:"15-20", rest:60, vid:"iQ92TuvBqRo", shape:"quads", tier:"easy"},
-    {id:"mla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"mla_core", en:"Hanging Leg Raise (core)", sets:3, reps:"10-15", rest:45, vid:"0wSUjj5j1xo", shape:"core_lower", tier:"hard"},
+    {id:"mla_squat", en:"Barbell Back Squat", sets:4, reps:"6-8", rest:150, vid:"tNUq6b5t11Q", shape:"quads", tier:"hard", tools:["barbell"]},
+    {id:"mla_rdl", en:"Barbell Romanian Deadlift", sets:3, reps:"8-10", rest:90, vid:"zdip4iexlxg", shape:"hamstrings", shape2:"back_lower", tier:"hard", tools:["barbell"]},
+    {id:"bbb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:75, vid:"uODWo4YqbT8", shape:"quads", tier:"hard", tools:["dumbbell", "bench"]},
+    {id:"mla_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy", tools:["machine"]},
+    {id:"mlb_legext", en:"Leg Extension", sets:3, reps:"15-20", rest:60, vid:"iQ92TuvBqRo", shape:"quads", tier:"easy", tools:["machine"]},
+    {id:"mla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy", tools:["dumbbell"]},
+    {id:"mla_core", en:"Hanging Leg Raise (core)", sets:3, reps:"10-15", rest:45, vid:"0wSUjj5j1xo", shape:"core_lower", tier:"hard", tools:["pullup_bar"]},
   ]},
   { id:"m_backbi", label:"Back + Biceps + Calves", muscles:"Back, Biceps, Calves", exercises:[
-    {id:"mub_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
-    {id:"bbb_tbar", en:"T-Bar Row", sets:4, reps:"8-10", rest:90, vid:"1iQSSqin3ro", shape:"back_mid", tier:"hard"},
-    {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"bba_inclcurl", en:"Incline Dumbbell Curl", sets:3, reps:"10-12", rest:45, vid:"XhIsIcjIbCw", shape:"biceps_long", tier:"medium"},
-    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
-    {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy"},
+    {id:"mub_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium", tools:["cable"]},
+    {id:"bbb_tbar", en:"T-Bar Row", sets:4, reps:"8-10", rest:90, vid:"1iQSSqin3ro", shape:"back_mid", tier:"hard", tools:["machine"]},
+    {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"bba_inclcurl", en:"Incline Dumbbell Curl", sets:3, reps:"10-12", rest:45, vid:"XhIsIcjIbCw", shape:"biceps_long", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium", tools:["dumbbell"]},
+    {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy", tools:["dumbbell", "bench"]},
   ]},
   { id:"m_chesttri", label:"Chest + Triceps", muscles:"Chest, Triceps", exercises:[
-    {id:"ctb_dbbench", en:"Dumbbell Bench Press", sets:4, reps:"8-10", rest:90, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium"},
-    {id:"mub_incline", en:"Incline Dumbbell Press", sets:3, reps:"8-10", rest:120, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium"},
-    {id:"cta_fly", en:"Cable Chest Fly", sets:3, reps:"12-15", rest:60, vid:"I-Ue34qLxc4", shape:"chest_mid", tier:"easy"},
-    {id:"ctb_pushup", en:"Push-ups", sets:3, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
-    {id:"cta_ohext", en:"Overhead Cable Triceps Extension", sets:3, reps:"10-15", rest:60, vid:"tPIWaCKWFF8", shape:"triceps_long", tier:"medium"},
-    {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy"},
+    {id:"ctb_dbbench", en:"Dumbbell Bench Press", sets:4, reps:"8-10", rest:90, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"mub_incline", en:"Incline Dumbbell Press", sets:3, reps:"8-10", rest:120, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"cta_fly", en:"Cable Chest Fly", sets:3, reps:"12-15", rest:60, vid:"I-Ue34qLxc4", shape:"chest_mid", tier:"easy", tools:["cable"]},
+    {id:"ctb_pushup", en:"Push-ups", sets:3, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy", tools:["none"]},
+    {id:"cta_ohext", en:"Overhead Cable Triceps Extension", sets:3, reps:"10-15", rest:60, vid:"tPIWaCKWFF8", shape:"triceps_long", tier:"medium", tools:["cable"]},
+    {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy", tools:["cable"]},
   ]},
 ];
 // The week the men's gym plan runs on, in order. A rest slot is a day to
@@ -76,132 +76,144 @@ const WEEK_MALE = ["m_upper", "m_lower", null, "m_backbi", "m_chesttri", null, n
 // translation already) — nothing new to translate or source video for.
 const LEGACY_MALE_DAYS = [
   { id:"m_upperA", label:"Upper A", muscles:"Chest, Back, Delts, Arms", exercises:[
-    {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard"},
-    {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
-    {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
-    {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium"},
-    {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"mua_curl", en:"Barbell Curl", sets:3, reps:"10-12", rest:60, vid:"ZQWL7omZh94", shape:"biceps_short", tier:"medium"},
-    {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy"},
+    {id:"mua_bench", en:"Barbell Bench Press", sets:4, reps:"6-8", rest:150, vid:"0cXAp6WhSj4", shape:"chest_mid", tier:"hard", tools:["barbell", "bench"]},
+    {id:"mua_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium", tools:["cable"]},
+    {id:"mua_ohp", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"10-12", rest:75, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"mua_row", en:"Chest-Supported Row", sets:4, reps:"8-10", rest:90, vid:"uhwcRYpkjvc", shape:"back_mid", tier:"medium", tools:["machine"]},
+    {id:"mua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy", tools:["dumbbell"]},
+    {id:"mua_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"mua_curl", en:"Barbell Curl", sets:3, reps:"10-12", rest:60, vid:"ZQWL7omZh94", shape:"biceps_short", tier:"medium", tools:["barbell"]},
+    {id:"mua_pushdown", en:"Cable Rope Pushdown", sets:3, reps:"12-15", rest:45, vid:"7OF77JMEXhM", shape:"triceps_lateral", tier:"easy", tools:["cable"]},
   ]},
   { id:"m_lowerA", label:"Lower A", muscles:"Quads, Glutes, Hamstrings, Abs", exercises:[
-    {id:"mla_squat", en:"Barbell Back Squat", sets:4, reps:"6-8", rest:150, vid:"tNUq6b5t11Q", shape:"quads", tier:"hard"},
-    {id:"mla_rdl", en:"Barbell Romanian Deadlift", sets:3, reps:"8-10", rest:90, vid:"zdip4iexlxg", shape:"hamstrings", shape2:"back_lower", tier:"hard"},
-    {id:"mla_legpress", en:"Leg Press", sets:3, reps:"10-12", rest:120, vid:"nDh_BlnLCGc", shape:"quads", tier:"easy"},
-    {id:"mla_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy"},
-    {id:"mla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"mla_core", en:"Hanging Leg Raise (core)", sets:3, reps:"10-15", rest:45, vid:"0wSUjj5j1xo", shape:"core_lower", tier:"hard"},
+    {id:"mla_squat", en:"Barbell Back Squat", sets:4, reps:"6-8", rest:150, vid:"tNUq6b5t11Q", shape:"quads", tier:"hard", tools:["barbell"]},
+    {id:"mla_rdl", en:"Barbell Romanian Deadlift", sets:3, reps:"8-10", rest:90, vid:"zdip4iexlxg", shape:"hamstrings", shape2:"back_lower", tier:"hard", tools:["barbell"]},
+    {id:"mla_legpress", en:"Leg Press", sets:3, reps:"10-12", rest:120, vid:"nDh_BlnLCGc", shape:"quads", tier:"easy", tools:["machine"]},
+    {id:"mla_legcurl", en:"Lying Leg Curl", sets:3, reps:"12-15", rest:60, vid:"bgfHeL6eR9Q", shape:"hamstrings", tier:"easy", tools:["machine"]},
+    {id:"mla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy", tools:["dumbbell"]},
+    {id:"mla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"mla_core", en:"Hanging Leg Raise (core)", sets:3, reps:"10-15", rest:45, vid:"0wSUjj5j1xo", shape:"core_lower", tier:"hard", tools:["pullup_bar"]},
   ]},
   { id:"m_upperB", label:"Upper B", muscles:"Chest, Back, Delts, Arms", exercises:[
-    {id:"mub_incline", en:"Incline Dumbbell Press", sets:3, reps:"8-10", rest:120, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium"},
-    {id:"mub_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium"},
-    {id:"mub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium"},
-    {id:"mub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy"},
-    {id:"mub_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
-    {id:"mub_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
+    {id:"mub_incline", en:"Incline Dumbbell Press", sets:3, reps:"8-10", rest:120, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"mub_pulldown", en:"Lat Pulldown / Pull-up", sets:4, reps:"8-10", rest:120, vid:"bNmvKpJSWKM", shape:"back_lats", tier:"medium", tools:["cable"]},
+    {id:"mub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium", tools:["dumbbell"]},
+    {id:"mub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy", tools:["dumbbell", "bench"]},
+    {id:"mub_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy", tools:["dumbbell"]},
+    {id:"mub_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"mub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium", tools:["dumbbell"]},
+    {id:"mub_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy", tools:["bench"]},
   ]},
   { id:"m_lowerB", label:"Lower B", muscles:"Quads, Hamstrings, Calves", exercises:[
-    {id:"mlb_hack", en:"Hack Squat", sets:4, reps:"8-10", rest:120, vid:"g9i05umL5vc", shape:"quads", tier:"medium"},
-    {id:"mlb_sldl", en:"Single-Leg Dumbbell RDL", sets:3, reps:"10-12/leg", rest:45, vid:"kQf5g0y0mO4", shape:"hamstrings", tier:"hard"},
-    {id:"mlb_legext", en:"Leg Extension", sets:3, reps:"15-20", rest:60, vid:"iQ92TuvBqRo", shape:"quads", tier:"easy"},
-    {id:"mlb_seatcurl", en:"Seated Leg Curl", sets:3, reps:"12-15", rest:60, vid:"xdbEG3xGLI8", shape:"hamstrings", tier:"easy"},
-    {id:"mlb_kickback", en:"Band Glute Kickback", sets:3, reps:"15-20/leg", rest:30, vid:"aw9WClmz5jw", shape:"glutes", tier:"easy"},
-    {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy"},
-    {id:"mlb_core", en:"Pallof Press (core)", sets:3, reps:"12/side", rest:45, vid:"P1H4IzD9rbQ", shape:"core_obliques", tier:"medium"},
+    {id:"mlb_hack", en:"Hack Squat", sets:4, reps:"8-10", rest:120, vid:"g9i05umL5vc", shape:"quads", tier:"medium", tools:["machine"]},
+    {id:"mlb_sldl", en:"Single-Leg Dumbbell RDL", sets:3, reps:"10-12/leg", rest:45, vid:"kQf5g0y0mO4", shape:"hamstrings", tier:"hard", tools:["dumbbell"]},
+    {id:"mlb_legext", en:"Leg Extension", sets:3, reps:"15-20", rest:60, vid:"iQ92TuvBqRo", shape:"quads", tier:"easy", tools:["machine"]},
+    {id:"mlb_seatcurl", en:"Seated Leg Curl", sets:3, reps:"12-15", rest:60, vid:"xdbEG3xGLI8", shape:"hamstrings", tier:"easy", tools:["machine"]},
+    {id:"mlb_kickback", en:"Band Glute Kickback", sets:3, reps:"15-20/leg", rest:30, vid:"aw9WClmz5jw", shape:"glutes", tier:"easy", tools:["band"]},
+    {id:"mlb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy", tools:["dumbbell", "bench"]},
+    {id:"mlb_core", en:"Pallof Press (core)", sets:3, reps:"12/side", rest:45, vid:"P1H4IzD9rbQ", shape:"core_obliques", tier:"medium", tools:["cable"]},
   ]},
 ];
 
 const DAYS_FEMALE = [
   { id:"f_lowerA", label:"Lower A", muscles:"Glutes & Quads", exercises:[
-    {id:"fla_goblet", en:"Goblet Squat", sets:3, reps:"12-15", rest:60, vid:"0OWbS1WiUGU", shape:"quads", tier:"easy"},
-    {id:"fla_rdl", en:"Dumbbell Romanian Deadlift", sets:3, reps:"12-15", rest:60, vid:"hu3jRvTc_po", shape:"hamstrings", tier:"medium"},
-    {id:"fla_lunge", en:"Reverse Lunge (Dumbbell)", sets:3, reps:"10-12/leg", rest:60, vid:"YXL_f378hLM", shape:"quads", tier:"medium"},
-    {id:"fla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"fla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"fla_deadbug", en:"Dead Bug (core)", sets:3, reps:"10-12/side", rest:30, vid:"XcYtWYMz39w", shape:"core_lower", tier:"easy"},
+    {id:"fla_goblet", en:"Goblet Squat", sets:3, reps:"12-15", rest:60, vid:"0OWbS1WiUGU", shape:"quads", tier:"easy", tools:["dumbbell"]},
+    {id:"fla_rdl", en:"Dumbbell Romanian Deadlift", sets:3, reps:"12-15", rest:60, vid:"hu3jRvTc_po", shape:"hamstrings", tier:"medium", tools:["dumbbell"]},
+    {id:"fla_lunge", en:"Reverse Lunge (Dumbbell)", sets:3, reps:"10-12/leg", rest:60, vid:"YXL_f378hLM", shape:"quads", tier:"medium", tools:["dumbbell"]},
+    {id:"fla_bridge", en:"Dumbbell Glute Bridge", sets:3, reps:"15-20", rest:45, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy", tools:["dumbbell"]},
+    {id:"fla_calf", en:"Standing Calf Raise", sets:3, reps:"15-20", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"fla_deadbug", en:"Dead Bug (core)", sets:3, reps:"10-12/side", rest:30, vid:"XcYtWYMz39w", shape:"core_lower", tier:"easy", tools:["none"]},
   ]},
   { id:"f_upperA", label:"Upper A", muscles:"Push focus", exercises:[
-    {id:"fua_bench", en:"Dumbbell Bench Press", sets:3, reps:"10-12", rest:60, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium"},
-    {id:"fua_row", en:"One-Arm Dumbbell Row", sets:3, reps:"12-15/arm", rest:45, vid:"H8jf3DwlIlo", shape:"back_mid", tier:"medium"},
-    {id:"fua_press", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"12-15", rest:45, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium"},
-    {id:"fua_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"fua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy"},
-    {id:"fua_arms", en:"Biceps Curl + Triceps Extension (superset)", sets:3, reps:"12-15", rest:45, vid:"8UIbEovL-xU", shape:"biceps_short", shape2:"triceps_long", tier:"medium"},
+    {id:"fua_bench", en:"Dumbbell Bench Press", sets:3, reps:"10-12", rest:60, vid:"Gf65Yy0-wGI", shape:"chest_mid", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"fua_row", en:"One-Arm Dumbbell Row", sets:3, reps:"12-15/arm", rest:45, vid:"H8jf3DwlIlo", shape:"back_mid", tier:"medium", tools:["dumbbell"]},
+    {id:"fua_press", en:"Seated Dumbbell Shoulder Press", sets:3, reps:"12-15", rest:45, vid:"k6tzKisR3NY", shape:"shoulder_front", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"fua_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"fua_lateral", en:"Dumbbell Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"Kl3LEzQ5Zqs", shape:"shoulder_side", tier:"easy", tools:["dumbbell"]},
+    {id:"fua_arms", en:"Biceps Curl + Triceps Extension (superset)", sets:3, reps:"12-15", rest:45, vid:"8UIbEovL-xU", shape:"biceps_short", shape2:"triceps_long", tier:"medium", tools:["dumbbell"]},
   ]},
   { id:"f_lowerB", label:"Lower B", muscles:"Hamstrings & Glutes", exercises:[
-    {id:"flb_sumo", en:"Dumbbell Sumo Squat", sets:3, reps:"12-15", rest:60, vid:"bRCjBCtBGIo", shape:"quads", shape2:"glutes", tier:"medium"},
-    {id:"flb_sldl", en:"Single-Leg Dumbbell RDL", sets:3, reps:"10-12/leg", rest:45, vid:"kQf5g0y0mO4", shape:"hamstrings", tier:"hard"},
-    {id:"flb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:60, vid:"uODWo4YqbT8", shape:"quads", tier:"hard"},
-    {id:"flb_kickback", en:"Band Glute Kickback", sets:3, reps:"15-20/leg", rest:30, vid:"aw9WClmz5jw", shape:"glutes", tier:"easy"},
-    {id:"flb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy"},
-    {id:"flb_legraise", en:"Lying Leg Raise (core)", sets:3, reps:"12-15", rest:30, vid:"jrSWj0huh5o", shape:"core_lower", tier:"medium"},
+    {id:"flb_sumo", en:"Dumbbell Sumo Squat", sets:3, reps:"12-15", rest:60, vid:"bRCjBCtBGIo", shape:"quads", shape2:"glutes", tier:"medium", tools:["dumbbell"]},
+    {id:"flb_sldl", en:"Single-Leg Dumbbell RDL", sets:3, reps:"10-12/leg", rest:45, vid:"kQf5g0y0mO4", shape:"hamstrings", tier:"hard", tools:["dumbbell"]},
+    {id:"flb_bss", en:"Bulgarian Split Squat", sets:3, reps:"10-12/leg", rest:60, vid:"uODWo4YqbT8", shape:"quads", tier:"hard", tools:["dumbbell", "bench"]},
+    {id:"flb_kickback", en:"Band Glute Kickback", sets:3, reps:"15-20/leg", rest:30, vid:"aw9WClmz5jw", shape:"glutes", tier:"easy", tools:["band"]},
+    {id:"flb_calf", en:"Seated Calf Raise (Dumbbell)", sets:3, reps:"15-20", rest:30, vid:"NrHJPauB01I", shape:"calves", tier:"easy", tools:["dumbbell", "bench"]},
+    {id:"flb_legraise", en:"Lying Leg Raise (core)", sets:3, reps:"12-15", rest:30, vid:"jrSWj0huh5o", shape:"core_lower", tier:"medium", tools:["none"]},
   ]},
   { id:"f_upperB", label:"Upper B", muscles:"Pull focus & core", exercises:[
-    {id:"fub_incline", en:"Incline Dumbbell Press", sets:3, reps:"12-15", rest:60, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium"},
-    {id:"fub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy"},
-    {id:"fub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium"},
-    {id:"fub_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"fub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium"},
-    {id:"fub_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
+    {id:"fub_incline", en:"Incline Dumbbell Press", sets:3, reps:"12-15", rest:60, vid:"8fXfwG4ftaQ", shape:"chest_upper", tier:"medium", tools:["dumbbell", "bench"]},
+    {id:"fub_row", en:"Chest-Supported Dumbbell Row", sets:3, reps:"12-15", rest:45, vid:"09wri23R4SU", shape:"back_mid", tier:"easy", tools:["dumbbell", "bench"]},
+    {id:"fub_arnold", en:"Arnold Press", sets:3, reps:"12-15", rest:45, vid:"AjB-UXErljM", shape:"shoulder_front", tier:"medium", tools:["dumbbell"]},
+    {id:"fub_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"fub_hammer", en:"Hammer Curl", sets:3, reps:"12-15", rest:30, vid:"K9LiwcGuqA0", shape:"biceps_long", tier:"medium", tools:["dumbbell"]},
+    {id:"fub_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium", tools:["none"]},
   ]},
 ];
 
 // ---- Military calisthenics: 3 days, no equipment (bands + a sturdy table). Shared moves, scaled reps. ----
 const DAYS_MALE_CAL = [
   { id:"mc_push", label:"Push", muscles:"Push & Core", exercises:[
-    {id:"mcp_pushup", en:"Push-ups", sets:4, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
-    {id:"mcp_pike", en:"Pike Push-ups", sets:3, reps:"8-12", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
-    {id:"mcp_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
-    {id:"mcp_plank", en:"Plank (core)", sets:3, reps:"45-60s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
-    {id:"mcp_hollow", en:"Hollow Body Hold", sets:3, reps:"25-40s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium"},
-    {id:"mcp_mtn", en:"Mountain Climbers", sets:4, reps:"40s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium"},
+    {id:"mcp_pushup", en:"Push-ups", sets:4, reps:"12-20", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy", tools:["none"]},
+    {id:"mcp_pike", en:"Pike Push-ups", sets:3, reps:"8-12", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium", tools:["none"]},
+    {id:"mcp_dips", en:"Bench Dips", sets:3, reps:"12-18", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy", tools:["bench"]},
+    {id:"mcp_plank", en:"Plank (core)", sets:3, reps:"45-60s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium", tools:["none"]},
+    {id:"mcp_hollow", en:"Hollow Body Hold", sets:3, reps:"25-40s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium", tools:["none"]},
+    {id:"mcp_mtn", en:"Mountain Climbers", sets:4, reps:"40s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium", tools:["none"]},
   ]},
   { id:"mc_legs", label:"Legs", muscles:"Legs & Cardio", exercises:[
-    {id:"mcl_squat", en:"Bodyweight Squats", sets:4, reps:"25-35", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy"},
-    {id:"mcl_lunge", en:"Reverse Lunges", sets:3, reps:"12-16/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy"},
-    {id:"mcl_bridge", en:"Glute Bridge", sets:3, reps:"20-25", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"mcl_jump", en:"Squat Jumps", sets:4, reps:"12-15", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard"},
-    {id:"mcl_calf", en:"Standing Calf Raise", sets:3, reps:"25-30", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"mcl_burpee", en:"Burpees", sets:5, reps:"10-15", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard"},
+    {id:"mcl_squat", en:"Bodyweight Squats", sets:4, reps:"25-35", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy", tools:["none"]},
+    {id:"mcl_lunge", en:"Reverse Lunges", sets:3, reps:"12-16/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy", tools:["none"]},
+    {id:"mcl_bridge", en:"Glute Bridge", sets:3, reps:"20-25", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy", tools:["none"]},
+    {id:"mcl_jump", en:"Squat Jumps", sets:4, reps:"12-15", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard", tools:["none"]},
+    {id:"mcl_calf", en:"Standing Calf Raise", sets:3, reps:"25-30", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"mcl_burpee", en:"Burpees", sets:5, reps:"10-15", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard", tools:["none"]},
   ]},
   { id:"mc_pull", label:"Pull", muscles:"Pull & Total Body", exercises:[
-    {id:"mcx_row", en:"Inverted Row (under a table)", sets:4, reps:"10-15", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
-    {id:"mcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"20-25", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"mcx_superman", en:"Superman", sets:3, reps:"15-20", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
-    {id:"mcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"mcx_flutter", en:"Flutter Kicks", sets:4, reps:"40s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy"},
-    {id:"mcx_bear", en:"Bear Crawl", sets:3, reps:"30s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium"},
+    {id:"mcx_row", en:"Inverted Row (under a table)", sets:4, reps:"10-15", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium", tools:["table"]},
+    {id:"mcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"20-25", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"mcx_superman", en:"Superman", sets:3, reps:"15-20", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy", tools:["none"]},
+    {id:"mcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"mcx_flutter", en:"Flutter Kicks", sets:4, reps:"40s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy", tools:["none"]},
+    {id:"mcx_bear", en:"Bear Crawl", sets:3, reps:"30s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium", tools:["none"]},
   ]},
 ];
 
 const DAYS_FEMALE_CAL = [
   { id:"fc_push", label:"Push", muscles:"Push & Core", exercises:[
-    {id:"fcp_pushup", en:"Push-ups", sets:3, reps:"8-15", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy"},
-    {id:"fcp_pike", en:"Pike Push-ups", sets:3, reps:"6-10", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium"},
-    {id:"fcp_dips", en:"Bench Dips", sets:3, reps:"8-12", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy"},
-    {id:"fcp_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium"},
-    {id:"fcp_hollow", en:"Hollow Body Hold", sets:3, reps:"15-30s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium"},
-    {id:"fcp_mtn", en:"Mountain Climbers", sets:3, reps:"30s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium"},
+    {id:"fcp_pushup", en:"Push-ups", sets:3, reps:"8-15", rest:60, vid:"wD1M-f69Yy8", shape:"chest_mid", tier:"easy", tools:["none"]},
+    {id:"fcp_pike", en:"Pike Push-ups", sets:3, reps:"6-10", rest:60, vid:"XckEEwa1BPI", shape:"shoulder_front", tier:"medium", tools:["none"]},
+    {id:"fcp_dips", en:"Bench Dips", sets:3, reps:"8-12", rest:45, vid:"ekgvqS_4Ee4", shape:"triceps_lateral", tier:"easy", tools:["bench"]},
+    {id:"fcp_plank", en:"Plank (core)", sets:3, reps:"30-45s", rest:30, vid:"fWW5d1ZFhk4", shape:"core_upper", tier:"medium", tools:["none"]},
+    {id:"fcp_hollow", en:"Hollow Body Hold", sets:3, reps:"15-30s", rest:30, vid:"Xk-JcNj6lfY", shape:"core_lower", shape2:"core_upper", tier:"medium", tools:["none"]},
+    {id:"fcp_mtn", en:"Mountain Climbers", sets:3, reps:"30s", rest:30, vid:"fpmWW6iXfes", shape:"core_lower", shape2:"shoulder_front", tier:"medium", tools:["none"]},
   ]},
   { id:"fc_legs", label:"Legs", muscles:"Legs & Cardio", exercises:[
-    {id:"fcl_squat", en:"Bodyweight Squats", sets:3, reps:"20-30", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy"},
-    {id:"fcl_lunge", en:"Reverse Lunges", sets:3, reps:"10-14/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy"},
-    {id:"fcl_bridge", en:"Glute Bridge", sets:3, reps:"15-20", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy"},
-    {id:"fcl_jump", en:"Squat Jumps", sets:3, reps:"8-12", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard"},
-    {id:"fcl_calf", en:"Standing Calf Raise", sets:3, reps:"20-25", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy"},
-    {id:"fcl_burpee", en:"Burpees", sets:3, reps:"6-10", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard"},
+    {id:"fcl_squat", en:"Bodyweight Squats", sets:3, reps:"20-30", rest:45, vid:"3fl7uYmiMVw", shape:"quads", tier:"easy", tools:["none"]},
+    {id:"fcl_lunge", en:"Reverse Lunges", sets:3, reps:"10-14/leg", rest:45, vid:"ufjvjxrGyFM", shape:"quads", tier:"easy", tools:["none"]},
+    {id:"fcl_bridge", en:"Glute Bridge", sets:3, reps:"15-20", rest:30, vid:"12m6GW59LvQ", shape:"glutes", tier:"easy", tools:["none"]},
+    {id:"fcl_jump", en:"Squat Jumps", sets:3, reps:"8-12", rest:45, vid:"dX9bNPQeQa8", shape:"quads", shape2:"glutes", tier:"hard", tools:["none"]},
+    {id:"fcl_calf", en:"Standing Calf Raise", sets:3, reps:"20-25", rest:30, vid:"B30JglFGx8Y", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"fcl_burpee", en:"Burpees", sets:3, reps:"6-10", rest:60, vid:"DNHWxCUp8MY", shape:"quads", shape2:"chest_mid", tier:"hard", tools:["none"]},
   ]},
   { id:"fc_pull", label:"Pull", muscles:"Pull & Total Body", exercises:[
-    {id:"fcx_row", en:"Inverted Row (under a table)", sets:3, reps:"6-12", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium"},
-    {id:"fcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy"},
-    {id:"fcx_superman", en:"Superman", sets:3, reps:"12-15", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy"},
-    {id:"fcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy"},
-    {id:"fcx_flutter", en:"Flutter Kicks", sets:3, reps:"30s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy"},
-    {id:"fcx_bear", en:"Bear Crawl", sets:3, reps:"20s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium"},
+    {id:"fcx_row", en:"Inverted Row (under a table)", sets:3, reps:"6-12", rest:60, vid:"VO-pt_XgFho", shape:"back_lats", tier:"medium", tools:["table"]},
+    {id:"fcx_pullapart", en:"Band Pull-Apart", sets:3, reps:"15-20", rest:30, vid:"qi2y-eI_kuI", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"fcx_superman", en:"Superman", sets:3, reps:"12-15", rest:30, vid:"uexOGyxLr7E", shape:"back_lower", tier:"easy", tools:["none"]},
+    {id:"fcx_facepull", en:"Band Face Pull", sets:3, reps:"15-20", rest:30, vid:"JBpj9-3tP0c", shape:"shoulder_rear", tier:"easy", tools:["band"]},
+    {id:"fcx_flutter", en:"Flutter Kicks", sets:3, reps:"30s", rest:30, vid:"pRZhSdw5Tqg", shape:"core_lower", shape2:"quads", tier:"easy", tools:["none"]},
+    {id:"fcx_bear", en:"Bear Crawl", sets:3, reps:"20s", rest:45, vid:"-9L3rTrYo4Q", shape:"core_obliques", shape2:"shoulder_front", tier:"medium", tools:["none"]},
+  ]},
+];
+
+// ---- No-equipment moves for biceps, triceps and hamstrings (added 2026-10-22 for the training splits).
+// Library-only: no plan lists this "day". There is no video yet (vid is empty on purpose, the card
+// shows "Video coming soon" until the owner supplies a clip); never put a guessed video id here. ----
+const DAYS_EXTRA = [
+  { id:"x_library", label:"Library", muscles:"No-equipment biceps, triceps, hamstrings", exercises:[
+    {id:"nb_towelcurl", en:"Towel Door Curl", sets:3, reps:"12-15", rest:45, vid:"", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["none"]},
+    {id:"nb_diamond", en:"Diamond Push-ups", sets:3, reps:"8-12", rest:60, vid:"", shape:"triceps_lateral", tier:"medium", tools:["none"]},
+    {id:"nb_hinge1", en:"Single-Leg Hip Hinge", sets:3, reps:"8-12/leg", rest:45, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
+    {id:"nb_slidecurl", en:"Towel Sliding Hamstring Curl", sets:3, reps:"8-12", rest:60, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
   ]},
 ];
 
@@ -252,7 +264,9 @@ const AR_EX = {
   "Push-ups":"تمرين الضغط","Pike Push-ups":"ضغط بايك (كتف)","Bench Dips":"غطس على مقعد (ترايسبس)","Hollow Body Hold":"ثبات الجسم المجوف",
   "Mountain Climbers":"تسلق الجبل","Bodyweight Squats":"سكوات بوزن الجسم","Reverse Lunges":"طعن خلفي","Glute Bridge":"جسر الألوية",
   "Squat Jumps":"قفز سكوات","Burpees":"بيربي","Inverted Row (under a table)":"تجديف مقلوب (تحت طاولة)","Superman":"سوبرمان (أسفل الظهر)",
-  "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب"
+  "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب",
+  "Towel Door Curl":"مرجحة بايسبس بمنشفة على الباب","Diamond Push-ups":"ضغط الماس (ترايسبس)","Single-Leg Hip Hinge":"ثني الورك برجل واحدة (خلفية الفخذ)",
+  "Towel Sliding Hamstring Curl":"ثني الرجلين بالانزلاق على منشفة (خلفية الفخذ)"
 };
 const AR_DAY = {"Push":"دفع","Pull":"سحب","Legs":"أرجل","Upper":"علوي","Lower":"سفلي","Lower A":"سفلي أ","Upper A":"علوي أ","Lower B":"سفلي ب","Upper B":"علوي ب","Full-Body Starter":"تمرين شامل للمبتدئين",
   "Back + Biceps + Calves":"ظهر + بايسبس + سمانة","Chest + Triceps":"صدر + ترايسبس","Chest & Triceps A":"صدر وترايسبس أ","Back & Biceps A":"ظهر وبايسبس أ","Chest & Triceps B":"صدر وترايسبس ب","Back & Biceps B":"ظهر وبايسبس ب"};
@@ -306,7 +320,7 @@ const EX_ALIASES = {
 };
 const EX_VID = (function(){
   const m = {};
-  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.vid) return;
       m[_shapeKey(ex.en)] = ex.vid;
@@ -344,7 +358,7 @@ const EX_GENERIC = {
 };
 const EX_SHAPE = (function(){
   const m = {};
-  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(set=>{
+  [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA].forEach(set=>{
     set.forEach(d=> d.exercises.forEach(ex=>{
       if(!ex.shape) return;
       const tags = ex.shape2 ? {shape:ex.shape, shape2:ex.shape2} : {shape:ex.shape};
@@ -368,7 +382,7 @@ const T = {
   appTitle:["Etqadem","اتقدم"],
   homeLink:["Etqadem home","الصفحة الرئيسية لاتقدم"],
   obTitle:["One step forward, every day.","اتقدم خطوة كل يوم"],
-  obSub:["Everything you need to train: a plan that fits you, an AI coach that understands your InBody, form videos, a rest timer, and progress that follows you from phone to laptop.","كل ما تحتاجه للتمرين: خطة تناسبك، مدرب ذكي يفهم نتيجة الـ InBody، فيديوهات للأداء الصحيح، مؤقت راحة، وتقدّمك يتابعك من الموبايل للابتوب."],
+  obSub:["Your plan, logging, rest timer, form videos and AI coach — in one app.","خطتك، تسجيل تمارينك، مؤقت الراحة، فيديوهات الأداء ومدرّب ذكي — في تطبيق واحد."],
   obStart:["Start Changing Yourself","ابدأ بتغيير نفسك"],
   obContinue:["Continue without signing in","المتابعة بدون تسجيل الدخول"],
   fxTagline:["Every rep counts.","كل تكرار يُحسب."],
@@ -380,7 +394,7 @@ const T = {
   obLegal:["By continuing, you agree to our <a href=\"/terms\">Terms</a> and <a href=\"/privacy\">Privacy Policy</a> and confirm you're 18 or older.","بالمتابعة، أنت توافق على <a href=\"/terms\">شروط الاستخدام</a> و<a href=\"/privacy\">سياسة الخصوصية</a> وتؤكد أن عمرك 18 عامًا أو أكثر."],
   resolvingSession:["Resolving your session…","جارٍ التحقق من جلستك…"],
   anonLockTitle:["Sign in to unlock everything","سجّل الدخول لفتح كل المزايا"],
-  anonLockBody:["The full multi-day plans, important notes, cross-device sync and the AI coach are free with a Google account.","الخطط الكاملة متعددة الأيام، الملاحظات المهمة، المزامنة بين الأجهزة، ومدرّب الذكاء الاصطناعي — كلها مجانية مع حساب جوجل."],
+  anonLockBody:["Full plans, sync across devices and the AI coach — free with an account.","الخطط الكاملة، المزامنة بين أجهزتك، والمدرّب الذكي — مجاناً مع حساب."],
   anonSignIn:["Sign in with Google","سجّل الدخول عبر جوجل"],
   male:["Male","رجالي"],
   female:["Female","نسائي"],
@@ -397,8 +411,8 @@ const T = {
   restTodayNone:["Today: not trained yet","اليوم: لم تتمرن بعد"],
   restTodayDone:["Today: trained","اليوم: تمرنت"],
   restTodayRest:["Today: rest day, streak kept","اليوم: يوم راحة، السلسلة محفوظة"],
-  restLeft:["{n} of 2 rest days left this week","متبقي {n} من يومَي راحة هذا الأسبوع"],
-  restHint:["A rest day keeps your streak but doesn't add to it.","يوم الراحة يحافظ على سلسلتك لكنه لا يضيف إليها."],
+  restLeft:["{n} of 2 rest days left","متبقي {n} من يومَي راحة"],
+  restHint:["keeps your streak","يحافظ على سلسلتك"],
   weekRest:["Rest","راحة"],
   weekDayN:["Day {n}","اليوم {n}"],
   restPanelBody:["Day {n} of 7. Recovery is when training turns into strength. Nothing to log today.","اليوم {n} من 7. في الراحة يتحول التمرين إلى قوة. لا شيء لتسجيله اليوم."],
@@ -434,6 +448,7 @@ const T = {
   hdrBlocked:["This account has been disabled. Contact support if you think this is a mistake.","تم تعطيل هذا الحساب. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."],
   hdrRemoved:["This account was removed. Contact support if you think this is a mistake.","تمت إزالة هذا الحساب. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ."],
   hdrSignOut:["Sign out","تسجيل الخروج"],
+  hdrTips:["Replay tips","إعادة عرض النصائح"],
   notifBell:["Notifications","الإشعارات"],
   notifBellUnread:["Notifications, {n} unread","الإشعارات، {n} غير مقروءة"],
   notifTitle:["Notifications","الإشعارات"],
@@ -444,6 +459,15 @@ const T = {
   notifReadAll:["Mark all as read","تحديد الكل كمقروء"],
   notifAllReadDone:["All notifications marked as read","تم تحديد كل الإشعارات كمقروءة"],
   notifAllReadErr:["Couldn't mark notifications as read. Try again.","تعذّر تحديد الإشعارات كمقروءة. حاول مرة أخرى."],
+  notifHintDay:["Log or rest","سجّل أو خذ راحة"],
+  notifHintPlan:["Open plan","افتح الخطة"],
+  notifHintCheckin:["Open check-in","افتح التسجيل الأسبوعي"],
+  notifHintCoach:["Open coach","افتح المدرب"],
+  notifHintFood:["Open food","افتح التغذية"],
+  notifHintProfile:["Open profile","افتح الملف الشخصي"],
+  notifCheckinDone:["This week's check-in is already done.","تم تسجيل هذا الأسبوع بالفعل."],
+  notifCheckinBaseline:["Build your first plan to unlock weekly check-ins.","أنشئ خطتك الأولى لتفتح التسجيل الأسبوعي."],
+  notifCheckinOff:["The check-in isn't available right now. Try again from Coach.","التسجيل الأسبوعي غير متاح الآن. حاول مرة أخرى من المدرب."],
   notifUnreadDot:["Unread","غير مقروء"],
   notifJustNow:["just now","الآن"],
   profTitle:["Profile","الملف الشخصي"],
@@ -477,7 +501,7 @@ const T = {
   profSignInBtn:["Sign in","تسجيل الدخول"],
   profLoadErr:["Couldn't load your profile. Try again later.","تعذّر تحميل ملفك الشخصي. حاول مرة أخرى لاحقاً."],
   profBack:["Back","رجوع"],
-  installTip:['<b>Add this app to your home screen:</b> open your browser menu and choose "Add to Home Screen" so it opens like a regular app.','<b>أضِف التطبيق إلى الشاشة الرئيسية:</b> افتح قائمة المتصفح واختر "إضافة إلى الشاشة الرئيسية" ليعمل كتطبيق عادي.'],
+  installTip:["<b>Install the app:</b> browser menu → Add to Home Screen.","<b>ثبّت التطبيق:</b> قائمة المتصفح ← إضافة إلى الشاشة الرئيسية."],
   workoutTimer:["Workout Timer","مؤقّت التمرين"],
   notStarted:["Not started yet","لم يبدأ بعد"],
   startWorkout:["Start Workout","ابدأ التمرين"],
@@ -487,13 +511,20 @@ const T = {
   resume:["Resume","استئناف"],
   paused:["Paused","متوقّف مؤقتاً"],
   lastSession:["Last {d} session: {n} min","آخر جلسة {d}: {n} دقيقة"],
-  warmupTitle:["Warm-up — do this first","الإحماء — ابدأ به أولاً"],
+  warmupTitle:["Warm-up","الإحماء"],
+  warmupSum:["5 min cardio · mobility · ramp-up sets","5 دقائق كارديو · تحريك المفاصل · مجموعات تدرّج"],
+  showSteps:["Show steps","عرض الخطوات"],
   video:["Video","فيديو"], hideVideo:["Hide video","إخفاء الفيديو"], videoSoon:["Video coming soon","الفيديو قريباً"],
-  warmup1:["<b>Raise your temperature</b> — 5 min easy cardio (bike, incline walk or rower) until you break a light sweat.","<b>ارفع حرارة جسمك</b> — 5 دقائق كارديو خفيف (دراجة، مشي بميل، أو تجديف) حتى يتصبب عرق خفيف."],
-  warmup2:["<b>Loosen the day's joints</b> — 5-8 slow reps each. Upper-body days: band pull-aparts, shoulder dislocates, arm circles, cat-cow. Lower-body days: leg swings front & side, hip circles, 10 bodyweight squats, walking lunges.","<b>حرّك مفاصل اليوم</b> — 5-8 تكرارات بطيئة لكل حركة. أيام الجزء العلوي: شد المطاط، تدوير الكتف والذراعين، القطة-البقرة. أيام الجزء السفلي: أرجحة الساق أماماً وجانباً، تدوير الورك، 10 سكوات بوزن الجسم، طعنات مشي."],
-  warmup3:["<b>Ramp up the first lift only</b> — empty bar ×10, then ~50% ×5, ~70% ×3, ~85% ×1. Rest 60-90 s and stop each set well short of effort.","<b>تدرّج في التمرين الأول فقط</b> — بار فارغ ×10، ثم ~50% ×5، ~70% ×3، ~85% ×1. استرِح 60-90 ثانية وأوقف كل مجموعة قبل الإجهاد. (في الكاليسثينكس: مجموعة خفيفة واحدة من الحركة الأولى.)"],
-  warmup4:["<b>Start working set 1.</b> Isolation moves (raises, curls, extensions) need just one light feeder set.","<b>ابدأ المجموعة الأولى الفعلية.</b> تمارين العزل (الرفرفة، المرجحة، التمديد) تحتاج مجموعة تحضيرية خفيفة واحدة فقط."],
+  warmup1:["<b>Cardio</b> — 5 min easy, until a light sweat.","<b>كارديو</b> — 5 دقائق خفيفة حتى تعرق قليلاً."],
+  warmup2:["<b>Mobility</b> — 5–8 slow reps: arm circles and band pull-aparts on upper days; leg swings and bodyweight squats on lower days.","<b>تحريك المفاصل</b> — 5–8 تكرارات بطيئة: تدوير الذراعين وشد المطاط في أيام العلوي؛ أرجحة الساق وسكوات بوزن الجسم في أيام السفلي."],
+  warmup3:["<b>Ramp-up sets</b> — first lift only: bar ×10, ~50% ×5, ~70% ×3, ~85% ×1.","<b>مجموعات تدرّج</b> — للتمرين الأول فقط: بار فارغ ×10، ~50% ×5، ~70% ×3، ~85% ×1."],
+  warmup4:["<b>Go.</b> Isolation moves need just one light set first.","<b>ابدأ.</b> تمارين العزل تكفيها مجموعة خفيفة واحدة قبلها."],
   viewFront:["Front","أمام"], viewBack:["Back","خلف"],
+  mapTitle:["Muscles this week","عضلات هذا الأسبوع"],
+  mapSummary:["{two} of {n} trained twice, {one} once","تم تدريب {two} من {n} مرتين و{one} مرة واحدة"],
+  mapOnce:["Trained once","تم التدريب مرة واحدة"], mapTwice:["Trained twice","تم التدريب مرتين"], mapNone:["not trained yet","لم تُدرَّب بعد"],
+  mapOnceIn:["trained once","تم التدريب مرة واحدة"], mapTwiceIn:["trained twice","تم التدريب مرتين"],
+  mapRegion:["{m}, {s}","{m}، {s}"], mapHint:["Tap a muscle to see its name.","المس عضلة لمعرفة اسمها."],
   setsGroup:["Sets","المجموعات"], setLblReps:["Set {n} · {r} reps","المجموعة {n} · {r} تكرار"], setLblSec:["Set {n} · {r} sec","المجموعة {n} · {r} ث"], setLblRaw:["Set {n} · {r}","المجموعة {n} · {r}"],
   sets:["sets","مجموعات"], reps:["reps","تكرار"], rest:["rest","راحة"],
   save:["Save","حفظ"], saved:["✓ Saved","✓ تم الحفظ"], restBtn:["Rest","راحة"],
@@ -503,8 +534,8 @@ const T = {
   resetChecklist:["Reset today's checklist","إعادة ضبط قائمة اليوم"],
   resetToastMsg:["Today's checklist was reset.","تمت إعادة ضبط قائمة اليوم."],
   undo:["Undo","تراجع"],
-  dayAlreadyDone:["This workout is already complete for today. Reset the checklist if you want to log it again.","اكتمل هذا التمرين لهذا اليوم بالفعل. أعد ضبط القائمة إذا أردت تسجيله مرة أخرى."],
-  notesTitle:["Important Notes","ملاحظات مهمة"],
+  dayAlreadyDone:["Already done today. Reset the checklist to log it again.","تم إنجازه اليوم. أعِد ضبط القائمة لتسجيله مرة أخرى."],
+  notesTitle:["Plan tips","نصائح الخطة"],
   skip:["Skip","تخطٍّ"],
   restTimer:["Rest — {name}","راحة — {name}"],
   restAdd:["Add 15 seconds","إضافة 15 ثانية"],
@@ -528,8 +559,8 @@ const T = {
   alarmChannel:["Timer alarm","منبّه المؤقت"],
   preciseTitle:["Allow precise rest alerts?","تسمح بتنبيهات الراحة بالثانية؟"],
   preciseTitleF:["Allow precise rest alerts?","تسمحي بتنبيهات الراحة بالثانية؟"],
-  preciseBody:["Your rest alert rings exactly on time, even when the screen is off. You'll confirm it in Android settings.","تنبيه الراحة هيرن في معاده بالظبط حتى لو الشاشة مقفولة. هتأكد ده من إعدادات أندرويد."],
-  preciseBodyF:["Your rest alert rings exactly on time, even when the screen is off. You'll confirm it in Android settings.","تنبيه الراحة هيرن في معاده بالظبط حتى لو الشاشة مقفولة. هتأكدي ده من إعدادات أندرويد."],
+  preciseBody:["So your rest alert rings on time, even with the screen off.","ليرنّ تنبيه الراحة في وقته حتى والشاشة مطفأة."],
+  preciseBodyF:["So your rest alert rings on time, even with the screen off.","ليرنّ تنبيه الراحة في وقته حتى والشاشة مطفأة."],
   preciseAllow:["Allow","اسمح"],
   preciseAllowF:["Allow","اسمحي"],
   preciseLater:["Not now","مش دلوقتي"],
@@ -537,6 +568,29 @@ const T = {
   settings:["Settings","الإعدادات"],
   planLabel:["Plan","الخطة"],
   programLabel:["Program","البرنامج"],
+  splitLabel:["Training split","تقسيم التمرين"],
+  splitDays:["Days per week","أيام في الأسبوع"],
+  splitClassic:["Classic","الكلاسيكي"],
+  splitClassicNote:["Your current plan, unchanged. Pick a number of days to switch to a split.","خطتك الحالية كما هي. اختر عدد الأيام للتحويل إلى تقسيم."],
+  splitDaysN:["{n} days","{n} أيام"],
+  splitBest:["Best fit for your setup: {n} days.","الأنسب لتجهيزاتك: {n} أيام."],
+  splitBestMark:["best fit","الأنسب"],
+  splitWeekdays:["Training days: {d}","أيام التمرين: {d}"],
+  splitWhere:["Where you train","مكان التمرين"],
+  splitGym:["Gym","جيم"], splitHome:["Home","المنزل"],
+  splitTools:["What you have at home","ما لديك في المنزل"],
+  splitSumTitle:["What this split trains","ماذا يدرّب هذا التقسيم"],
+  splitSum3:["Three full-body days: Full Body A, B and C. Every muscle is trained at least twice a week.","ثلاثة أيام لكامل الجسم: أ و ب و ج. كل عضلة تُدرَّب مرتين على الأقل أسبوعياً."],
+  splitSum4:["Upper, Lower, Upper, Lower. Every muscle is trained twice a week.","علوي، سفلي، علوي، سفلي. كل عضلة تُدرَّب مرتين أسبوعياً."],
+  splitSum5:["Upper, Lower, Push, Pull, Legs. Every muscle is trained twice a week, some more.","علوي، سفلي، دفع، سحب، أرجل. كل عضلة تُدرَّب مرتين أسبوعياً وبعضها أكثر."],
+  splitSum6:["Push, Pull, Legs, twice over. Every muscle is trained twice a week.","دفع، سحب، أرجل، مرتين. كل عضلة تُدرَّب مرتين أسبوعياً."],
+  splitHint:["Tick {tool} to cover {parts}.","فعّل {tool} لتغطية {parts}."],
+  splitSaved:["Split updated","تم تحديث التقسيم"],
+  toolsLbl:["Tools","الأدوات"],
+  tool_none:["No equipment","بدون معدات"], tool_dumbbell:["Dumbbells","دمبل"], tool_band:["Resistance bands","أحزمة مقاومة"],
+  tool_bench:["Bench or chair","بنش أو كرسي"], tool_table:["Sturdy table","طاولة ثابتة"], tool_pullup_bar:["Pull-up bar","بار عقلة"],
+  tool_kettlebell:["Kettlebell","كيتل بيل"], tool_jump_rope:["Jump rope","حبل قفز"],
+  tool_barbell:["Barbell","بار"], tool_cable:["Cable","كيبل"], tool_machine:["Machine","جهاز"],
   prefsLabel:["Display preferences","تفضيلات العرض"],
   themeToDark:["Switch to dark mode","التبديل إلى الوضع الداكن"], themeToLight:["Switch to light mode","التبديل إلى الوضع الفاتح"],
   menuThemeDark:["Dark mode","الوضع الداكن"], menuThemeLight:["Light mode","الوضع الفاتح"],
@@ -560,82 +614,56 @@ const T = {
 };
 const NOTES = {
   male_gym:{ en:[
-    "<b>Weekly schedule:</b> Day 1 Upper · Day 2 Lower · Day 3 rest · Day 4 Back + Biceps + Calves · Day 5 Chest + Triceps · Days 6-7 rest. Chest and back get two sessions a week; legs get one heavy session.",
-    "<b>Progressive overload:</b> add a little weight or a rep once you hit the top of the rep range with clean form — beat last session's numbers (shown on each card).",
-    "<b>Train close to failure:</b> stop compound sets 1-3 reps short; isolation moves 0-1.",
-    "<b>Warm-up:</b> follow the warm-up card before your first set.",
-    "<b>Core:</b> hanging leg raise on Lower day. Brace as if bracing for a punch.",
-    "<b>Recover:</b> 7-9 h sleep. Football counts as leg load — keep it to Tuesday.",
-    "<b>Deload</b> every 5-8 weeks: an easy week at ~⅔ the weight or half the sets.",
-    "<b>Protein:</b> 1.6-2.2 g per kg body weight daily.",
-    "Data is saved on this device only. Tap <b>Back up progress</b> every week or two."
+    "<b>Week:</b> Upper · Lower · rest · Back + Biceps + Calves · Chest + Triceps · rest · rest.",
+    "<b>Progress:</b> hit the top of the rep range, then add weight.",
+    "<b>Effort:</b> stop compound sets 1–3 reps short of failure.",
+    "<b>Recover:</b> 7–9 h sleep; deload every 5–8 weeks.",
+    "<b>Protein:</b> 1.6–2.2 g per kg body weight a day."
   ], ar:[
-    "<b>الجدول الأسبوعي:</b> اليوم 1 علوي · اليوم 2 سفلي · اليوم 3 راحة · اليوم 4 ظهر + بايسبس + سمانة · اليوم 5 صدر + ترايسبس · اليومان 6-7 راحة. الصدر والظهر مرتين أسبوعياً، والأرجل مرة واحدة بحمل ثقيل.",
-    "<b>الزيادة التدريجية:</b> أضِف وزناً بسيطاً أو تكراراً عند بلوغ أعلى نطاق التكرار بأداء نظيف — تجاوز أرقام الجلسة السابقة (تظهر على كل بطاقة).",
-    "<b>اقترب من الفشل:</b> أوقف تمارين المركّب قبل الفشل بـ1-3 تكرارات، وتمارين العزل بـ0-1.",
-    "<b>الإحماء:</b> اتبع بطاقة الإحماء قبل مجموعتك الأولى.",
-    "<b>البطن:</b> رفع الرجلين معلقاً في يوم السفلي. شُدّ البطن كأنك تتلقى لكمة.",
-    "<b>الاستشفاء:</b> نوم 7-9 ساعات. كرة القدم تُحسب حِملاً على الأرجل — اجعلها يوم الثلاثاء.",
-    "<b>أسبوع تخفيف</b> كل 5-8 أسابيع: أسبوع سهل بثلثي الوزن أو نصف المجموعات تقريباً.",
-    "<b>البروتين:</b> 1.6-2.2 جم لكل كجم من وزن الجسم يومياً.",
-    "البيانات محفوظة على هذا الجهاز فقط. اضغط <b>نسخة احتياطية</b> كل أسبوع أو اثنين."
+    "<b>الأسبوع:</b> علوي · سفلي · راحة · ظهر + بايسبس + سمانة · صدر + ترايسبس · راحة · راحة.",
+    "<b>التدرّج:</b> عند بلوغ أعلى نطاق التكرار، زِد الوزن.",
+    "<b>الجهد:</b> أوقف التمارين المركّبة قبل الفشل بـ1–3 تكرارات.",
+    "<b>الاستشفاء:</b> نوم 7–9 ساعات؛ أسبوع تخفيف كل 5–8 أسابيع.",
+    "<b>البروتين:</b> 1.6–2.2 جم لكل كجم من وزنك يومياً."
   ]},
   female_gym:{ en:[
-    "<b>Weekly layout:</b> Sat Lower A · Sun Upper A · Tue Lower B · Wed Upper B. Other days: rest or a walk.",
-    "<b>Goal — lean & tone:</b> the lifting keeps your muscle while a modest calorie deficit drives fat loss. Keep reps controlled.",
-    "<b>Conditioning:</b> 7-9k steps a day plus 2-3 brisk/incline walks of 25-35 min. Optional 6-8 min finisher after Lower B or Upper B.",
-    "<b>Progression:</b> add reps to the top of the range first, then a little weight. Keep 1-2 reps in reserve.",
-    "<b>Form first:</b> single-leg moves are about control — go light until balance is steady.",
-    "<b>Warm-up:</b> follow the warm-up card before your first set.",
-    "<b>Nutrition:</b> follow your meal-timing plan; ~1.6-2 g protein per kg body weight daily.",
-    "Data is saved on this device only. Tap <b>Back up progress</b> every week or two."
+    "<b>Week:</b> Sat Lower A · Sun Upper A · Tue Lower B · Wed Upper B.",
+    "<b>Progress:</b> add reps first, then a little weight.",
+    "<b>Steps:</b> 7–9k a day, plus 2–3 brisk walks a week.",
+    "<b>Form first:</b> go light on single-leg moves until you're steady.",
+    "<b>Protein:</b> ~1.6–2 g per kg body weight a day."
   ], ar:[
-    "<b>التوزيع الأسبوعي:</b> السبت سفلي أ · الأحد علوي أ · الثلاثاء سفلي ب · الأربعاء علوي ب. باقي الأيام: راحة أو مشي.",
-    "<b>الهدف — رشاقة وشدّ:</b> التمرين يحافظ على العضلات بينما عجز سعرات بسيط يحرق الدهون. حافظي على تحكّم في التكرارات.",
-    "<b>الكارديو:</b> 7-9 آلاف خطوة يومياً مع 2-3 جلسات مشي سريع أو بميل 25-35 دقيقة. اختياري: خاتمة 6-8 دقائق بعد سفلي ب أو علوي ب.",
-    "<b>التدرّج:</b> زيدي التكرارات لأعلى النطاق أولاً ثم وزناً بسيطاً. اتركي 1-2 تكرار احتياطياً.",
-    "<b>الأداء أولاً:</b> تمارين الرجل الواحدة تتعلق بالتحكّم — ابدئي خفيفاً حتى يثبت التوازن.",
-    "<b>الإحماء:</b> اتبعي بطاقة الإحماء قبل مجموعتك الأولى.",
-    "<b>التغذية:</b> اتبعي خطة توقيت الوجبات؛ ~1.6-2 جم بروتين لكل كجم يومياً.",
-    "البيانات محفوظة على هذا الجهاز فقط. اضغطي <b>نسخة احتياطية</b> كل أسبوع أو اثنين."
+    "<b>الأسبوع:</b> السبت سفلي أ · الأحد علوي أ · الثلاثاء سفلي ب · الأربعاء علوي ب.",
+    "<b>التدرّج:</b> زيدي التكرارات أولاً، ثم وزناً بسيطاً.",
+    "<b>الخطوات:</b> 7–9 آلاف يومياً، مع 2–3 جلسات مشي سريع أسبوعياً.",
+    "<b>الأداء أولاً:</b> ابدئي خفيفاً في تمارين الرجل الواحدة حتى تثبتي.",
+    "<b>البروتين:</b> ~1.6–2 جم لكل كجم من وزنك يومياً."
   ]},
   male_cal:{ en:[
-    "<b>Weekly plan:</b> 3 days — Push · Legs · Pull. Run them on non-consecutive days (e.g. Sat / Mon / Wed).",
-    "<b>Circuit style:</b> rest is short on purpose. The listed rest is the maximum, not a target — keep moving.",
-    "<b>Reps:</b> take most sets close to failure but stop with 1-2 clean reps left. Add reps each week before adding difficulty.",
-    "<b>Progress the hard moves:</b> when push-ups feel easy slow the lowering, then elevate the feet; for pike push-ups raise the hips higher.",
-    "<b>Conditioning:</b> add a 20-30 min run, ruck or fast walk on 1-2 off days. Optional finisher: 5 rounds of 30 s burpees / 30 s rest.",
-    "<b>Core is built in</b> (plank, hollow hold, flutter kicks, mountain climbers) — brace hard, don't hold your breath.",
-    "<b>No pull-up bar needed:</b> inverted rows use a sturdy table edge; swap for band bent-over rows if that's easier.",
-    "Data is saved on this device only. Back it up every week or two."
+    "<b>Week:</b> Push · Legs · Pull, on non-consecutive days.",
+    "<b>Circuit:</b> the listed rest is a maximum — keep moving.",
+    "<b>Reps:</b> stop 1–2 clean reps short; add reps before difficulty.",
+    "<b>Too easy?</b> Slow the lowering, then raise your feet.",
+    "<b>No bar?</b> Do inverted rows under a sturdy table."
   ], ar:[
-    "<b>الخطة الأسبوعية:</b> 3 أيام — دفع · أرجل · سحب. نفّذها في أيام غير متتالية (مثلاً السبت / الاثنين / الأربعاء).",
-    "<b>أسلوب الدوائر:</b> الراحة قصيرة عن قصد. الراحة المذكورة حدّ أقصى وليست هدفاً — استمر في الحركة.",
-    "<b>التكرارات:</b> اقترب من الفشل في معظم المجموعات مع ترك 1-2 تكرار نظيف. زِد التكرارات أسبوعياً قبل زيادة الصعوبة.",
-    "<b>تدرّج في الحركات الصعبة:</b> عندما يسهل الضغط، أبطئ النزول ثم ارفع القدمين؛ ولضغط البايك ارفع الحوض أكثر.",
-    "<b>الكارديو:</b> أضِف جري أو مشي سريع 20-30 دقيقة في يوم أو يومين راحة. اختياري: 5 جولات 30 ث بيربي / 30 ث راحة.",
-    "<b>البطن مدمج</b> (بلانك، ثبات مجوف، رفرفة الرجلين، تسلق الجبل) — شُدّ البطن ولا تحبس نفسك.",
-    "<b>لا حاجة لعقلة:</b> التجديف المقلوب يستخدم حافة طاولة ثابتة؛ بدّله بتجديف بالمطاط إن كان أسهل.",
-    "البيانات محفوظة على هذا الجهاز فقط. اعمل نسخة احتياطية كل أسبوع أو اثنين."
+    "<b>الأسبوع:</b> دفع · أرجل · سحب، في أيام غير متتالية.",
+    "<b>دوائر:</b> الراحة المذكورة حدّ أقصى — استمر في الحركة.",
+    "<b>التكرارات:</b> توقّف قبل الفشل بـ1–2 تكرار؛ زِد التكرارات قبل الصعوبة.",
+    "<b>سهل جداً؟</b> أبطئ النزول، ثم ارفع قدميك.",
+    "<b>بدون عقلة؟</b> نفّذ التجديف المقلوب تحت طاولة ثابتة."
   ]},
   female_cal:{ en:[
-    "<b>Weekly plan:</b> 3 days — Push · Legs · Pull, on non-consecutive days (e.g. Sat / Mon / Wed).",
-    "<b>Circuit style:</b> short rests on purpose — the listed rest is a maximum. Keep the pace up for the fat-loss effect.",
-    "<b>Scale to your level:</b> drop to your knees or hands on a bench for push-ups until you can do 8+ clean reps; do step-back burpees with no jump.",
-    "<b>Reps:</b> stop each set with 1-2 clean reps left; add reps weekly before making a move harder.",
-    "<b>Conditioning:</b> 7-9k steps a day plus a 20-30 min brisk walk or light jog on 1-2 off days.",
-    "<b>Core is built in</b> (plank, hollow hold, flutter kicks, mountain climbers) — brace, breathe, no yanking with the hip flexors.",
-    "<b>No bar needed:</b> inverted rows use a sturdy table; a band bent-over row works too.",
-    "Data is saved on this device only. Back it up every week or two."
+    "<b>Week:</b> Push · Legs · Pull, on non-consecutive days.",
+    "<b>Circuit:</b> the listed rest is a maximum — keep the pace up.",
+    "<b>Scale it:</b> knee or bench push-ups until you can do 8 clean reps.",
+    "<b>Steps:</b> 7–9k a day, plus 1–2 brisk walks a week.",
+    "<b>No bar?</b> Do inverted rows under a sturdy table."
   ], ar:[
-    "<b>الخطة الأسبوعية:</b> 3 أيام — دفع · أرجل · سحب، في أيام غير متتالية (مثلاً السبت / الاثنين / الأربعاء).",
-    "<b>أسلوب الدوائر:</b> الراحة قصيرة عن قصد — المذكور حدّ أقصى. حافظي على الإيقاع لتحقيق حرق الدهون.",
-    "<b>عدّلي حسب مستواكِ:</b> انزلي على الركبتين أو ضعي اليدين على مقعد في الضغط حتى تؤدّي 8+ تكرارات نظيفة؛ ونفّذي البيربي بخطوة للخلف دون قفز.",
-    "<b>التكرارات:</b> أنهي كل مجموعة وأنتِ تملكين 1-2 تكرار نظيف؛ زيدي التكرارات أسبوعياً قبل زيادة الصعوبة.",
-    "<b>الكارديو:</b> 7-9 آلاف خطوة يومياً مع مشي سريع أو هرولة خفيفة 20-30 دقيقة في يوم أو يومين راحة.",
-    "<b>البطن مدمج</b> (بلانك، ثبات مجوف، رفرفة الرجلين، تسلق الجبل) — شُدّي البطن، تنفّسي، دون شدّ بعضلات الورك.",
-    "<b>لا حاجة لعقلة:</b> التجديف المقلوب يستخدم طاولة ثابتة؛ ويصلح أيضاً تجديف بالمطاط.",
-    "البيانات محفوظة على هذا الجهاز فقط. اعملي نسخة احتياطية كل أسبوع أو اثنين."
+    "<b>الأسبوع:</b> دفع · أرجل · سحب، في أيام غير متتالية.",
+    "<b>دوائر:</b> الراحة المذكورة حدّ أقصى — حافظي على الإيقاع.",
+    "<b>حسب مستواكِ:</b> ضغط على الركبتين أو على مقعد حتى تؤدّي 8 تكرارات نظيفة.",
+    "<b>الخطوات:</b> 7–9 آلاف يومياً، مع 1–2 جلسة مشي سريع أسبوعياً.",
+    "<b>بدون عقلة؟</b> نفّذي التجديف المقلوب تحت طاولة ثابتة."
   ]}
 };
 
@@ -958,6 +986,26 @@ let activePlan  = localStorage.getItem("gym_plan");                 // "male" | 
 let activeStyle = localStorage.getItem("gym_style") || "gym";       // "gym" | "cal"
 let activeLang  = localStorage.getItem("gym_lang")  || "en";        // "en" | "ar"
 
+// Training split choice (gym_split, synced like the other prefs): days 0 = Classic (the plans
+// below, untouched); 3-6 = the generated split from splits.js. where/tools are remembered
+// either way. Nobody is moved: no pref means Classic.
+function readSplit(){
+  const s = loadJSON("gym_split", null) || {};
+  const days = [3, 4, 5, 6].indexOf(+s.days) >= 0 ? +s.days : 0;
+  const home = HOME_TOOL_KEYS;
+  return { days, where: s.where === "home" ? "home" : "gym", tools: (Array.isArray(s.tools) ? s.tools : []).filter((k, i, a)=> home.indexOf(k) > 0 && a.indexOf(k) === i) };
+}
+const HOME_TOOL_KEYS = ["none", "dumbbell", "band", "bench", "table", "pullup_bar", "kettlebell", "jump_rope"];
+let splitChoice = readSplit();
+let splitCache = null; // { sig, plan } - the generated plan for the current choice + sex
+function splitPlan(){
+  if(!splitChoice.days || !window.GymSplits) return null;
+  const sex = activePlan === "female" ? "female" : "male";
+  const sig = [splitChoice.days, splitChoice.where, splitChoice.tools.join(), sex].join("|");
+  if(!splitCache || splitCache.sig !== sig) splitCache = { sig, plan: GymSplits.buildPlan({ days: splitChoice.days, where: splitChoice.where, sex, tools: splitChoice.tools }) };
+  return splitCache.plan;
+}
+
 // Theme (auto | light | dark) is a separate axis from the plan persona; both
 // pick the palette in styles.css. theme-boot.js (loaded in <head>) resolves
 // gym_theme before first paint, follows the OS in auto mode and owns the
@@ -988,6 +1036,8 @@ function pickDays(){
     const c = loadJSON("gym_plans_custom", null);
     if(c && c.length) return c;
   }
+  const sp = activeStyle === "gym" ? splitPlan() : null;
+  if(sp) return sp.days;
   const fem = activePlan === "female";
   if(activeStyle === "cal") return fem ? DAYS_FEMALE_CAL : DAYS_MALE_CAL;
   return fem ? DAYS_FEMALE : DAYS_MALE;
@@ -999,32 +1049,60 @@ let DAYS = pickDays();
 window.GymApp = window.GymApp || {};
 // Read-only views for the muscle-art specs (and the Plan tab's tile/close-up code).
 window.GymApp.muscleShapes = MUSCLE_SHAPES;
-window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL]; };
-window.GymApp.dayExercises = function(dayId){
+window.GymApp.allDaySets = function(){ return [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA]; };
+// A day by id: the active plan, the legacy plan, or - for a split day from an earlier choice this
+// week (days/tools switched since) - rebuilt from its id, so its checks still count.
+function findDay(dayId){
   const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  if(day || !window.GymSplits) return day;
+  const m = /^sp([3-6])([gh])([mf])_/.exec(dayId || "");
+  if(!m) return undefined;
+  const old = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male", tools: splitChoice.tools });
+  return old.days.find(d=>d.id===dayId);
+}
+window.GymApp.dayExercises = function(dayId){
+  const day = findDay(dayId);
   return day ? day.exercises : [];
 };
 // Marks every exercise of a past day's checklist as done (rest-days.js "save
 // yesterday"). Goes through the in-memory `checks` so the next toggle's
 // saveJSON doesn't overwrite it with a stale copy.
 window.GymApp.markDayComplete = function(date, dayId){
-  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  const day = findDay(dayId);
   if(!day) return;
   const k = date + "_" + dayId;
   checks[k] = checks[k] || {};
   day.exercises.forEach(ex=>{ checks[k][ex.id] = true; });
   saveJSON("gym_checks", checks);
+  rememberTags(k, day.exercises);
+  refreshWeekMap();
+};
+// Strings and language for the weekly muscle map (muscle-map.js), and the tags of
+// one exercise of a day in any plan we can still see (Classic, either persona,
+// the AI plan). null when the plan that had it is gone: the map then falls back
+// to the copy it stored when the exercise was ticked.
+window.GymApp.t = t;
+window.GymApp.lang = ()=> activeLang;
+window.GymApp.exerciseShapes = function(dayId, exId){
+  const custom = loadJSON("gym_plans_custom", null);
+  const sets = window.GymApp.allDaySets().concat([DAYS], Array.isArray(custom) ? [custom] : []);
+  for(const set of sets){
+    const day = set.find(d=>d.id === dayId);
+    const ex = day && (day.exercises || []).find(e=>e.id === exId);
+    if(ex) return exShapes(ex);
+  }
+  return null;
 };
 // Localised day label for dayId (used by the save-yesterday sheet).
 window.GymApp.dayName = function(dayId){
-  const day = DAYS.find(d=>d.id===dayId) || LEGACY_MALE_DAYS.find(d=>d.id===dayId);
+  const day = findDay(dayId);
   return day ? dayLabel(day) : "";
 };
 
 function t(key){ const e = T[key]; return e ? (e[activeLang === "ar" ? 1 : 0]) : key; }
 function exName(ex){ return activeLang === "ar" ? (AR_EX[ex.en] || ex.en) : ex.en; }
-function dayLabel(d){ return activeLang === "ar" ? (AR_DAY[d.label] || d.label) : d.label; }
-function musLabel(d){ return activeLang === "ar" ? (AR_MUS[d.muscles] || d.muscles) : d.muscles; }
+function dayLabel(d){ return activeLang === "ar" ? (d.labelAr || AR_DAY[d.label] || d.label) : d.label; }
+function musLabel(d){ return activeLang === "ar" ? (d.musclesAr || AR_MUS[d.muscles] || d.muscles) : d.muscles; }
 function notesKey(){ return (activePlan === "female" ? "female" : "male") + "_" + (activeStyle === "cal" ? "cal" : "gym"); }
 function activeDayStoreKey(){ return "gym_active_day_" + (activePlan || "male") + "_" + activeStyle; }
 
@@ -1043,7 +1121,7 @@ if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
 // LOCAL_ONLY convention / gymauth_session, gymcoach_form, gymchat_history)
 // so it stays device-local and is never round-tripped through sync.
 (function applyDayRotation(){
-  const rotatable = DAYS === DAYS_MALE || DAYS === DAYS_FEMALE || DAYS === DAYS_MALE_CAL || DAYS === DAYS_FEMALE_CAL;
+  const rotatable = (splitCache && DAYS === splitCache.plan.days) || DAYS === DAYS_MALE || DAYS === DAYS_FEMALE || DAYS === DAYS_MALE_CAL || DAYS === DAYS_FEMALE_CAL;
   if(!rotatable) return;
   const last = loadJSON("gymday_last_completed", null);
   if(!last || !last.dayId || last.date === todayStr()) return; // nothing to do, or completed today (not "the day after" yet)
@@ -1268,6 +1346,17 @@ function renderMuscleTiles(day){
   if(html && animateCards && window.GymMotion) GymMotion.enter(dayMuscleTiles);   // no-op under reduced motion
 }
 
+// ---- weekly muscle map (muscle-map.js) ----
+// Keep each ticked exercise's tags with the session, so a later plan switch can't orphan the tick.
+function rememberTags(sessionKey, exercises){
+  if(!window.GymMuscleMap) return;
+  GymMuscleMap.remember(sessionKey, exercises.map(ex=>{ const sh = exShapes(ex); return sh && { id:ex.id, shape:sh.shape, shape2:sh.shape2 }; }).filter(Boolean));
+}
+function refreshWeekMap(){
+  const host = document.getElementById("weekMap");
+  if(host && window.GymMuscleMap) GymMuscleMap.render(host, { sex: figureSex() });
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
@@ -1318,6 +1407,7 @@ function renderExercises(){
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
         <span><b>${esc(ex.rest)}s</b> ${t("rest")}</span>
       </div>
+      ${toolsLine(ex)}
       <div class="set-row" role="group" aria-label="${t("setsGroup")}">
         ${setState(key, ex, done).map((on, si)=>`<button type="button" class="set-chk${on?' on':''}" role="checkbox" aria-label="${esc(setLabel(ex, si + 1))}" aria-checked="${on}" data-set-ex="${eid}" data-set="${si}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
@@ -1373,6 +1463,8 @@ function renderExercises(){
     checks[k] = checks[k] || {};
     checks[k][id] = on;
     saveJSON("gym_checks", checks);
+    if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
+    refreshWeekMap();
     const el = exList.querySelector(`.check[data-id="${id}"]`);
     if(el){
       const was = el.classList.contains("on");
@@ -1540,10 +1632,12 @@ function renderAll(){
   renderDate();
   renderDayTabs();
   renderExercises();
+  refreshWeekMap();
   updateProgress();
   updateSessionUI();
   renderNotes();
   applyAnonUI();
+  renderSplitPanel();
 }
 
 // Lock everything except the single preview day for signed-out users.
@@ -1586,6 +1680,7 @@ function applyAnonUI(){
 
 // Re-pick the day set and re-render after an auth/anon state change (ui.js).
 window.GymAppRebuild = function(){
+  splitChoice = readSplit();
   DAYS = pickDays();
   restSlot = null;
   activeDay = localStorage.getItem(activeDayStoreKey()) || DAYS[0].id;
@@ -2329,6 +2424,140 @@ function applyState(persist){
   renderAll();
 }
 
+// ---------------- TRAINING SPLIT (More tab) ----------------
+// Tool icons (24px outline). "none" is the bodyweight figure.
+const TOOL_ICONS = {
+  none: '<circle cx="12" cy="5" r="2"/><path d="M12 8v6m0 0-3 6m3-6 3 6M6.5 11 12 9.5l5.5 1.5"/>',
+  dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
+  band: '<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><path d="M7.5 12c2-4.5 7-4.5 9 0M7.5 12c2 4.5 7 4.5 9 0"/>',
+  bench: '<path d="M7 4v10h11M7 14v6M18 14v6M7 9h4"/>',
+  table: '<path d="M3 8h18M6 8v12M18 8v12M6 14h12"/>',
+  pullup_bar: '<path d="M4 20V5M20 20V5M4 7h16M9 7v4M15 7v4"/>',
+  kettlebell: '<path d="M8.5 9V7.5a3.5 3.5 0 0 1 7 0V9"/><circle cx="12" cy="14.5" r="5.5"/>',
+  jump_rope: '<rect x="5" y="3" width="3" height="5" rx="1"/><rect x="16" y="3" width="3" height="5" rx="1"/><path d="M6.5 8c-3 9 2 13 5.5 13s8.5-4 5.5-13"/>',
+  barbell: '<path d="M2.5 12h19M5 7.5v9M8 6v12M16 6v12M19 7.5v9"/>',
+  cable: '<path d="M12 3v7M8 21l4-11 4 11M9 21h6"/><circle cx="12" cy="3.5" r="1.5"/>',
+  machine: '<rect x="4" y="3" width="4" height="18" rx="1"/><path d="M8 7h10v4H8M8 17h8M14 11v6"/>'
+};
+function toolIcon(k){ return `<svg class="tool-ic" viewBox="0 0 24 24" aria-hidden="true">${TOOL_ICONS[k] || ""}</svg>`; }
+// The small "Tools" line on a split exercise card (Classic cards stay as they were).
+function toolsLine(ex){
+  if(!splitCache || DAYS !== splitCache.plan.days || !Array.isArray(ex.tools) || !ex.tools.length) return "";
+  const names = ex.tools.map(k=>t("tool_" + k));
+  return `<div class="ex-tools" role="group" aria-label="${GymUI.esc(t("toolsLbl") + ": " + names.join(", "))}">${ex.tools.map((k, i)=>`<span class="ex-tool">${toolIcon(k)}<span>${GymUI.esc(names[i])}</span></span>`).join("")}</div>`;
+}
+
+function saveSplit(patch){
+  splitChoice = Object.assign({}, splitChoice, patch);
+  saveJSON("gym_split", { days: splitChoice.days, where: splitChoice.where, tools: splitChoice.tools });
+}
+// A different day count that leaves strictly fewer tool-caused gaps ("region" gaps) than the current
+// choice, or 0. Ties go to 4 days, then 5, 3, 6. Frequency gaps are ignored: they always favour 6.
+function bestSplitDays(){
+  if(!window.GymSplits) return 0;
+  const sex = activePlan === "female" ? "female" : "male";
+  const gaps = d=> GymSplits.buildPlan({ days: d, where: splitChoice.where, sex, tools: splitChoice.tools }).gaps.filter(g=>g.kind === "region").length;
+  let best = 0, bestN = gaps(splitChoice.days);
+  [4, 5, 3, 6].forEach(d=>{
+    if(d === splitChoice.days) return;
+    const n = gaps(d);
+    if(n < bestN){ best = d; bestN = n; }
+  });
+  return best;
+}
+// "Mon · Wed · Fri" for a split's fixed training weekdays (buildPlan's `week`, Monday first).
+function weekdayList(plan){
+  const f = new Intl.DateTimeFormat(activeLang === "ar" ? "ar" : "en", { weekday:"short", timeZone:"UTC" });
+  return plan.week.map((id, i)=> id ? f.format(new Date(Date.UTC(2024, 0, 1 + i))) : null).filter(Boolean).join(" · ");
+}
+// "Tick X to cover Y" lines for the tools that would close this plan's gaps.
+function gapHints(plan){
+  const by = {};
+  plan.gaps.forEach(g=>{
+    (g.tick || []).forEach(k=>{
+      if(k === "none") return;
+      (by[k] = by[k] || {})[g.region] = 1;
+    });
+  });
+  const list = (arr)=> window.Intl && Intl.ListFormat ? new Intl.ListFormat(activeLang, { style:"long", type:"conjunction" }).format(arr) : arr.join(", ");
+  return Object.keys(by).sort((a, b)=> Object.keys(by[b]).length - Object.keys(by[a]).length).slice(0, 2).map(k=>{
+    const parts = Object.keys(by[k]).slice(0, 3).map(r=> SHAPE_BY_ID[r] ? (activeLang === "ar" ? SHAPE_BY_ID[r].labelAr : SHAPE_BY_ID[r].label) : r);
+    return { tool: k, text: t("splitHint").replace("{tool}", t("tool_" + k)).replace("{parts}", list(parts)) };
+  });
+}
+
+function renderSplitPanel(){
+  const host = document.getElementById("splitPanel");
+  if(!host || !window.GymSplits) return;
+  const esc = GymUI.esc, c = splitChoice;
+  const focusKey = document.activeElement && host.contains(document.activeElement) ? document.activeElement.dataset.spKey : null;
+  const best = c.days ? bestSplitDays() : 0; // 0 = none better than the current choice
+  const chip = (d)=>{
+    const on = c.days === d, rec = d && d === best;
+    const label = d ? t("splitDaysN").replace("{n}", d) : t("splitClassic");
+    return `<button type="button" class="sp-chip${on ? " on" : ""}${rec ? " rec" : ""}" role="radio" aria-checked="${on}" data-sp-days="${d}" data-sp-key="d${d}" aria-label="${esc(label + (rec ? ", " + t("splitBestMark") : ""))}">${d ? d : esc(label)}</button>`;
+  };
+  let html = `<div class="sp-sub" id="spDaysLbl">${t("splitDays")}</div>
+    <div class="sp-chips" role="radiogroup" aria-labelledby="spDaysLbl">${[0, 3, 4, 5, 6].map(chip).join("")}</div>`;
+  if(!c.days){
+    html += `<p class="sp-note">${t("splitClassicNote")}</p>`;
+  } else {
+    const plan = splitPlan();
+    html += (best ? `<p class="sp-note">${t("splitBest").replace("{n}", "<bdi>" + best + "</bdi>")}</p>` : "") + `
+      <div class="sp-sub" id="spWhereLbl">${t("splitWhere")}</div>
+      <div class="plan-toggle" role="radiogroup" aria-labelledby="spWhereLbl">
+        ${["gym", "home"].map(w=>`<button type="button" role="radio" aria-checked="${c.where === w}" class="${c.where === w ? "on" : ""}" data-sp-where="${w}" data-sp-key="w${w}">${t(w === "gym" ? "splitGym" : "splitHome")}</button>`).join("")}
+      </div>`;
+    if(c.where === "home"){
+      html += `<div class="sp-sub" id="spToolsLbl">${t("splitTools")}</div>
+        <div class="sp-tools" role="group" aria-labelledby="spToolsLbl">
+          ${HOME_TOOL_KEYS.map(k=>{
+            const on = k === "none" ? !c.tools.length : c.tools.indexOf(k) >= 0;
+            return `<button type="button" class="sp-tool${on ? " on" : ""}" role="checkbox" aria-checked="${on}" data-sp-tool="${k}" data-sp-key="t${k}">${toolIcon(k)}<span>${esc(t("tool_" + k))}</span></button>`;
+          }).join("")}
+        </div>`;
+    }
+    const hints = gapHints(plan);
+    html += `<div class="sp-hints" aria-live="polite">${hints.map(h=>`<p class="sp-hint">${toolIcon(h.tool)}<span>${esc(h.text)}</span></p>`).join("")}</div>
+      <div class="sp-sum"><div class="sp-sub">${t("splitSumTitle")}</div><p>${t("splitSum" + c.days)}</p><p class="sp-wk">${t("splitWeekdays").replace("{d}", "<bdi>" + esc(weekdayList(plan)) + "</bdi>")}</p></div>`;
+  }
+  host.innerHTML = html;
+  if(focusKey){ const f = host.querySelector(`[data-sp-key="${focusKey}"]`); if(f) f.focus(); }
+}
+
+// Applies a split choice (More tab now, the onboarding survey later) and re-renders. days 0 =
+// Classic; 3-6 = a generated split, which also moves the user to the Gym program. Nothing is
+// written until this is called, so nobody is moved on their own. Returns { days, week, gaps }
+// for a split, or null for Classic.
+function applySplitChoice(c){
+  c = c || {};
+  const patch = {};
+  if("days" in c) patch.days = [3, 4, 5, 6].indexOf(+c.days) >= 0 ? +c.days : 0;
+  if("where" in c) patch.where = c.where === "home" ? "home" : "gym";
+  if("tools" in c) patch.tools = HOME_TOOL_KEYS.filter((k, i)=> i > 0 && (c.tools || []).indexOf(k) >= 0);
+  saveSplit(patch);
+  if(splitChoice.days && activeStyle !== "gym"){ activeStyle = "gym"; setPref("gym_style", activeStyle); }
+  applyState(false);
+  return splitPlan();
+}
+if(window.GymSplits) window.GymSplits.applyChoice = applySplitChoice; // splits.js missing (cache/network): Classic keeps working
+(function wireSplitPanel(){
+  const host = document.getElementById("splitPanel");
+  if(!host) return;
+  host.addEventListener("click", (e)=>{
+    const b = e.target.closest("button");
+    if(!b || !host.contains(b)) return;
+    if(isAnonMode()){ if(window.GymUI) window.GymUI.promptSignIn(); return; }
+    if(b.dataset.spDays !== undefined) applySplitChoice({ days: +b.dataset.spDays });
+    else if(b.dataset.spWhere) applySplitChoice({ where: b.dataset.spWhere });
+    else if(b.dataset.spTool){
+      const k = b.dataset.spTool, cur = splitChoice.tools.slice();
+      if(k === "none") applySplitChoice({ tools: [] });
+      else applySplitChoice({ tools: cur.indexOf(k) >= 0 ? cur.filter(x=>x !== k) : cur.concat(k) });
+    }
+  });
+})();
+
 // ---------------- DAY TABS (always-visible chip strip on the Plan screen) ----------------
 function renderDayTabs(){
   const list = document.getElementById("dayTabs");
@@ -2394,6 +2623,8 @@ function ensureCoachStyleBtn(){
 
 function setStyle(style){
   if(isAnonMode()){ if(window.GymUI) window.GymUI.promptSignIn(); return; }
+  // A split belongs to the Gym program; the in-house and coach programs go back to Classic.
+  if(style !== "gym" && splitChoice.days) saveSplit({ days: 0 });
   activeStyle = style;
   applyState(true);
   if(window.GymUI) window.GymUI.navigate("plan");
@@ -2423,10 +2654,13 @@ function renderTitle(){
     return;
   }
   const planWord  = t(activePlan === "female" ? "female" : "male");
-  const styleWord = t(activeStyle === "cal" ? "styleCal" : "styleGym");
+  // An active split replaces the program word: "4 days · Home" (Classic keeps Gym / In-House).
+  const styleWord = splitChoice.days
+    ? t("splitDaysN").replace("{n}", splitChoice.days).replace(" ", " ") + " · " + t(splitChoice.where === "home" ? "splitHome" : "splitGym")
+    : t(activeStyle === "cal" ? "styleCal" : "styleGym");
   const full = t("appTitle") + " · " + planWord + " · " + styleWord;
   document.getElementById("appTitleEl").textContent = full;
-  document.title = t("appTitle") + " · " + planWord + " · " + styleWord;
+  document.title = full;
 }
 
 // Plan (Male/Female) and program (Gym/In-House) are switched from the More
