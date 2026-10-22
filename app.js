@@ -210,10 +210,10 @@ const DAYS_FEMALE_CAL = [
 // shows "Video coming soon" until the owner supplies a clip); never put a guessed video id here. ----
 const DAYS_EXTRA = [
   { id:"x_library", label:"Library", muscles:"No-equipment biceps, triceps, hamstrings", exercises:[
-    {id:"nb_towelcurl", en:"Towel Door Curl", sets:3, reps:"12-15", rest:45, vid:"", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["none"]},
-    {id:"nb_diamond", en:"Diamond Push-ups", sets:3, reps:"8-12", rest:60, vid:"", shape:"triceps_lateral", tier:"medium", tools:["none"]},
-    {id:"nb_hinge1", en:"Single-Leg Hip Hinge", sets:3, reps:"8-12/leg", rest:45, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
-    {id:"nb_slidecurl", en:"Towel Sliding Hamstring Curl", sets:3, reps:"8-12", rest:60, vid:"", shape:"hamstrings", tier:"medium", tools:["none"]},
+    {id:"nb_towelcurl", en:"Towel Door Curl", sets:3, reps:"12-15", rest:45, vid:"leaEyx33mHw", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["none"]},
+    {id:"nb_diamond", en:"Diamond Push-ups", sets:3, reps:"8-12", rest:60, vid:"PPTj-MW2tcs", shape:"triceps_lateral", tier:"medium", tools:["none"]},
+    {id:"nb_hinge1", en:"Single-Leg Hip Hinge", sets:3, reps:"8-12/leg", rest:45, vid:"JQZqPsmeesc", shape:"hamstrings", tier:"medium", tools:["none"]},
+    {id:"nb_slidecurl", en:"Towel Sliding Hamstring Curl", sets:3, reps:"8-12", rest:60, vid:"cjtsLDniFpk", shape:"hamstrings", tier:"medium", tools:["none"]},
   ]},
 ];
 

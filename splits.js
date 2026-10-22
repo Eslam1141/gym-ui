@@ -98,10 +98,10 @@
     fla_deadbug: L("Dead Bug (core)", "XcYtWYMz39w", "core_lower", null, "easy", ["none"], "secondary", "8-12/side", 30),
     mcx_flutter: L("Flutter Kicks", "pRZhSdw5Tqg", "core_lower", "quads", "easy", ["none"], "hold", "30s", 30),
     mlb_core: L("Pallof Press (core)", "P1H4IzD9rbQ", "core_obliques", null, "medium", ["cable"], "secondary", "8-12/side", 45),
-    nb_towelcurl: L("Towel Door Curl", "", "biceps_short", "biceps_long", "easy", ["none"], "isolation", "12-15", 45),
-    nb_diamond: L("Diamond Push-ups", "", "triceps_lateral", null, "medium", ["none"], "secondary", "8-12", 60),
-    nb_hinge1: L("Single-Leg Hip Hinge", "", "hamstrings", null, "medium", ["none"], "secondary", "8-12/leg", 45),
-    nb_slidecurl: L("Towel Sliding Hamstring Curl", "", "hamstrings", null, "medium", ["none"], "secondary", "8-12", 60),
+    nb_towelcurl: L("Towel Door Curl", "leaEyx33mHw", "biceps_short", "biceps_long", "easy", ["none"], "isolation", "12-15", 45),
+    nb_diamond: L("Diamond Push-ups", "PPTj-MW2tcs", "triceps_lateral", null, "medium", ["none"], "secondary", "8-12", 60),
+    nb_hinge1: L("Single-Leg Hip Hinge", "JQZqPsmeesc", "hamstrings", null, "medium", ["none"], "secondary", "8-12/leg", 45),
+    nb_slidecurl: L("Towel Sliding Hamstring Curl", "cjtsLDniFpk", "hamstrings", null, "medium", ["none"], "secondary", "8-12", 60),
     mcx_bear: L("Bear Crawl", "-9L3rTrYo4Q", "core_obliques", "shoulder_front", "medium", ["none"], "hold", "30s", 45)
   };
 
