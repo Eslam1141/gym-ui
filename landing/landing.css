@@ -230,6 +230,57 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .scan-bar i { display: block; height: 100%; width: 67%; border-radius: inherit; background: var(--teal); transform-origin: left; }
 .cell .scan .scan-add { margin-top: 4px; min-height: 44px; display: grid; place-items: center; border-radius: var(--r-pill); background: var(--teal-deep); color: #fff; font-weight: 700; }
 
+/* Splits, muscle map, coach bubble, watch rings: small CSS-built examples,
+   same quiet panel language as the calorie and meal cards. */
+.cell-splits, .cell-map, .cell-bubble, .cell-watch { gap: 24px; }
+.cell-splits { background: radial-gradient(90% 100% at 0% 100%, rgb(60 194 184 / .14), transparent 65%), var(--panel); }
+.split { display: grid; gap: 14px; align-content: start; }
+.split p { margin: 0; }
+.split-days { display: flex; align-items: center; gap: 8px; }
+.split-days span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+.split-days .on { background: var(--teal); border-color: var(--teal); color: #fff; }
+.split-days em { margin-inline-start: 6px; font-style: normal; color: var(--muted); font-size: .9375rem; }
+.split-week, .split-tools { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.split-week li { flex: 1 1 0; min-width: 64px; padding: 12px 8px; text-align: center; border-radius: 14px; background: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: .9375rem; }
+.split-week li:nth-child(odd) { border-color: rgb(60 194 184 / .5); color: var(--teal-lit); }
+.split-tools li { padding: 6px 14px; border-radius: var(--r-pill); background: rgb(243 240 232 / .06); font-size: .875rem; color: var(--paper); }
+
+.mm { display: grid; gap: 12px; margin-top: auto; }
+.cell .mm p { display: grid; grid-template-columns: 4.5em 1fr 4.5em; align-items: center; gap: 12px; max-width: none; color: var(--paper); font-weight: 600; font-size: .9375rem; }
+.mm-bar { height: 12px; border-radius: var(--r-pill); background: rgb(243 240 232 / .1); overflow: hidden; }
+.mm-bar i { display: block; height: 100%; width: var(--f); border-radius: inherit; background: var(--teal-lit); }
+.cell .mm .mm-s { color: var(--muted); font-weight: 500; text-align: end; }
+
+.fab-demo { position: relative; min-height: 190px; padding: 22px; border-radius: 20px; background: var(--ink); border: 1px solid var(--line); display: grid; gap: 12px; align-content: start; overflow: hidden; }
+.fab-line { height: 12px; border-radius: var(--r-pill); background: rgb(243 240 232 / .1); }
+.fab-short { width: 55%; }
+.fab { position: absolute; inset-inline-end: 20px; bottom: 18px; width: 60px; height: 60px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--emerald)); box-shadow: 0 14px 28px -10px rgb(0 0 0 / .8), 0 0 0 6px rgb(60 194 184 / .14); }
+
+.cell-watch { background: radial-gradient(90% 100% at 100% 0%, rgb(60 194 184 / .14), transparent 65%), var(--ink-2); }
+.rings { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.rings svg { width: 150px; height: 150px; flex-shrink: 0; rotate: -90deg; }
+.rings circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+.r-bg { stroke: rgb(243 240 232 / .09); }
+.r-fg { stroke-dasharray: 100; }
+.r1 { stroke: var(--teal-lit); stroke-dashoffset: 26; }
+.r2 { stroke: var(--emerald); stroke-dashoffset: 38; }
+.r3 { stroke: var(--paper); stroke-dashoffset: 10; }
+.rings ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; flex: 1 1 140px; }
+.rings li { display: flex; justify-content: space-between; gap: 16px; padding-inline-start: 14px; border-inline-start: 4px solid var(--c); font-size: .9375rem; }
+.rings li span { color: var(--muted); }
+.rings li b { font-variant-numeric: tabular-nums; }
+.k1 { --c: var(--teal-lit); } .k2 { --c: var(--emerald); } .k3 { --c: var(--paper); } .k4 { --c: var(--muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  html.motion .r-fg { stroke-dashoffset: 100; transition: stroke-dashoffset 1.2s var(--ease); }
+  html.motion .cell-watch.in .r1 { stroke-dashoffset: 26; transition-delay: .3s; }
+  html.motion .cell-watch.in .r2 { stroke-dashoffset: 38; transition-delay: .5s; }
+  html.motion .cell-watch.in .r3 { stroke-dashoffset: 10; transition-delay: .7s; }
+  html.motion .mm-bar i { transform: scaleX(0); transform-origin: left; transition: transform .8s .3s var(--ease); }
+  html.motion[dir="rtl"] .mm-bar i { transform-origin: right; }
+  html.motion .cell-map.in .mm-bar i { transform: none; }
+}
+
 /* Coach: the focal moment. */
 .coach { background: linear-gradient(180deg, var(--ink) 0%, #0a2a2c 50%, var(--ink) 100%); padding-block: 80px; }
 .coach-in { display: grid; gap: 40px; align-items: center; }
@@ -288,6 +339,9 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
   .cell-food { grid-column: span 5; }
   .cell-video { grid-column: span 3; }
   .cell-streak { grid-column: span 4; }
+  .cell-splits { grid-column: span 7; }
+  .cell-map { grid-column: span 5; }
+  .cell-bubble, .cell-watch { grid-column: span 6; }
   .copy { flex-basis: auto; }
 }
 @media (min-width: 960px) {
