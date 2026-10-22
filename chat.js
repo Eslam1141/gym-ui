@@ -395,8 +395,8 @@
   }
 
   // ---------------- screen-aware suggestions ----------------
-  // The chat API takes no "which screen" field, so the screen shows up as
-  // tappable suggestions that send an ordinary message.
+  // The screen shows up as tappable suggestions that send an ordinary message
+  // (the request also carries it as "screen", see showChat).
   function chipTexts() {
     var tab = document.body.getAttribute("data-tab");
     if (tab === "plan") {
@@ -536,7 +536,11 @@
     // The AI Coach consent comes first; "Not now" leaves the chat closed.
     GymCoachConsent.ensure().then(function (ok) { if (ok) showChat(); });
   }
+  var SCREENS = ["plan", "coach", "food", "watch", "more"];   // the API's accepted "screen" values
+  var openedFrom = "";   // the tab the sheet was opened over, captured at open time
   function showChat() {
+    var tab = document.body.getAttribute("data-tab");
+    openedFrom = SCREENS.indexOf(tab) >= 0 ? tab : "";
     open = true;
     chat.hidden = false;
     requestAnimationFrame(function () { chat.classList.add("show"); });
@@ -583,6 +587,7 @@
     if (profile) body.profile = profile;
     var planSummary = window.GymCoach && GymCoach.planSummary ? GymCoach.planSummary() : "";
     if (planSummary) body.planSummary = planSummary;
+    if (openedFrom) body.screen = openedFrom;
     if (window.GymCoach && GymCoach.ramadan && GymCoach.ramadan()) body.ramadan = true; // omit when false: backend hash stays unchanged for normal plans
 
     var foodP = window.GymFood && GymFood.foodToday ? GymFood.foodToday() : Promise.resolve("");
