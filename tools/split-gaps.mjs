@@ -17,7 +17,9 @@ const src = readFileSync(join(root, "app.js"), "utf8");
 // ---------- library (parsed from app.js) ----------
 const lib = new Map(); // id -> {id,en,shape,shape2,tools}
 const entry = /\{id:"([^"]+)", en:"([^"]+)"[^}]*?shape:"([a-z_0-9]+)"(?:, shape2:"([a-z_0-9]+)")?[^}]*?tools:\[([^\]]*)\]\}/g;
+let entryCount = 0; // plan entries (the same id is reused across plans)
 for (let m; (m = entry.exec(src)); ) {
+  entryCount++;
   lib.set(m[1], { id: m[1], en: m[2], shape: m[3], shape2: m[4] || null, tools: [...m[5].matchAll(/"([^"]+)"/g)].map((x) => x[1]) });
 }
 const names = new Map(); // en -> first entry (one move may carry several ids)
@@ -59,32 +61,32 @@ const fits = (tools, have) => tools.every((t) => have.includes(t));
 // Traps live under the "back_lower" tag ("Lower back / traps"), so they are
 // split out here to be checked on their own.
 const PARTS = [
-  { id: "chest_upper", label: "Upper chest", tag: "chest_upper", P: ["mub_incline"], S: [] },
-  { id: "chest_mid", label: "Mid chest", tag: "chest_mid", P: ["mua_bench", "ctb_dbbench", "ctb_pushup", "cta_fly"], S: [], big: true },
-  { id: "chest_lower", label: "Lower chest", tag: "chest_lower", P: [], S: ["ctb_pushup"] },
-  { id: "back_lats", label: "Back width (lats)", tag: "back_lats", P: ["mua_pulldown"], S: ["mcx_row"], big: true },
-  { id: "back_mid", label: "Back thickness (mid-back)", tag: "back_mid", P: ["mua_row", "pv_cablerow", "mub_row", "fua_row", "bbb_tbar", "mcx_row"], S: [], big: true },
+  { id: "chest_upper", label: "Upper chest", tag: "chest_upper", P: ["mub_incline", "gm_declpush"], S: [] },
+  { id: "chest_mid", label: "Mid chest", tag: "chest_mid", P: ["mua_bench", "ctb_dbbench", "ctb_pushup", "cta_fly", "gm_inclpush"], S: [], big: true },
+  { id: "chest_lower", label: "Lower chest", tag: "chest_lower", P: ["gm_inclpush"], S: ["ctb_pushup"] },
+  { id: "back_lats", label: "Back width (lats)", tag: "back_lats", P: ["mua_pulldown", "gm_pullup", "gm_bandpulldown", "gm_pullover"], S: ["mcx_row"], big: true },
+  { id: "back_mid", label: "Back thickness (mid-back)", tag: "back_mid", P: ["mua_row", "pv_cablerow", "mub_row", "fua_row", "bbb_tbar", "mcx_row", "gm_towelrow"], S: [], big: true },
   { id: "back_lower", label: "Lower back (erectors)", tag: "back_lower", P: ["mcx_superman"], S: ["mla_rdl"] },
-  { id: "traps", label: "Traps", tag: "back_lower", P: [], S: ["mub_pullapart", "mua_facepull", "bbb_tbar"] },
+  { id: "traps", label: "Traps", tag: "back_lower", P: ["gm_yt"], S: ["mub_pullapart", "mua_facepull", "bbb_tbar"] },
   { id: "shoulder_front", label: "Front delts", tag: "shoulder_front", P: ["pv_ohp", "mub_arnold", "mcp_pike"], S: [] },
-  { id: "shoulder_side", label: "Side delts", tag: "shoulder_side", P: ["mua_lateral"], S: [] },
-  { id: "shoulder_rear", label: "Rear delts", tag: "shoulder_rear", P: ["mua_facepull", "mub_pullapart"], S: ["mub_row", "mua_row", "mcx_row"] },
-  { id: "biceps_long", label: "Biceps long head", tag: "biceps_long", P: ["bba_inclcurl", "nb_towelcurl"], S: ["mub_hammer"] },
-  { id: "biceps_short", label: "Biceps short head", tag: "biceps_short", P: ["mua_curl", "fua_arms", "nb_towelcurl"], S: [] },
-  { id: "brachialis", label: "Brachialis", tag: "biceps_long", P: ["mub_hammer"], S: [] },
-  { id: "triceps_long", label: "Triceps long head", tag: "triceps_long", P: ["cta_ohext", "fua_arms"], S: [] },
+  { id: "shoulder_side", label: "Side delts", tag: "shoulder_side", P: ["mua_lateral", "gm_bandlat"], S: [] },
+  { id: "shoulder_rear", label: "Rear delts", tag: "shoulder_rear", P: ["mua_facepull", "mub_pullapart", "gm_yt"], S: ["mub_row", "mua_row", "mcx_row"] },
+  { id: "biceps_long", label: "Biceps long head", tag: "biceps_long", P: ["bba_inclcurl", "nb_towelcurl", "gm_bandcurl"], S: ["mub_hammer"] },
+  { id: "biceps_short", label: "Biceps short head", tag: "biceps_short", P: ["mua_curl", "fua_arms", "nb_towelcurl", "gm_bandcurl"], S: [] },
+  { id: "brachialis", label: "Brachialis", tag: "biceps_long", P: ["mub_hammer", "gm_bandrevcurl"], S: [] },
+  { id: "triceps_long", label: "Triceps long head", tag: "triceps_long", P: ["cta_ohext", "fua_arms", "gm_bandohext"], S: [] },
   { id: "triceps_lateral", label: "Triceps lateral head", tag: "triceps_lateral", P: ["mua_pushdown", "mub_dips", "nb_diamond"], S: ["ctb_pushup"] },
   { id: "quads", label: "Quads (vasti, general)", tag: "quads", P: ["mla_squat", "mla_legpress", "mlb_hack", "fla_goblet", "flb_bss", "mcl_squat", "fla_lunge", "mcl_lunge", "flb_sumo", "mlb_legext"], S: ["mcl_jump", "mcl_burpee"], big: true, legs: true },
-  { id: "quads_rectus", label: "Rectus femoris", tag: "quads", P: ["mlb_legext"], S: [] },
+  { id: "quads_rectus", label: "Rectus femoris", tag: "quads", P: ["mlb_legext", "gm_sissy"], S: [] },
   { id: "ham_hinge", label: "Hamstrings: hip hinge", tag: "hamstrings", P: ["mla_rdl", "fla_rdl", "mlb_sldl", "nb_hinge1"], S: [], big: true, legs: true },
   { id: "ham_curl", label: "Hamstrings: knee bend", tag: "hamstrings", P: ["pv_legcurl", "mlb_seatcurl", "nb_slidecurl"], S: [], legs: true },
   { id: "glute_max", label: "Glute max", tag: "glutes", P: ["mcl_bridge", "mla_bridge", "mlb_kickback"], S: ["flb_sumo", "flb_bss", "mcl_jump", "mla_rdl"], big: true, glute: true },
-  { id: "glute_med", label: "Glute medius (abduction)", tag: "glutes", P: [], S: ["flb_bss", "mlb_sldl", "mcl_lunge", "fla_lunge"], glute: true },
+  { id: "glute_med", label: "Glute medius (abduction)", tag: "glutes", P: ["gm_hipabd"], S: ["flb_bss", "mlb_sldl", "mcl_lunge", "fla_lunge"], glute: true },
   { id: "calf_gastro", label: "Calves: gastrocnemius", tag: "calves", P: ["mla_calf"], S: [] },
-  { id: "calf_soleus", label: "Calves: soleus", tag: "calves", P: ["flb_calf"], S: [] },
+  { id: "calf_soleus", label: "Calves: soleus", tag: "calves", P: ["flb_calf", "gm_soleus"], S: [] },
   { id: "core_flexion", label: "Core: flexion (abs)", tag: "core_lower", P: ["mla_core", "flb_legraise", "mcx_flutter"], S: ["mcp_hollow"] },
   { id: "core_antiext", label: "Core: anti-extension", tag: "core_upper", P: ["mcp_plank", "fla_deadbug", "mcp_hollow"], S: ["mcp_mtn", "mcx_bear"] },
-  { id: "core_antirot", label: "Core: anti-rotation (obliques)", tag: "core_obliques", P: ["mlb_core"], S: ["mcx_bear"] }
+  { id: "core_antirot", label: "Core: anti-rotation (obliques)", tag: "core_obliques", P: ["mlb_core", "gm_sideplank"], S: ["mcx_bear"] }
 ];
 for (const p of PARTS) for (const id of [...p.P, ...p.S]) if (!lib.has(id)) throw new Error(`part ${p.id}: unknown exercise id ${id}`);
 for (const t of MUSCLE_TAGS) if (!PARTS.some((p) => p.tag === t)) throw new Error("muscle tag without a part: " + t);
@@ -92,22 +94,14 @@ for (const t of MUSCLE_TAGS) if (!PARTS.some((p) => p.tag === t)) throw new Erro
 // ---------- moves the library does not have (candidates for new videos) ----------
 // closes = parts the move trains as its main job; adds = extra variety only.
 const MISSING = [
-  { en: "Pull-ups", tools: ["pullup_bar"], closes: ["back_lats"], adds: ["biceps_short"] },
   { en: "Chin-ups", tools: ["pullup_bar"], closes: ["back_lats", "biceps_short"], adds: ["brachialis"] },
   { en: "Hanging Knee Raise", tools: ["pullup_bar"], closes: [], adds: ["core_flexion"], note: "easier regression of Hanging Leg Raise" },
-  { en: "Decline (Feet-Elevated) Push-ups", tools: ["none"], closes: ["chest_upper"], adds: ["chest_mid"], note: "feet on any stable chair, sofa or stair" },
-  { en: "Hands-Elevated Push-ups", tools: ["none"], closes: ["chest_lower"], adds: ["chest_mid"], note: "hands on any stable chair, bench or counter; Chest Dips below is the heavier option" },
   { en: "Chest Dips", tools: ["machine"], closes: ["chest_lower", "triceps_lateral"], adds: [], note: "dip station or assisted-dip machine (gym upgrade)" },
   { en: "Bodyweight Triceps Extension", tools: ["table"], closes: ["triceps_long"], adds: [], note: "hands on a sturdy table edge, lower the head toward it" },
   { en: "Dumbbell Overhead Triceps Extension", tools: ["dumbbell"], closes: ["triceps_long"], adds: [] },
-  { en: "Band Overhead Triceps Extension", tools: ["band"], closes: ["triceps_long"], adds: [] },
   { en: "Band Triceps Pushdown", tools: ["band"], closes: ["triceps_lateral"], adds: [] },
   { en: "Band Row", tools: ["band"], closes: ["back_mid"], adds: ["shoulder_rear"] },
-  { en: "Band Lat Pulldown", tools: ["band"], closes: ["back_lats"], adds: [] },
   { en: "Band Chest Press", tools: ["band"], closes: ["chest_mid"], adds: [] },
-  { en: "Band Lateral Raise", tools: ["band"], closes: ["shoulder_side"], adds: [] },
-  { en: "Band Curl", tools: ["band"], closes: ["biceps_short", "biceps_long"], adds: [] },
-  { en: "Band Reverse-Grip Curl", tools: ["band"], closes: ["brachialis"], adds: [] },
   { en: "Band Pull-Through", tools: ["band"], closes: ["ham_hinge", "glute_max"], adds: [] },
   { en: "Band Pallof Press", tools: ["band"], closes: ["core_antirot"], adds: [] },
   { en: "Banded Lateral Walk", tools: ["band"], closes: ["glute_med"], adds: [], note: "Band Hip Abduction in the spec's list" },
@@ -117,16 +111,9 @@ const MISSING = [
   { en: "Kettlebell Goblet Squat", tools: ["kettlebell"], closes: ["quads"], adds: [], note: "skip if the owner accepts Goblet Squat done with a kettlebell" },
   { en: "Jump Rope", tools: ["jump_rope"], closes: [], adds: ["calf_gastro"], note: "conditioning; the Standing Calf Raise already covers calves" },
   { en: "Dumbbell Fly", tools: ["dumbbell", "bench"], closes: ["chest_mid"], adds: [] },
-  { en: "Dumbbell Pullover", tools: ["dumbbell"], closes: ["back_lats"], adds: ["chest_mid"], note: "lying across a bench or on the floor" },
   { en: "Dumbbell Shrug", tools: ["dumbbell"], closes: ["traps"], adds: [] },
   { en: "Dumbbell Rear Delt Fly", tools: ["dumbbell"], closes: ["shoulder_rear"], adds: ["back_mid"] },
-  { en: "Prone Y-T Raise", tools: ["none"], closes: ["shoulder_rear", "traps"], adds: [], note: "the only honest zero-equipment rear delt / trap move" },
-  { en: "Doorway Towel Row", tools: ["none"], closes: ["back_mid"], adds: ["shoulder_rear", "biceps_short"], note: "towel round a sturdy door handle; replaces the table row for users with no table" },
   { en: "Single-Leg Calf Raise", tools: ["none"], closes: [], adds: ["calf_gastro"] },
-  { en: "Bent-Knee Calf Raise (soleus)", tools: ["none"], closes: ["calf_soleus"], adds: [] },
-  { en: "Side Plank", tools: ["none"], closes: ["core_antirot"], adds: [] },
-  { en: "Sissy Squat", tools: ["none"], closes: ["quads_rectus"], adds: ["quads"] },
-  { en: "Side-Lying Hip Abduction", tools: ["none"], closes: ["glute_med"], adds: [] },
   { en: "Hip Abduction Machine", tools: ["machine"], closes: ["glute_med"], adds: [], note: "gym upgrade" },
   { en: "Barbell Hip Thrust", tools: ["barbell", "bench"], closes: ["glute_max"], adds: [], note: "gym upgrade" },
   { en: "Barbell Shrug", tools: ["barbell"], closes: ["traps"], adds: [], note: "gym upgrade (the Dumbbell Shrug already closes this)" },
@@ -165,9 +152,9 @@ function cheapestFill(part, have) {
 function needTool(part) {
   // No move fits this kit: the smallest extra tool that would make one fit.
   const opts = [
-    ...MISSING.filter((m) => m.closes.includes(part.id) && !GYM_UPGRADE.has(m.en)).map((m) => ({ tools: m.tools, name: m.en })),
-    ...part.P.map((id) => ({ tools: lib.get(id).tools, name: lib.get(id).en }))
-  ].sort((a, b) => toolCost(a.tools) - toolCost(b.tools));
+    ...part.P.map((id) => ({ tools: lib.get(id).tools, name: lib.get(id).en })),
+    ...MISSING.filter((m) => m.closes.includes(part.id) && !GYM_UPGRADE.has(m.en)).map((m) => ({ tools: m.tools, name: m.en }))
+  ].filter((o) => !o.tools.some((t) => ["barbell", "cable", "machine"].includes(t))).sort((a, b) => toolCost(a.tools) - toolCost(b.tools));
   return opts[0] || null;
 }
 
@@ -210,29 +197,30 @@ w("# Training splits: gap report (2026-10-21)");
 w();
 w("Generated by `node tools/split-gaps.mjs` from the `tools` tags in `app.js`. Re-run it after adding a video and the gap disappears.");
 w();
-w("Approved clips (owner, 2026-10-22), including the 4 new no-tool moves that now have videos: see [approved-clips-2026-10-22.md](approved-clips-2026-10-22.md).");
+w("Approved clips (owner, 2026-10-22): all 19 are in the app, the 4 no-tool moves (`nb_*`) and the 15 gap moves (`gm_*`); see [approved-clips-2026-10-22.md](approved-clips-2026-10-22.md).");
 w();
 w("## How to read this");
 w();
-w(`- Library: 122 plan entries tagged, ${exCount} distinct ids, ${moveCount} distinct moves (the same id is reused across plans, and one move can carry several ids). Every entry now has a \`tools\` tag: what the move requires.`);
+w(`- Library: ${entryCount} plan entries tagged, ${exCount} distinct ids, ${moveCount} distinct moves (the same id is reused across plans, and one move can carry several ids). Every entry now has a \`tools\` tag: what the move requires.`);
 w(`- Moves per tool: ${Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(", ")}.`);
 w(`- A **part** is a piece of a muscle (for example "Upper chest" or "Hamstrings: hip hinge"). The ${PARTS.length} parts map onto the app's 20 muscle tags; traps sit under the "Lower back / traps" tag, so they are checked on their own.`);
 w("- **Gap**: no library move whose main job is that part fits the toolset. Nothing can be scheduled for it, whatever the split, so the builder would have to borrow from a neighbouring part. The move named under \"Fill with\" is the cheapest missing move that closes it.");
 w("- **Thin**: the part has a move but fewer different moves than the split wants (a 5 or 6 day week should not repeat one move every session; women's plans want more glute and leg variety). Not a blocker.");
 w("- Gaps do not depend on sex or on the number of days, only on the toolset. Variety depends on all three.");
+w("- A part counts as closed when the library has a main move for it that fits the kit. `splits.js` schedules a gap move (`gm_*`) only where the kit leaves that slot empty or with a single move; kits that already have a good move keep it, so their plans do not change. Sissy Squat has no template slot yet, and Side-Lying Hip Abduction, Prone Y-T Raise and Bent-Knee Calf Raise are scheduled only in the kits that otherwise lack them.");
 w(`- Kits: bodyweight is only \`none\`. Dumbbell, band and dumbbell + band + bench add to \`none\`. All home tools is ${HOME.filter((t) => t !== "none").join(", ")}. Gym is every tool, including barbell, cable and machine.`);
 w("- Barbell, cable and machine moves never appear in a home kit; the Playwright test `tests/split-tools.spec.js` enforces that.");
 w();
 w("### Tagging calls worth a second look");
 w();
-w("- **Lat Pulldown / Pull-up** is tagged `cable`: the library clip is the pulldown. A pull-up bar is an alternative the clip does not show, so Pull-ups is listed below as a missing move.");
+w("- **Lat Pulldown / Pull-up** is tagged `cable`: the library clip is the pulldown. A pull-up bar is an alternative the clip does not show, so Pull-ups is its own library move (`pullup_bar`).");
 w("- **Goblet Squat** is tagged `dumbbell`; a kettlebell does the same job (the \"Kettlebell Goblet Squat\" row below is optional if the owner is happy for the existing clip to serve both).");
 w("- **Standing Calf Raise** is tagged `none`: it is already used bodyweight in the calisthenics plans (25-30 reps); a loaded version is not required.");
 w("- **Bulgarian Split Squat** is tagged `dumbbell + bench`; unloaded on a chair it works, but the clip shows the loaded move.");
 w("- **Pallof Press** is tagged `cable`; a band works too (listed as Band Pallof Press).");
 w("- **Chest-Supported Row** and **T-Bar Row** are tagged `machine` (gym plate-loaded / supported row). The dumbbell version is a separate move (Chest-Supported Dumbbell Row, `dumbbell + bench`).");
 w("- **Hanging Leg Raise** is tagged `pullup_bar`.");
-w("- The inverted row is `table`; Decline Push-ups, Hands-Elevated Push-ups and the Doorway Towel Row below assume household furniture and are tagged `none`.");
+w("- The inverted row is `table`; Decline Push-ups, Hands-Elevated Push-ups and the Doorway Towel Row assume household furniture and are tagged `none`.");
 w();
 
 for (const ts of TOOLSETS) {
@@ -301,7 +289,7 @@ if (unfillable.length) {
 
 w("## Gym upgrades (not gaps)");
 w();
-w("The gym kit has no unfilled part once the cheap bodyweight clips above exist, but several parts rest on a single machine or a floor move. These are the spec's gym additions, kept as optional extras:");
+w("The gym kit has no unfilled part now that the approved bodyweight clips are in the app, but several parts rest on a single machine or a floor move. These are the spec's gym additions, kept as optional extras:");
 w();
 MISSING.filter((m) => GYM_UPGRADE.has(m.en) || m.en === "Chest Dips").forEach((m) => w(`- ${m.en} (${toolStr(m.tools)}): ${m.closes.map((id) => PARTS.find((p) => p.id === id).label).join(", ")}${m.ar ? `. Arabic name already in AR_EX: ${m.ar}` : ""}`));
 w();

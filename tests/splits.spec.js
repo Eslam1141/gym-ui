@@ -25,18 +25,37 @@ for (const days of S.DAYS) for (const sex of ["male", "female"]) for (const kit 
 const build = (c) => S.buildPlan({ days: c.days, where: c.kit.where, sex: c.sex, tools: c.kit.tools });
 const have = (c) => (c.kit.where === "gym" ? [...HOME, "barbell", "cable", "machine"] : c.kit.tools);
 
-// Regions the current library cannot train on two different days, per toolset (all splits and
-// sexes agree). Each one is returned in `gaps`; the owner supplies the missing clips.
+// Regions no library move in the toolset can train at all, per toolset (all splits and sexes
+// agree). Each one is returned in `gaps` with the tool to tick. Since the 15 gap moves (2026-10-22)
+// only the bodyweight kit has any: it has no move for lats, side delts or the triceps long head.
 const EXPECTED_REGION_GAPS = {
-  "bodyweight only": ["back_lats", "back_mid", "chest_lower", "chest_upper", "shoulder_rear", "shoulder_side", "triceps_long"],
-  dumbbell: ["back_lats", "chest_lower", "chest_upper", "shoulder_rear"],
-  band: ["back_lats", "back_mid", "chest_lower", "chest_upper", "shoulder_side", "triceps_long"],
-  "dumbbell+band+bench": ["back_lats", "chest_lower"],
-  "all home tools": ["chest_lower"],
-  gym: ["chest_lower"]
+  "bodyweight only": ["back_lats", "shoulder_side", "triceps_long"],
+  dumbbell: [],
+  band: [],
+  "dumbbell+band+bench": [],
+  "all home tools": [],
+  gym: []
 };
 // New no-equipment moves (2026-10-22) and their owner-approved clips (2026-10-22).
 const NEW_NB_CLIPS = { nb_towelcurl: "leaEyx33mHw", nb_diamond: "PPTj-MW2tcs", nb_hinge1: "JQZqPsmeesc", nb_slidecurl: "cjtsLDniFpk" };
+// The 15 gap moves (2026-10-22): id -> [EN name, approved clip, tools, shape, shape2].
+const GAP_MOVES = {
+  gm_yt: ["Prone Y-T Raise", "X-b1S-rQc9k", ["none"], "shoulder_rear", null],
+  gm_inclpush: ["Hands-Elevated Push-ups", "yAbg3_pJKvw", ["none"], "chest_lower", "chest_mid"],
+  gm_hipabd: ["Side-Lying Hip Abduction", "-rDiQXjeXO0", ["none"], "glutes", null],
+  gm_sissy: ["Sissy Squat", "_cWFxUEfV7o", ["none"], "quads", null],
+  gm_sideplank: ["Side Plank", "44ND4bOB-T0", ["none"], "core_obliques", null],
+  gm_declpush: ["Decline Push-ups", "xoX1nSewXgA", ["none"], "chest_upper", null],
+  gm_soleus: ["Bent-Knee Calf Raise", "uJ7QH7pExh0", ["none"], "calves", null],
+  gm_towelrow: ["Doorway Towel Row", "SkFBcrHVGn4", ["none"], "back_mid", null],
+  gm_bandcurl: ["Resistance Band Curl", "AaA7Yj3zHiU", ["band"], "biceps_short", "biceps_long"],
+  gm_bandpulldown: ["Resistance Band Lat Pulldown", "8zv8Pray4-w", ["band"], "back_lats", null],
+  gm_pullup: ["Pull-ups", "I3K-IbszbuI", ["pullup_bar"], "back_lats", null],
+  gm_bandlat: ["Band Lateral Raise", "iQlrRrZTrBs", ["band"], "shoulder_side", null],
+  gm_bandohext: ["Band Overhead Triceps Extension", "Yi_zNoIsNcc", ["band"], "triceps_long", null],
+  gm_bandrevcurl: ["Band Reverse-Grip Curl", "ze32_Pas8ho", ["band"], "biceps_long", null],
+  gm_pullover: ["Dumbbell Pullover", "jQjWlIwG4sI", ["dumbbell"], "back_lats", null]
+};
 
 function stats(plan) {
   const regionDays = {}, groupSets = {}, groupDay = {};
@@ -156,10 +175,10 @@ test("gaps per toolset are exactly the known ones, and every unfilled/substitute
 // Regions the tools can reach but the per-day exercise cap leaves on fewer than two days
 // ("frequency" gaps), gym toolset, as the union over men and women. 6-day PPL x2 has only back_lower.
 const EXPECTED_GYM_FREQUENCY = {
-  3: ["back_lower", "biceps_long", "core_obliques", "shoulder_front", "shoulder_rear", "shoulder_side", "triceps_lateral"],
-  4: ["back_lower", "biceps_long", "chest_upper", "shoulder_rear", "triceps_lateral"],
-  5: ["back_lower", "biceps_long", "shoulder_rear", "triceps_lateral"],
-  6: ["back_lower"]
+  3: ["back_lower", "biceps_long", "chest_lower", "core_obliques", "shoulder_front", "shoulder_rear", "shoulder_side", "triceps_lateral"],
+  4: ["back_lower", "biceps_long", "chest_lower", "chest_upper", "shoulder_rear", "triceps_lateral"],
+  5: ["back_lower", "biceps_long", "chest_lower", "shoulder_rear", "triceps_lateral"],
+  6: ["back_lower", "chest_lower"]
 };
 test("frequency gaps (exercise cap) are recorded, never faked", () => {
   for (const days of S.DAYS) {
@@ -206,6 +225,58 @@ test("new no-equipment moves: in app.js with EN + AR names, approved clip, tools
   });
 });
 
+test("15 gap moves: in app.js and splits.js with the approved clip, tools, shape tags and an Arabic name", () => {
+  expect(Object.keys(GAP_MOVES)).toHaveLength(15);
+  Object.entries(GAP_MOVES).forEach(([id, [en, vid, tools, shape, shape2]]) => {
+    const m = S.library[id];
+    expect(m, id).toBeTruthy();
+    expect({ en: m.en, vid: m.vid, tools: m.tools, shape: m.shape, shape2: m.shape2 || null }, id).toEqual({ en, vid, tools, shape, shape2 });
+    const line = appSrc.split("\n").find((l) => l.includes(`{id:"${id}"`));
+    expect(line, `${id} is not in app.js`).toBeTruthy();
+    expect(line, id).toContain(`en:"${en}"`);
+    expect(line, id).toContain(`vid:"${vid}"`);
+    const ar = appSrc.match(new RegExp(`"${en.replace(/[()]/g, "\\$&")}":"([^"]+)"`));
+    expect(ar && /[؀-ۿ]/.test(ar[1]), `${id} has no Arabic name in AR_EX`).toBe(true);
+  });
+  // ids are unique across app.js
+  Object.keys(GAP_MOVES).forEach((id) => expect(appSrc.split(`{id:"${id}"`).length - 1, id).toBe(1));
+  // the owner's specific tool calls
+  expect(S.library.gm_pullup.tools).toEqual(["pullup_bar"]);
+  expect(S.library.gm_pullover.tools).toEqual(["dumbbell"]);
+});
+
+test("gap moves are used only where the kit lacked a move; gym plans did not change", () => {
+  const used = {};
+  for (const c of cases) build(c).days.forEach((d) => d.exercises.forEach((e) => {
+    if (e.id.startsWith("gm_")) (used[e.id] = used[e.id] || new Set()).add(c.kit.key);
+  }));
+  // gym: no gap move, and the eight gym plans are exactly what they were before the gap moves
+  Object.values(used).forEach((s) => expect(s.has("gym")).toBe(false));
+  const parts = [];
+  for (const days of S.DAYS) for (const sex of ["male", "female"]) S.buildPlan({ days, where: "gym", sex }).days.forEach((d) => parts.push(d.id + ":" + d.exercises.map((e) => e.id + "x" + e.sets).join(",")));
+  expect(crypto.createHash("sha256").update(parts.join("|")).digest("hex").slice(0, 16)).toBe("9d9c7326214fd3b4");
+  // every gap move is scheduled in at least one kit except Sissy Squat (no template slot yet)
+  const unused = Object.keys(GAP_MOVES).filter((id) => !used[id]);
+  expect(unused).toEqual(["gm_sissy"]);
+  // band moves only in band kits, the pull-up only with a bar, pullover only with a dumbbell
+  ["gm_bandcurl", "gm_bandlat", "gm_bandohext", "gm_bandrevcurl", "gm_bandpulldown"].forEach((id) => [...used[id]].forEach((k) => expect(["band", "dumbbell+band+bench"], `${id} in ${k}`).toContain(k)));
+  expect([...used.gm_pullup]).toEqual(["all home tools"]);
+  [...used.gm_pullover].forEach((k) => expect(["dumbbell", "dumbbell+band+bench"]).toContain(k));
+  // what the bodyweight kit now schedules (it had the most gaps)
+  const bw = new Set();
+  for (const days of S.DAYS) for (const sex of ["male", "female"]) S.buildPlan({ days, where: "home", sex, tools: ["none"] }).days.forEach((d) => d.exercises.forEach((e) => bw.add(e.id)));
+  ["gm_declpush", "gm_inclpush", "gm_towelrow", "gm_yt", "gm_hipabd", "gm_soleus", "gm_sideplank"].forEach((id) => expect(bw.has(id), id).toBe(true));
+});
+
+test("a pull-up bar closes the bodyweight lats gap by name, and pull-ups appear when the bar is ticked", () => {
+  const gap = S.buildPlan({ days: 4, where: "home", sex: "male", tools: ["none"] }).gaps.find((g) => g.kind === "region" && g.region === "back_lats");
+  expect(gap && gap.tick).toEqual(["pullup_bar"]);
+  expect(gap.needs).toBe("Pull-ups");
+  const withBar = S.buildPlan({ days: 4, where: "home", sex: "male", tools: ["pullup_bar"] });
+  expect(withBar.gaps.some((g) => g.kind === "region" && g.region === "back_lats")).toBe(false);
+  expect(withBar.days.some((d) => d.exercises.some((e) => e.id === "gm_pullup"))).toBe(true);
+});
+
 test("id reuse: one move, one id, across every split and sex", () => {
   const idByName = {}, nameById = {};
   for (const c of cases) build(c).days.forEach((d) => d.exercises.forEach((e) => {
@@ -226,7 +297,7 @@ test("id reuse: every scheduled id is an existing app.js library exercise with i
     expect({ en: m.en, vid: m.vid, shape: m.shape, shape2: m.shape2, tier: m.tier, tools: m.tools }, id).toEqual(lib[id]);
   });
   // every ranked id exists in the splits library
-  Object.entries(S.parts).forEach(([p, part]) => [...part.r, ...(part.f || [])].forEach((id) => expect(S.library[id], `${p} -> ${id}`).toBeTruthy()));
+  Object.entries(S.parts).forEach(([p, part]) => [...part.r, ...(part.f || []), ...(part.x || [])].forEach((id) => expect(S.library[id], `${p} -> ${id}`).toBeTruthy()));
 });
 
 test("women's versions weight glutes and legs more than the men's", () => {

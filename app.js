@@ -205,15 +205,31 @@ const DAYS_FEMALE_CAL = [
   ]},
 ];
 
-// ---- No-equipment moves for biceps, triceps and hamstrings (added 2026-10-22 for the training splits).
-// Library-only: no plan lists this "day". There is no video yet (vid is empty on purpose, the card
-// shows "Video coming soon" until the owner supplies a clip); never put a guessed video id here. ----
+// ---- Library-only moves for the training splits (no plan lists this "day"): the no-equipment
+// biceps, triceps and hamstrings moves (nb_) and the gap-filling moves (gm_) from the 2026-10-21
+// gap report. Every vid is an owner-approved clip (docs/approved-clips-2026-10-22.md); never put a
+// guessed video id here. ----
 const DAYS_EXTRA = [
-  { id:"x_library", label:"Library", muscles:"No-equipment biceps, triceps, hamstrings", exercises:[
+  { id:"x_library", label:"Library", muscles:"No-equipment moves and split gap fillers", exercises:[
     {id:"nb_towelcurl", en:"Towel Door Curl", sets:3, reps:"12-15", rest:45, vid:"leaEyx33mHw", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["none"]},
     {id:"nb_diamond", en:"Diamond Push-ups", sets:3, reps:"8-12", rest:60, vid:"PPTj-MW2tcs", shape:"triceps_lateral", tier:"medium", tools:["none"]},
     {id:"nb_hinge1", en:"Single-Leg Hip Hinge", sets:3, reps:"8-12/leg", rest:45, vid:"JQZqPsmeesc", shape:"hamstrings", tier:"medium", tools:["none"]},
     {id:"nb_slidecurl", en:"Towel Sliding Hamstring Curl", sets:3, reps:"8-12", rest:60, vid:"cjtsLDniFpk", shape:"hamstrings", tier:"medium", tools:["none"]},
+    {id:"gm_yt", en:"Prone Y-T Raise", sets:3, reps:"12-15", rest:30, vid:"X-b1S-rQc9k", shape:"shoulder_rear", tier:"easy", tools:["none"]},
+    {id:"gm_inclpush", en:"Hands-Elevated Push-ups", sets:3, reps:"10-12", rest:60, vid:"yAbg3_pJKvw", shape:"chest_lower", shape2:"chest_mid", tier:"easy", tools:["none"]},
+    {id:"gm_hipabd", en:"Side-Lying Hip Abduction", sets:3, reps:"15-20/leg", rest:30, vid:"-rDiQXjeXO0", shape:"glutes", tier:"easy", tools:["none"]},
+    {id:"gm_sissy", en:"Sissy Squat", sets:3, reps:"8-12", rest:60, vid:"_cWFxUEfV7o", shape:"quads", tier:"hard", tools:["none"]},
+    {id:"gm_sideplank", en:"Side Plank", sets:3, reps:"20-30s", rest:30, vid:"44ND4bOB-T0", shape:"core_obliques", tier:"medium", tools:["none"]},
+    {id:"gm_declpush", en:"Decline Push-ups", sets:3, reps:"8-12", rest:60, vid:"xoX1nSewXgA", shape:"chest_upper", tier:"medium", tools:["none"]},
+    {id:"gm_soleus", en:"Bent-Knee Calf Raise", sets:3, reps:"15-20", rest:30, vid:"uJ7QH7pExh0", shape:"calves", tier:"easy", tools:["none"]},
+    {id:"gm_towelrow", en:"Doorway Towel Row", sets:3, reps:"8-12", rest:60, vid:"SkFBcrHVGn4", shape:"back_mid", tier:"medium", tools:["none"]},
+    {id:"gm_bandcurl", en:"Resistance Band Curl", sets:3, reps:"12-15", rest:45, vid:"AaA7Yj3zHiU", shape:"biceps_short", shape2:"biceps_long", tier:"easy", tools:["band"]},
+    {id:"gm_bandpulldown", en:"Resistance Band Lat Pulldown", sets:3, reps:"10-12", rest:60, vid:"8zv8Pray4-w", shape:"back_lats", tier:"easy", tools:["band"]},
+    {id:"gm_pullup", en:"Pull-ups", sets:3, reps:"5-8", rest:120, vid:"I3K-IbszbuI", shape:"back_lats", tier:"hard", tools:["pullup_bar"]},
+    {id:"gm_bandlat", en:"Band Lateral Raise", sets:3, reps:"15-20", rest:30, vid:"iQlrRrZTrBs", shape:"shoulder_side", tier:"easy", tools:["band"]},
+    {id:"gm_bandohext", en:"Band Overhead Triceps Extension", sets:3, reps:"12-15", rest:45, vid:"Yi_zNoIsNcc", shape:"triceps_long", tier:"easy", tools:["band"]},
+    {id:"gm_bandrevcurl", en:"Band Reverse-Grip Curl", sets:3, reps:"12-15", rest:45, vid:"ze32_Pas8ho", shape:"biceps_long", tier:"easy", tools:["band"]},
+    {id:"gm_pullover", en:"Dumbbell Pullover", sets:3, reps:"10-12", rest:60, vid:"jQjWlIwG4sI", shape:"back_lats", tier:"medium", tools:["dumbbell"]},
   ]},
 ];
 
@@ -266,7 +282,22 @@ const AR_EX = {
   "Squat Jumps":"قفز سكوات","Burpees":"بيربي","Inverted Row (under a table)":"تجديف مقلوب (تحت طاولة)","Superman":"سوبرمان (أسفل الظهر)",
   "Flutter Kicks":"رفرفة الرجلين","Bear Crawl":"زحف الدب",
   "Towel Door Curl":"مرجحة بايسبس بمنشفة على الباب","Diamond Push-ups":"ضغط الماس (ترايسبس)","Single-Leg Hip Hinge":"ثني الورك برجل واحدة (خلفية الفخذ)",
-  "Towel Sliding Hamstring Curl":"ثني الرجلين بالانزلاق على منشفة (خلفية الفخذ)"
+  "Towel Sliding Hamstring Curl":"ثني الرجلين بالانزلاق على منشفة (خلفية الفخذ)",
+  "Prone Y-T Raise":"رفع Y-T على البطن (كتف خلفي وترابيس)",
+  "Hands-Elevated Push-ups":"ضغط بيدين مرتفعتين (صدر سفلي)",
+  "Side-Lying Hip Abduction":"فتح الورك مستلقياً على الجنب (ألوية)",
+  "Sissy Squat":"سكوات سيسي (أمامية الفخذ)",
+  "Side Plank":"بلانك جانبي (بطن)",
+  "Decline Push-ups":"ضغط بقدمين مرتفعتين (صدر علوي)",
+  "Bent-Knee Calf Raise":"رفع السمانة بركبة مثنية",
+  "Doorway Towel Row":"تجديف بمنشفة على الباب (ظهر)",
+  "Resistance Band Curl":"مرجحة بايسبس بالمطاط",
+  "Resistance Band Lat Pulldown":"سحب أمامي بالمطاط (عرض الظهر)",
+  "Pull-ups":"عقلة",
+  "Band Lateral Raise":"رفرفة جانبي بالمطاط",
+  "Band Overhead Triceps Extension":"تمديد ترايسبس خلف الرأس بالمطاط",
+  "Band Reverse-Grip Curl":"مرجحة بايسبس قبضة عكسية بالمطاط",
+  "Dumbbell Pullover":"بول أوفر بالدمبل (عرض الظهر)"
 };
 const AR_DAY = {"Push":"دفع","Pull":"سحب","Legs":"أرجل","Upper":"علوي","Lower":"سفلي","Lower A":"سفلي أ","Upper A":"علوي أ","Lower B":"سفلي ب","Upper B":"علوي ب","Full-Body Starter":"تمرين شامل للمبتدئين",
   "Back + Biceps + Calves":"ظهر + بايسبس + سمانة","Chest + Triceps":"صدر + ترايسبس","Chest & Triceps A":"صدر وترايسبس أ","Back & Biceps A":"ظهر وبايسبس أ","Chest & Triceps B":"صدر وترايسبس ب","Back & Biceps B":"ظهر وبايسبس ب"};
@@ -292,7 +323,7 @@ const EX_ALIASES = {
   "squat":"Barbell Back Squat", "squats":"Bodyweight Squats", "bodyweight squat":"Bodyweight Squats", "air squat":"Bodyweight Squats",
   "back squat":"Barbell Back Squat", "goblet squats":"Goblet Squat",
   "deadlift":"Barbell Romanian Deadlift", "deadlifts":"Barbell Romanian Deadlift", "romanian deadlift":"Barbell Romanian Deadlift", "rdl":"Barbell Romanian Deadlift", "stiff leg deadlift":"Barbell Romanian Deadlift",
-  "pull up":"Lat Pulldown / Pull-up", "pull ups":"Lat Pulldown / Pull-up", "pullup":"Lat Pulldown / Pull-up", "pullups":"Lat Pulldown / Pull-up", "chin up":"Lat Pulldown / Pull-up", "chin ups":"Lat Pulldown / Pull-up",
+  "pull up":"Pull-ups", "pull ups":"Pull-ups", "pullup":"Pull-ups", "pullups":"Pull-ups", "chin up":"Pull-ups", "chin ups":"Pull-ups",
   "lat pulldown":"Lat Pulldown / Pull-up", "assisted pull up":"Lat Pulldown / Pull-up",
   "row":"Seated Cable Row", "cable row":"Seated Cable Row", "seated row":"Seated Cable Row",
   "bent over row":"Chest-Supported Row", "barbell row":"Chest-Supported Row", "bent over barbell row":"Chest-Supported Row",
@@ -310,7 +341,7 @@ const EX_ALIASES = {
   "split squat":"Bulgarian Split Squat", "bulgarian split squats":"Bulgarian Split Squat", "rear foot elevated split squat":"Bulgarian Split Squat",
   "calf raise":"Standing Calf Raise", "calf raises":"Standing Calf Raise",
   "hip thrust":"Barbell Hip Thrust", "hip thrusts":"Barbell Hip Thrust", "glute bridge":"Glute Bridge", "glute bridges":"Glute Bridge",
-  "plank":"Plank (core)", "planks":"Plank (core)", "side plank":"Plank (core)", "forearm plank":"Plank (core)",
+  "plank":"Plank (core)", "planks":"Plank (core)", "forearm plank":"Plank (core)",
   "crunch":"Weighted Cable Crunch (core)", "crunches":"Weighted Cable Crunch (core)", "sit up":"Weighted Cable Crunch (core)", "sit ups":"Weighted Cable Crunch (core)",
   "leg raise":"Hanging Leg Raise (core)", "leg raises":"Hanging Leg Raise (core)", "hanging leg raises":"Hanging Leg Raise (core)", "lying leg raise":"Hanging Leg Raise (core)",
   "mountain climber":"Mountain Climbers", "burpee":"Burpees",
@@ -345,7 +376,6 @@ window.GymExerciseVideo = function(name){
 // contains-match: a wrong muscle lit up is worse than no picture.
 // _normEx drops non-latin letters, which would collapse every Arabic name to ""; keep them here.
 function _shapeKey(s){ return String(s||"").toLowerCase().replace(/\(.*?\)/g," ").replace(/[^a-z0-9\u0600-\u06FF]+/g," ").trim(); }
-const EX_SHAPE_SKIP = { "side plank":1 }; // reuses the Plank video, but trains the obliques
 // Generic names that don't say which head ("bicep curl", "tricep pushdown") train the whole muscle,
 // not the one head of the clip they borrow. Named variations (hammer, overhead, rope) keep theirs.
 const EX_WHOLE = { biceps:["biceps_long","biceps_short"], triceps:["triceps_long","triceps_lateral"] };
@@ -369,7 +399,7 @@ const EX_SHAPE = (function(){
   Object.keys(EX_ALIASES).forEach(alias=>{
     const tags = m[_shapeKey(EX_ALIASES[alias])];
     const whole = EX_GENERIC[alias] && EX_WHOLE[EX_GENERIC[alias]];
-    if(tags && !EX_SHAPE_SKIP[alias] && !m[_shapeKey(alias)]) m[_shapeKey(alias)] = whole ? {shape:whole[0], shape2:whole[1]} : tags;
+    if(tags && !m[_shapeKey(alias)]) m[_shapeKey(alias)] = whole ? {shape:whole[0], shape2:whole[1]} : tags;
   });
   return m;
 })();

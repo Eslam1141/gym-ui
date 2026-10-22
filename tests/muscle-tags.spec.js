@@ -119,7 +119,7 @@ test("lookup exact", async ({ browser }) => {
   expect(r.contains).toBeNull();
   expect(r.empty).toBeNull();
   expect(r.nul).toBeNull();
-  expect(r.sidePlank).toBeNull();   // an alias for the video, but a side plank trains the obliques, not "Plank"
+  expect(r.sidePlank).toEqual({ shape: "core_obliques" });   // its own move now (gm_sideplank), not an alias of "Plank"
   expect(r.two).toEqual({ shape: "hamstrings", shape2: "back_lower" });
   await context.close();
 });
