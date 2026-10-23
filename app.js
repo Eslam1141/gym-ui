@@ -1094,6 +1094,19 @@ function findDay(dayId){
   const old = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male", tools: splitChoice.tools });
   return old.days.find(d=>d.id===dayId);
 }
+// The Plan tab's split week in the shape the coach /assess request takes (English names and
+// shape ids whatever the UI language), or null for Classic / when another program is showing.
+window.GymApp.coachSplit = function(){
+  const sp = activeStyle === "gym" ? splitPlan() : null;
+  if(!sp || !sp.days || !sp.days.length) return null;
+  const clip = v=> String(v == null ? "" : v).trim().slice(0, 80);
+  const days = sp.days.slice(0, 7).map(d=>({
+    name: clip(d.label),
+    moves: (d.exercises || []).slice(0, 10).map(e=>({ name: clip(e.en), part: clip(e.shape) })).filter(m=>m.name && m.part)
+  })).filter(d=>d.name && d.moves.length);
+  if(!days.length) return null;
+  return { name: clip(`${splitChoice.days} days \u00b7 ${splitChoice.where === "home" ? "Home" : "Gym"}`), days };
+};
 window.GymApp.dayExercises = function(dayId){
   const day = findDay(dayId);
   return day ? day.exercises : [];

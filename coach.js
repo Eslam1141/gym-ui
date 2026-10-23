@@ -1115,6 +1115,9 @@
   }
   function buildRequest(st) {
     var req = { want: st.want, lang: lang(), profile: buildProfile(st) };
+    // The Plan tab's split (not Classic) so a workout is built on it; omitted otherwise (backend hash stays unchanged).
+    var split = st.want !== "diet" && window.GymApp && GymApp.coachSplit ? GymApp.coachSplit() : null;
+    if (split) req.split = split;
     if (st.ramadan) req.ramadan = true; // omit when false: backend hash stays unchanged for normal plans
     return req;
   }
