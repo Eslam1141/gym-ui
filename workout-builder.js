@@ -101,9 +101,11 @@
   function buildExerciseIndex() {
     var byName = {};
     var order = [];
-    [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL].forEach(function (set) {
+    [DAYS_PREVIEW, DAYS_MALE, LEGACY_MALE_DAYS, DAYS_FEMALE, DAYS_MALE_CAL, DAYS_FEMALE_CAL, DAYS_EXTRA].forEach(function (set) {
       set.forEach(function (day) {
         day.exercises.forEach(function (ex) {
+          // from the library only the optional gym moves (gu_) are offered
+          if (set === DAYS_EXTRA && ex.id.indexOf("gu_") !== 0) return;
           if (byName[ex.en]) return;
           byName[ex.en] = ex;
           order.push(ex.en);
