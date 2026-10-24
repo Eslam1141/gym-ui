@@ -43,8 +43,16 @@
     updated: ["Live · updated {t}", "مباشر · آخر تحديث {t}"],
     chartAlt: ["{n} signups in the last 90 days; busiest day {d} with {m}.", "{n} تسجيلًا في آخر 90 يومًا؛ أكثر يوم {d} بعدد {m}."],
     provTitle: ["Sign-in methods", "طرق تسجيل الدخول"],
-    pGoogle: ["Google", "Google"],
-    pPassword: ["E-mail", "البريد الإلكتروني"],
+    pGoogle: ["Google only", "Google فقط"],
+    pPassword: ["E-mail only", "البريد الإلكتروني فقط"],
+    mGoogle: ["Google", "Google"],
+    mPassword: ["E-mail", "البريد الإلكتروني"],
+    cInactive: ["Inactive 30+ days", "غير نشط منذ 30+ يومًا"],
+    fAll: ["All", "الكل"], fActive: ["Active", "نشط"], fInactive: ["Inactive", "غير نشط"],
+    filterLbl: ["Filter by activity", "تصفية حسب النشاط"],
+    lastWo: ["Last workout: {d}", "آخر تمرين: {d}"], noWo: ["No workouts yet", "لا توجد تمارين بعد"],
+    wo30: ["{n} in 30 days", "{n} خلال 30 يومًا"], streakN: ["{n}-day streak", "سلسلة {n} يوم"],
+    kvLastWo: ["Last workout", "آخر تمرين"], kvWo7: ["Workouts · 7 days", "التمارين · 7 أيام"], kvWo30: ["Workouts · 30 days", "التمارين · 30 يومًا"],
     pApple: ["Apple", "Apple"],
     pBoth: ["Both", "كلاهما"],
     dWeek: ["+{n} this week", "+{n} هذا الأسبوع"],
@@ -254,6 +262,10 @@
         ["cA30", st.activeUsers.d30, "pulse", { t: s("dShare", { p: share(st.activeUsers.d30) }) }],
         ["cBlocked", st.blockedUsers, "ban", st.blockedUsers ? { t: s("dShare", { p: share(st.blockedUsers) }) } : null, "warn"]
       ];
+      // additive backend field: the tile only exists once gym-be sends it
+      if (st.inactiveUsers && typeof st.inactiveUsers.d30 === "number") {
+        cards.push(["cInactive", st.inactiveUsers.d30, "pulse", { t: s("dShare", { p: share(st.inactiveUsers.d30) }) }, "inactive"]);
+      }
       var tiles = cards.map(function (c, i) {
         var num = quiet ? el("b", { text: fmtNum(c[1]) }) : countUp(el("b"), c[1]);
         var ico = el("span", { class: "adm-ico", "aria-hidden": "true" });
@@ -283,7 +295,8 @@
       drawChart(chartMode());
       chartTile.style.setProperty("--i", cards.length);
       var p = st.providers, base = tot || (p.google + p.password + p.both) || 1;
-      var provRows = [["pPassword", p.password + p.both], ["pGoogle", p.google + p.both], ["pBoth", p.both]];
+      // exclusive buckets: e-mail only + Google only + both (+ Apple) add up to the total
+      var provRows = [["pPassword", p.password], ["pGoogle", p.google], ["pBoth", p.both]];
       if (typeof p.apple === "number") provRows.splice(2, 0, ["pApple", p.apple]);
       var provTile = el("section", { class: "adm-tile adm-section adm-t-prov" }, [
         el("h2", { text: s("provTitle") }),
@@ -437,7 +450,18 @@
       default: return s("eGeneric");
     }
   }
-  function provLabel(p) { return s(p === "google" ? "pGoogle" : p === "apple" ? "pApple" : p === "both" ? "pBoth" : "pPassword"); }
+  function provLabel(p) { return s(p === "google" ? "mGoogle" : p === "apple" ? "pApple" : p === "both" ? "pBoth" : "mPassword"); }
+  function activeBadge(x) {
+    if (typeof x.active !== "boolean") return null;
+    return el("span", { class: "adm-badge " + (x.active ? "on" : "off"), text: s(x.active ? "fActive" : "fInactive") });
+  }
+  function progressLine(x) {
+    if (typeof x.active !== "boolean") return null;
+    var parts = [x.lastWorkoutAt ? s("lastWo", { d: fmtDate(x.lastWorkoutAt) }) : s("noWo")];
+    if (x.workouts30d > 0) parts.push(s("wo30", { n: fmtNum(x.workouts30d) }));
+    if (x.currentStreak > 0) parts.push(s("streakN", { n: fmtNum(x.currentStreak) }));
+    return el("div", { class: "adm-sub adm-prog", text: parts.join(" · ") });
+  }
   var DEFAULT_AV = "icons/avatar-default.svg";
   function avatar(u, big) {
     var img = el("img", { class: "adm-av", alt: "", width: big ? 64 : 36, height: big ? 64 : 36, referrerpolicy: "no-referrer", loading: "lazy" });
@@ -447,7 +471,7 @@
   }
 
   // ---- users: list view ----
-  state.users = { q: "", sort: "created", page: 1 };
+  state.users = { q: "", sort: "created", active: "", page: 1 };
   var searchTimer = null;
   views.users = function () {
     var u = state.users;
@@ -462,7 +486,12 @@
     ]);
     sel.value = u.sort;
     sel.addEventListener("change", function () { u.sort = sel.value; u.page = 1; loadList(); });
-    main.appendChild(el("div", { class: "adm-tools" }, [input, sel]));
+    var fsel = el("select", { "aria-label": s("filterLbl") }, [
+      el("option", { value: "", text: s("fAll") }), el("option", { value: "active", text: s("fActive") }), el("option", { value: "inactive", text: s("fInactive") })
+    ]);
+    fsel.value = u.active;
+    fsel.addEventListener("change", function () { u.active = fsel.value; u.page = 1; loadList(); });
+    main.appendChild(el("div", { class: "adm-tools" }, [input, sel, fsel]));
     var host = el("div", { id: "admListHost" });
     main.appendChild(host);
     loadList();
@@ -472,7 +501,7 @@
     var u = state.users, seq = ++listSeq;
     var host = document.getElementById("admListHost");
     if (!host) return;
-    var qs = "?page=" + u.page + "&pageSize=25&sort=" + encodeURIComponent(u.sort) + (u.q ? "&q=" + encodeURIComponent(u.q) : "");
+    var qs = "?page=" + u.page + "&pageSize=25&sort=" + encodeURIComponent(u.sort) + (u.active ? "&active=" + u.active : "") + (u.q ? "&q=" + encodeURIComponent(u.q) : "");
     api("/users" + qs).then(function (r) {
       if (seq !== listSeq) return; // a newer search superseded this one
       if (authFailed(r)) return;
@@ -486,11 +515,11 @@
       host.appendChild(el("div", { class: "adm-list" }, d.users.map(function (x, i) {
         var row = el("button", { type: "button", class: "adm-row", onclick: function () { openUser(x.id); } }, [
           avatar(x),
-          el("span", null, [el("div", { class: "adm-email", text: x.email }), el("div", { class: "adm-sub", text: x.displayName || x.name || "" })]),
+          el("span", null, [el("div", { class: "adm-email", text: x.email }), el("div", { class: "adm-sub", text: x.displayName || x.name || "" }), progressLine(x)]),
           el("span", { class: "adm-sub adm-col-hide", text: s("colJoined") + ": " + fmtDate(x.createdAt) }),
           el("span", { class: "adm-sub adm-col-hide", text: s("colSeen") + ": " + fmtDate(x.lastSeenAt) }),
           el("span", { class: "adm-sub adm-col-hide", text: provLabel(x.provider) }),
-          x.blocked ? el("span", { class: "adm-badge blocked", text: s("blocked") }) : el("span")
+          el("span", { class: "adm-badges" }, [activeBadge(x), x.blocked ? el("span", { class: "adm-badge blocked", text: s("blocked") }) : null])
         ]);
         row.style.setProperty("--i", Math.min(i, 12));
         return row;
@@ -548,11 +577,16 @@
     var badges = el("div", null, [
       u.isAdmin ? el("span", { class: "adm-badge", text: s("admin") }) : null,
       u.blocked ? el("span", { class: "adm-badge blocked", text: s("blocked") }) : null,
-      el("span", { class: "adm-badge", text: provLabel(u.provider) })
+      el("span", { class: "adm-badge", text: provLabel(u.provider) }),
+      activeBadge(u)
     ]);
     var kv = el("dl", { class: "adm-kv" });
     [["kvEmail", u.email], ["kvId", u.id], ["colJoined", fmtDate(u.createdAt)], ["colSeen", fmtDate(u.lastSeenAt)],
-     ["kvVerified", s(u.emailVerified ? "yes" : "no")], ["kvStreak", fmtNum(u.currentStreak)], ["kvDays", fmtNum(u.totalDaysTrained)],
+     ["kvVerified", s(u.emailVerified ? "yes" : "no")],
+     typeof u.active === "boolean" ? ["kvLastWo", u.lastWorkoutAt ? fmtDate(u.lastWorkoutAt) : s("noWo")] : null,
+     typeof u.workouts7d === "number" ? ["kvWo7", fmtNum(u.workouts7d)] : null,
+     typeof u.workouts30d === "number" ? ["kvWo30", fmtNum(u.workouts30d)] : null,
+     ["kvStreak", fmtNum(u.currentStreak)], ["kvDays", fmtNum(u.totalDaysTrained)],
      ["kvWorkouts", fmtNum(u.workouts)], ["kvMeals", fmtNum(u.meals)], u.blocked ? ["kvBlockedAt", fmtDate(u.blockedAt)] : null
     ].forEach(function (p) { if (p) { kv.appendChild(el("dt", { text: s(p[0]) })); kv.appendChild(el("dd", { text: p[1] })); } });
 
