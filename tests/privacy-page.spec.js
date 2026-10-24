@@ -270,8 +270,8 @@ test("delete-account page: export is a ZIP, the coach holds plans and check-ins 
 // ---------------- sign-up agreement line (replaces the 18+ popup) ----------------
 
 const AGREE = {
-  en: { text: "By continuing, you agree to our Terms and Privacy Policy and confirm you're 18 or older.", terms: "Terms", privacy: "Privacy Policy" },
-  ar: { text: "بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية وتؤكد أن عمرك 18 عامًا أو أكثر.", terms: "شروط الاستخدام", privacy: "سياسة الخصوصية" }
+  en: { text: "By continuing, you agree to our Terms and Privacy Policy, confirm you're 18 or older, and understand that Etqadem Coach, our AI coach, is powered by Anthropic (US), can make mistakes and isn't medical advice.", terms: "Terms", privacy: "Privacy Policy" },
+  ar: { text: "بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية، وتؤكد أن عمرك 18 عامًا أو أكثر، وتُقرّ بأن المدرّب اتقدم، وهو مدرّب ذكاء اصطناعي، يعمل بتقنية Anthropic (الولايات المتحدة)، وقد يخطئ، وليس نصيحة طبية.", terms: "شروط الاستخدام", privacy: "سياسة الخصوصية" }
 };
 
 test("agreement line: shown under the sign-in buttons with Terms and Privacy links, no popup (EN and AR)", async ({ browser }) => {
@@ -283,9 +283,10 @@ test("agreement line: shown under the sign-in buttons with Terms and Privacy lin
     const line = page.locator("#obLegal");
     await expect(line).toBeVisible();
     await expect(line).toHaveText(AGREE[lang].text);
-    await expect(line.locator("a")).toHaveCount(2);
+    await expect(line.locator("a")).toHaveCount(3);
     expect(await href(line.locator("a").nth(0))).toBe("/terms");
     expect(await href(line.locator("a").nth(1))).toBe("/privacy");
+    expect(await href(line.locator("a").nth(2))).toBe("/terms#ai-coach");
     await expect(line.locator("a").nth(0)).toHaveText(AGREE[lang].terms);
     await expect(line.locator("a").nth(1)).toHaveText(AGREE[lang].privacy);
     // the app behind is not locked by a modal
@@ -305,28 +306,28 @@ test("agreement line: also shown on the email step, hidden on the start and reso
   await context.close();
 });
 
-test("agreement line: nothing is recorded until a sign-in choice is tapped; Continue without signing in records terms.v1", async ({ browser }) => {
+test("agreement line: nothing is recorded until a sign-in choice is tapped; Continue without signing in records terms.v2", async ({ browser }) => {
   const { context, page } = await openApp(browser, { termsOk: false });
   await page.evaluate(() => GymUI.promptSignIn());
   expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBeNull();
   await page.click("#obContinueBtn");
-  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v2");
   await context.close();
 });
 
-test("agreement line: completing a Google sign-in from the sign-in screen records terms.v1", async ({ browser }) => {
+test("agreement line: completing a Google sign-in from the sign-in screen records terms.v2", async ({ browser }) => {
   const { context, page } = await openApp(browser, { termsOk: false });
   await page.evaluate(() => GymUI.promptSignIn());
   expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBeNull();
   await page.evaluate(() => GymUI.completeSignIn());
-  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v2");
   await context.close();
 });
 
 test("agreement line: signing out keeps the agreement on the device and it is on the sync keep-list", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true });
   await page.evaluate(() => GymSync.signOut());
-  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v1");
+  expect(await page.evaluate(() => localStorage.getItem("gym_terms_ok"))).toBe("terms.v2");
   await context.close();
 });
 
@@ -414,3 +415,35 @@ test("server 400 age_below_minimum (form bypassed) shows the 18+ message, EN and
     await context.close();
   }
 });
+
+// ---------------- Terms v2 + privacy additions ----------------
+
+for (const lang of ["en", "ar"]) {
+  test("/terms v2 (" + lang + "): AI coach section at its anchor, version v2, watch paragraph in section 4", async ({ browser }) => {
+    const hash = lang === "ar" ? "#ar-ai-coach" : "#ai-coach";
+    const { context, page } = await openPolicy(browser, { lang, route: "/terms", hash, width: 390 });
+    const sec = page.locator(lang === "ar" ? "#ar-ai-coach" : "#ai-coach");
+    await expect(sec).toBeVisible();
+    await expect(sec).toContainText(lang === "en" ? "It is an artificial-intelligence system, not a person." : "وهو نظام ذكاء اصطناعي وليس إنسانًا.");
+    await expect(sec).toContainText("Anthropic");
+    await expect(sec.locator('a[href="/privacy#ai-coach"]')).toHaveCount(1);
+    await expect(page.locator("[data-doc]:not([hidden]) .doc-head .meta")).toContainText("v2");
+    await expect(page.locator("[data-doc]:not([hidden]) .doc-head .meta")).not.toContainText("v1");
+    await expect(page.locator(lang === "ar" ? "#ar-health" : "#health")).toContainText("Health Connect");
+    if (process.env.SHOT_DIR) {
+      fs.mkdirSync(process.env.SHOT_DIR, { recursive: true });
+      await sec.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(process.env.SHOT_DIR, "terms-ai-coach-" + lang + ".png") });
+    }
+    await context.close();
+  });
+
+  test("/privacy (" + lang + "): the sign-in cookie line, phone number purpose, no Cloudflare or cdnjs", async ({ browser }) => {
+    const { context, page } = await openPolicy(browser, { lang, route: "/privacy" });
+    const doc = page.locator("[data-doc]:not([hidden])");
+    await expect(doc).toContainText("g_state");
+    await expect(doc).not.toContainText(/Cloudflare|cdnjs/);
+    await expect(doc).toContainText(lang === "en" ? "keep one account per person" : "حساب واحد لكل شخص");
+    await context.close();
+  });
+}

@@ -146,7 +146,7 @@
       <div id="obStepEmail" class="ob-step ob-step-email" inert></div>
     </div>
     <!-- Sign-up agreement (ui.js acceptTerms): shown on the choices and email steps. No checkbox; tapping a button accepts. -->
-    <p id="obLegal" class="ob-legal" data-i18n-html="obLegal" hidden>By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a> and confirm you're 18 or older.</p>
+    <p id="obLegal" class="ob-legal" data-i18n-html="obLegal" hidden>By continuing, you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>, confirm you're 18 or older, and understand that <a href="/terms#ai-coach">Etqadem Coach</a>, our AI coach, is powered by Anthropic (US), can make mistakes and isn't medical advice.</p>
   </div>
 </section>
 
@@ -277,7 +277,7 @@
   <div class="wrap">
     <header class="hero">
       <a class="home-link" href="/?home" data-i18n-aria="homeLink" aria-label="Etqadem home"><img class="hero-logo" src="icons/logo-etq.svg" alt="" width="46" height="46"></a>
-      <h1 data-i18n="coachTitle">AI Coach</h1>
+      <h1 data-i18n="coachTitle">Etqadem Coach</h1>
       <div class="sub" data-i18n="coachSub">A diet &amp; training plan built from your numbers</div>
     </header>
     <div id="coachBody"></div>
@@ -352,8 +352,7 @@
         </div>
         <ul class="premium-perks">
           <li data-i18n="premiumPerk1">Higher AI-coach limits</li>
-          <li data-i18n="premiumPerk2">Ramadan mode adjustments</li>
-          <li data-i18n="premiumPerk3">Priority support</li>
+          <li data-i18n="premiumPerk2">Priority support</li>
         </ul>
         <button type="button" class="premium-cta" disabled aria-disabled="true" data-i18n="premiumComingSoon">Coming soon</button>
       </div>
@@ -430,11 +429,11 @@
   <button type="button" class="alarm-stop" id="alarmStop">Stop</button>
 </div>
 
-<div id="videoModal" class="m-ovl" hidden>
+<div id="videoModal" class="m-ovl" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal-inner m-ovl-card">
     <div class="modal-title">
       <span id="modalTitle">Exercise video</span>
-      <button class="modal-close" id="modalClose">
+      <button class="modal-close" id="modalClose" type="button" data-i18n-aria="closeVideo" aria-label="Close video">
         <svg viewBox="0 0 24 24"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.41 4.3 19.7 2.89 18.29 9.17 12 2.89 5.71 4.3 4.3l6.29 6.29L16.89 4.3z"/></svg>
       </button>
     </div>
@@ -547,6 +546,7 @@
 <script src="privacy.js" defer></script>
 <script src="onboarding.js" defer></script>
 <script src="survey.js" defer></script>
+<script src="terms-update.js" defer></script>
 <script src="celebrate.js" defer></script>
 <script src="rest-days.js" defer></script>
 <script src="calendar.js" defer></script>

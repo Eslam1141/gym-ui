@@ -97,7 +97,7 @@ html[lang="ar"] .svy-q{ line-height:1.45; }
 .svy-input-wrap{ position:relative; display:block; }
 .svy-field input{
   width:100%; min-height:56px; padding:0 16px; box-sizing:border-box;
-  border-radius:var(--radius); border:1.5px solid var(--line); background:var(--panel);
+  border-radius:var(--radius); border:1.5px solid var(--line-strong); background:var(--panel);
   color:var(--paper); font:inherit; font-size:var(--text-xl); font-weight:700;
 }
 .svy-input-wrap input{ padding-inline-end:64px; }
@@ -114,7 +114,7 @@ html[lang="ar"] .svy-q{ line-height:1.45; }
 .svy-chips{ display:flex; flex-wrap:wrap; gap:8px; }
 .svy-chip{
   min-height:44px; padding:0 16px; border-radius:var(--radius-pill);
-  border:1.5px solid var(--line); background:var(--panel); color:var(--paper);
+  border:1.5px solid var(--line-strong); background:var(--panel); color:var(--paper);
   font:inherit; font-size:var(--text-sm); font-weight:700; cursor:pointer;
 }
 .svy-chip.on{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--panel)); color:var(--accent-tint); }

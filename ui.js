@@ -23,7 +23,8 @@
   function isAnon() { return ls("gym_anon") === "1"; }
   function onboarded() { return ls("gym_onboarded") === "1"; }
   // Version of the Terms/Privacy text the user last agreed to by tapping a sign-in choice.
-  var TERMS_VERSION = "terms.v1";
+  // terms-update.js sends it to the server and asks again when it changes.
+  var TERMS_VERSION = "terms.v2";
   function acceptTerms() { set("gym_terms_ok", TERMS_VERSION); }
 
   var ob = null;
@@ -324,6 +325,7 @@
     isAuthed: isAuthed,
     isAnon: isAnon,
     onboarded: onboarded,
+    termsVersion: TERMS_VERSION,
     startAnon: startAnon,
     completeSignIn: completeSignIn,
     promptSignIn: promptSignIn,

@@ -35,14 +35,13 @@
   if (!window.GymDom) throw new Error("chat.js: dom.js must load first");
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
-    note: ["AI coach powered by Anthropic (US). Not medical advice.", "المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة). ليس نصيحة طبية."],
     privacy: ["Privacy", "الخصوصية"],
     fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
     fabClose: ["Close the chat", "إغلاق الدردشة"],
-    title: ["Nutrition & fitness chat", "دردشة التغذية واللياقة"],
+    title: ["Etqadem Coach", "المدرّب اتقدم"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
     genPlan: ["Want a full plan? Generate one", "تريد خطة كاملة؟ أنشئ واحدة"],
-    signInBody: ["Sign in to chat with your AI coach.", "سجّل الدخول للدردشة مع مدرّبك الذكي."],
+    signInBody: ["Sign in to chat with Etqadem Coach.", "سجّل الدخول للدردشة مع المدرّب اتقدم."],
     thinking: ["Thinking…", "يفكّر…"],
     quota: ["You've reached today's chat limit. Try again after {t}.", "بلغت حد الدردشة اليومي. حاول بعد {t}."],
     quotaGeneric: ["You've reached today's chat limit. Try again tomorrow.", "بلغت حد الدردشة اليومي. حاول مجدداً غداً."],
@@ -469,7 +468,7 @@
     titleEl.textContent = s("title");
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
-    noteEl.textContent = s("note") + " ";
+    noteEl.textContent = "";
     noteEl.appendChild(GymDom.policyLink("ai-coach", s("privacy"), true));
     fab.setAttribute("aria-label", s(open ? "fabClose" : "fabLabel"));
     fab.innerHTML = "";

@@ -36,7 +36,7 @@
     aeConfirmPassword: ["Confirm new password", "تأكيد كلمة المرور الجديدة"],
     aePhone: ["Phone number", "رقم الهاتف"],
     aePwHint: ["At least 8 characters, with a letter and a number.", "8 أحرف على الأقل، تتضمن حرفًا ورقمًا."],
-    aePhoneHint: ["Include your country code, e.g. ‎+201001234567.", "أدخل رمز الدولة، مثل ‎+201001234567."],
+    aePhoneHint: ["Include your country code, e.g. ‎+201001234567. Used only to keep one account per person. We don't send texts or share it.", "أدخل رمز الدولة، مثل ‎+201001234567. نستخدمه فقط لضمان حساب واحد لكل شخص. لا نرسل رسائل نصية ولا نشاركه."],
     aeLoginBtn: ["Log in", "تسجيل الدخول"],
     aeSignupBtn: ["Create account", "إنشاء الحساب"],
     aeVerifyBtn: ["Verify", "تحقّق"],

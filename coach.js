@@ -199,8 +199,10 @@
     ramadan: ["Ramadan mode", "وضع رمضان"],
     ramadanHint: ["Plan meals around suhoor & iftar and train around your fast",
       "خطط وجباتك حول السحور والإفطار ونظّم تمرينك حول صيامك"],
-    ramadanSuggest: ["It's Ramadan — we've turned this on for you",
-      "إنه رمضان — قمنا بتفعيل هذا الخيار لك"]
+    ramadanAsk: ["It's Ramadan. Are you fasting? We'll plan meals around suhoor and iftar.",
+      "حلّ شهر رمضان. هل أنت صائم؟ سنخطّط وجباتك حول السحور والإفطار."],
+    ramadanYes: ["Yes, I'm fasting", "نعم، أنا صائم"],
+    ramadanNo: ["No", "لا"]
   };
   var s = GymDom.makeT(STR);
 
@@ -483,7 +485,7 @@
       dietPreference: "balanced", allergies: [], dislikes: [],
       inbodyOpen: false, bodyFatPct: "", skeletalMuscleMassKg: "", visceralFatLevel: "", bmrKcal: "",
       notes: "", experience: "",
-      ramadan: false, ramadanAuto: "", ramadanManual: false
+      ramadan: false, ramadanAsked: "", ramadanManual: false
     };
   }
   // Is `date` (default: now) in Hijri month 9 (Ramadan)? Relies on the
@@ -500,9 +502,8 @@
       return month === 9;
     } catch (e) { return false; }
   }
-  // Hijri year-month key ("1448-9") the auto-suggest last fired for, so
-  // unchecking the box sticks for the rest of that Ramadan instead of
-  // re-flipping it back on at the next render.
+  // Hijri year-month key ("1448-9") the fasting question was last answered for,
+  // so it is asked once per Ramadan.
   function hijriKey(date) {
     try {
       var fmt = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { year: "numeric", month: "numeric" });
@@ -539,20 +540,18 @@
     st.goal = deriveGoal(st.goalChecks);
     st.ramadan = !!st.ramadan;
     st.ramadanManual = !!st.ramadanManual;
-    st._ramadanSuggested = false;
+    st._ramadanAsk = "";
     if (isHijriRamadan()) {
       var key = hijriKey();
-      if (key && st.ramadanAuto !== key) {
-        st.ramadan = true;
-        st.ramadanAuto = key;
-        st._ramadanSuggested = true;
-        st.ramadanManual = false; // fresh auto-suggest for this Hijri month
+      if (key && st.ramadanAsked !== key && !(st.ramadan && st.ramadanManual)) {
+        // Never turned on for the user: fasting is a religious and health choice, so it is asked, unticked.
+        // A tick an older version made on its own (never touched by the user) is cleared too.
+        if (st.ramadan && !st.ramadanManual) { st.ramadan = false; saveSynced(FORM_KEY, st); }
+        st._ramadanAsk = key;
       }
-    } else if (st.ramadanAuto && st.ramadan && !st.ramadanManual) {
-      // Ramadan ended and this "on" state came from the auto-suggest (never
-      // touched by the user) — switch it back off so it doesn't stay on
-      // indefinitely after Eid. A manual tick made outside Ramadan (tracked
-      // via ramadanManual) is left alone.
+    } else if ((st.ramadanAuto || st.ramadanAsked) && st.ramadan && !st.ramadanManual) {
+      // Ramadan ended and this "on" state came from the "Yes, I'm fasting" answer (or an older
+      // auto-tick), never a manual tick: switch it back off so it doesn't stay on after Eid.
       st.ramadan = false;
       saveSynced(FORM_KEY, st);
     }
@@ -828,17 +827,35 @@
 
     // Ramadan mode — nameless checkbox (not part of the delegated
     // input/change listener above, which only handles st[el.name]); own
-    // listener + persist(), auto-checked during Hijri month 9 by loadState().
+    // listener + persist(). During Hijri month 9 loadState() asks the fasting question (never auto-ticks).
     var ramadanCb = h("input", { type: "checkbox", checked: st.ramadan ? "checked" : false });
-    var ramadanHintEl = h("small", { class: "coach-hint" }, st.ramadan && st._ramadanSuggested ? s("ramadanSuggest") : s("ramadanHint"));
+    var ramadanHintEl = h("small", { class: "coach-hint" }, s("ramadanHint"));
+    var ramadanAskEl = null;
     ramadanCb.addEventListener("change", function () {
       st.ramadan = ramadanCb.checked;
       st.ramadanManual = true; // explicit user choice — don't auto-clear this later
-      st._ramadanSuggested = false; // manual toggle overrides the auto-suggest hint
-      ramadanHintEl.textContent = s("ramadanHint");
+      if (ramadanAskEl) ramadanAskEl.remove();
       persist();
     });
+    // Once per Ramadan: a one-tap answer. Either button settles it for this Hijri month.
+    function answerRamadan(fasting) {
+      st.ramadan = fasting;
+      st.ramadanManual = false; // an answer for this month only: switched off again after Eid
+      st.ramadanAsked = st._ramadanAsk;
+      ramadanCb.checked = fasting;
+      ramadanAskEl.remove();
+      persist();
+      ramadanCb.focus();
+    }
+    if (st._ramadanAsk) {
+      ramadanAskEl = h("div", { class: "coach-ramadan-ask", role: "group", "aria-labelledby": "coachRamadanAsk" },
+        h("p", { id: "coachRamadanAsk" }, s("ramadanAsk")),
+        h("div", { class: "coach-ramadan-ask-btns" },
+          h("button", { type: "button", on: { click: function () { answerRamadan(true); } } }, s("ramadanYes")),
+          h("button", { type: "button", on: { click: function () { answerRamadan(false); } } }, s("ramadanNo"))));
+    }
     form.appendChild(h("fieldset", { class: "coach-group coach-ramadan" },
+      ramadanAskEl,
       h("label", { class: "coach-check" }, ramadanCb, h("span", {}, s("ramadan"))),
       ramadanHintEl));
 

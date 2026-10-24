@@ -42,6 +42,7 @@ const ASSETS = [
   "./onboarding.css",
   "./survey.js",
   "./survey.css",
+  "./terms-update.js",
   "./motion.js",
   "./motion.css",
   "./tour.js",

@@ -63,7 +63,7 @@ async function mockApi(context, s) {
   });
 }
 
-// opts: { tours (true = leave the first-visit screen tours unseen), setup (async (context, server) => ...: extra routes), termsOk (false = leave the sign-up agreement unrecorded), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
+// opts: { tours (true = leave the first-visit screen tours unseen), setup (async (context, server) => ...: extra routes), termsOk (false = leave the sign-up agreement unrecorded), termsSynced (false = the agreement is on the device but not yet on the server), signedIn, sub (raw gym_user_sub; without signedIn = a lapsed session), lang, theme, plan, checks, ls: {key: value}, server, viewport }
 async function openApp(browser, opts) {
   opts = opts || {};
   const context = await browser.newContext({
@@ -83,7 +83,8 @@ async function openApp(browser, opts) {
       const ls = localStorage;
       ls.setItem("gym_lang", o.lang || "en");
       ls.setItem("gym_onboarded", "1");
-      if (o.termsOk !== false) ls.setItem("gym_terms_ok", "terms.v1"); // the agreement line has its own spec
+      if (o.termsOk !== false) ls.setItem("gym_terms_ok", "terms.v2"); // the agreement line has its own spec
+      if (o.termsOk !== false && o.termsSynced !== false) ls.setItem("gym_terms_synced", "terms.v2"); // the server already has it (terms-update.js would POST it otherwise)
       ls.setItem("gym_plan", o.plan || "male");
       ls.setItem("gym_style", "gym");
       ls.setItem("gym_theme", o.theme || "dark");

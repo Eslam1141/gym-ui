@@ -8,7 +8,7 @@ async function newPage(browser) {
   // Own context per test — never share state with other sessions.
   const context = await browser.newContext({ timezoneId: "Africa/Cairo", locale: "en-US", serviceWorkers: "block" });
   await context.addInitScript(() => {
-    try { localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_terms_ok", "terms.v1"); } catch (e) {}
+    try { localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_terms_ok", "terms.v2"); } catch (e) {}
   });
   const page = await context.newPage();
   await page.clock.install({ time: new Date(LOCAL_NOW) });

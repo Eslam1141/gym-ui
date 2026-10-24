@@ -70,8 +70,8 @@ async function shot(page, name, o) {
 
 for (const lang of ["en", "ar"]) {
   const L = lang === "ar"
-    ? { title: "قبل استخدام المدرّب الذكي", go: "تفعيل المدرّب الذكي", cancel: "ليس الآن", off: "إيقاف المدرّب الذكي", note: "المدرّب الذكي يعمل بتقنية Anthropic", unavail: "تعذّر على المدرّب الذكي التحقق" }
-    : { title: "Before you use the AI coach", go: "Turn on the AI coach", cancel: "Not now", off: "Turn off AI coach", note: "AI coach powered by Anthropic (US)", unavail: "The AI coach can't check your settings" };
+    ? { title: "قبل استخدام المدرّب الذكي", go: "تفعيل المدرّب الذكي", cancel: "ليس الآن", off: "إيقاف المدرّب الذكي", unavail: "تعذّر على المدرّب الذكي التحقق" }
+    : { title: "Before you use the AI coach", go: "Turn on the AI coach", cancel: "Not now", off: "Turn off AI coach", unavail: "The AI coach can't check your settings" };
 
   for (const theme of ["light", "dark"]) {
     test(`[${lang}/${theme}] first plan submit shows the sheet; Continue waits for the tick; consent is POSTed, then the plan is requested`, async ({ browser }) => {
@@ -140,7 +140,7 @@ for (const lang of ["en", "ar"]) {
     await sheet(page).locator("label.cc-agree").click();
     await sheet(page).locator(".pv-btn-fill").click();
     await expect(page.locator("#coachChat.show")).toBeVisible();
-    await expect(page.locator("#coachChatNote")).toContainText(L.note);
+    await expect(page.locator("#coachChatNote")).toHaveText(lang === "ar" ? "الخصوصية" : "Privacy");   // the Anthropic note moved into the Terms (terms-v2.spec.js)
     await page.fill("#coachChatInput", "hi");
     await page.press("#coachChatInput", "Enter");
     await expect(page.locator(".coach-chat-msg.assistant")).toHaveText("Hello there.");

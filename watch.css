@@ -35,7 +35,7 @@
 /* Plan tab: one line that opens the Watch tab */
 .wt-link{
   display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:48px; padding:var(--space-2) var(--space-4);
-  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--elev-1);
+  background:var(--surface-2); border:1px solid var(--line-strong); border-radius:var(--radius); box-shadow:var(--elev-1);
   font:inherit; font-size:var(--text-sm); color:var(--ink); text-align:start; cursor:pointer;
   transition:background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
