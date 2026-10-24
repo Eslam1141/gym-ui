@@ -749,6 +749,7 @@
       if (r.status === 200 && validPair(r.body)) {
         var method = rec.method === "local" ? "local" : "google";
         saveSession(r.body, method);
+        refreshFailures = 0;
         acceptToken(r.body.accessToken, method);
         return "ok";
       }
@@ -769,8 +770,19 @@
         refreshTimer = setTimeout(function () { refreshSession("rate-limit"); }, Math.min(Math.max(r.retryAfter, 5), 300) * 1000);
         return "retry";
       }
+      retryRefreshLater();
       return "offline"; // keep the session; online / visible / the next 401 try again
     });
+  }
+
+  // The refresh could not reach the server (offline, a 5xx): the session is intact,
+  // so try again on a backoff (5 s, 15 s, 45 s ... capped at 5 min) as well as on the
+  // online / visible events. Reset by the next successful refresh.
+  var refreshFailures = 0;
+  function retryRefreshLater() {
+    var wait = Math.min(300, 5 * Math.pow(3, refreshFailures++));
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () { refreshSession("retry"); }, wait * 1000);
   }
 
   // On resume / online: refresh when there is no live access token or it is
@@ -1109,6 +1121,13 @@
     if (!shouldResolveSilently()) return;
     clearSignInPending();
     try { sessionStorage.removeItem("gym_switch"); } catch (e) {}
+    // A stored refresh token is still a live session: the cold-start refresh just
+    // hasn't got through yet (no network, a 5xx). Not a reason to ask for a sign-in;
+    // let the app show and keep retrying in the background (retryRefreshLater).
+    if (!isSignedIn() && sessionStore().get()) {
+      if (window.GymUI && typeof GymUI.endResolving === "function") GymUI.endResolving();
+      return;
+    }
     if (!isSignedIn() && window.GymUI && typeof GymUI.promptSignIn === "function") GymUI.promptSignIn();
   }
 
@@ -1232,6 +1251,9 @@
     onLocalWrite: onLocalWrite,
     syncNow: function (r) { return syncNow(r || "manual"); },
     isSignedIn: isSignedIn,
+    // A refresh token is stored: the user has a session even while no access token
+    // is live yet (offline cold start). Server features still need isSignedIn().
+    hasSession: function () { return !!sessionStore().get(); },
     // Current Google ID token for auth..."Bearer" calls to gym-be / gym-assistant.
     // null when signed out or the token is within 30s of expiry.
     token: function () { return isSignedIn() ? idToken : null; },

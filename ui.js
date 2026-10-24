@@ -272,8 +272,15 @@
     clearResolvingFallback();
     resolvingFallbackTimer = setTimeout(function () {
       resolvingFallbackTimer = null;
-      if (!isAuthed()) promptSignIn();
+      if (!isAuthed()) { if (window.GymSync && GymSync.hasSession && GymSync.hasSession()) endResolving(); else promptSignIn(); }
     }, 9000);
+  }
+
+  // The "resolving…" hold ends without a sign-in screen: a stored session is still
+  // being restored in the background (sync.js retries), so the app shows meanwhile.
+  function endResolving() {
+    clearResolvingFallback();
+    hideOnboarding();
   }
 
   // The user's LOCAL calendar day as YYYY-MM-DD (never toISOString, which is
@@ -315,6 +322,7 @@
     completeSignIn: completeSignIn,
     promptSignIn: promptSignIn,
     showResolvingSession: showResolvingSession,
+    endResolving: endResolving,
     showObStep: showObStep,
     navigate: navigate,
     pushSub: pushSub,
