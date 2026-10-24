@@ -71,7 +71,7 @@
     delDesc: ["Permanently remove your account and everything in it.", "احذف حسابك وكل ما فيه نهائيًا."],
     delBtn: ["Delete my account", "حذف حسابي"],
     shTitle: ["Delete your account?", "حذف حسابك؟"],
-    shLead: ["This permanently deletes your Etqadem account and everything in it. It can't be undone.", "سيحذف هذا حسابك في إتقدم وكل ما فيه نهائيًا، ولا يمكن التراجع عنه."],
+    shLead: ["This permanently deletes your Etqadem account and everything in it. It can't be undone.", "سيحذف هذا حسابك في اتقدم وكل ما فيه نهائيًا، ولا يمكن التراجع عنه."],
     shListLabel: ["What gets deleted", "ما الذي سيُحذف"],
     shI1: ["Workouts and rest days", "التمارين وأيام الراحة"],
     shI2: ["Meals", "الوجبات"],
@@ -100,7 +100,7 @@
     raBad: ["Wrong email or password.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."],
     raDone: ["You're signed in again. Press Delete my account to finish.", "تم تسجيل دخولك مرة أخرى. اضغط حذف حسابي للإنهاء."],
     doneTitle: ["Your account was deleted", "تم حذف حسابك"],
-    doneBody: ["Your data was removed from Etqadem and from this device. You're welcome to create a new account any time.", "تمت إزالة بياناتك من إتقدم ومن هذا الجهاز. يمكنك إنشاء حساب جديد في أي وقت."],
+    doneBody: ["Your data was removed from Etqadem and from this device. You're welcome to create a new account any time.", "تمت إزالة بياناتك من اتقدم ومن هذا الجهاز. يمكنك إنشاء حساب جديد في أي وقت."],
     doneBtn: ["Continue", "متابعة"]
   };
 

@@ -19,7 +19,7 @@ async function open(browser, o) {
       sessionStorage.setItem("__seeded", "1");
       localStorage.setItem("gym_lang", o.lang || "en");
       localStorage.setItem("gym_theme", o.theme || "dark");
-      localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v1");
+      localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v2");
       localStorage.setItem("gym_anon", "1");
     } catch (e) {}
     if (o.native) window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android", Plugins: {} };

@@ -11,7 +11,7 @@ async function firstPaint(browser, seed) {
   await context.addInitScript((seed) => {
     if (!sessionStorage.getItem("__seeded")) {
       sessionStorage.setItem("__seeded", "1");
-      localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v1");
+      localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v2");
       localStorage.setItem("gym_tab", "food");
       Object.keys(seed.ls || {}).forEach((k) => localStorage.setItem(k, seed.ls[k]));
       if (seed.session) sessionStorage.setItem("gymauth_session", JSON.stringify({

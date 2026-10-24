@@ -226,7 +226,7 @@ test.describe("choosing a split", () => {
     const context = await browser.newContext({ ...(process.env.PW_BASE ? { baseURL: process.env.PW_BASE } : {}), serviceWorkers: "block", viewport: { width: 390, height: 844 } });
     await context.route("**/splits.js", (r) => r.abort());
     await context.addInitScript(() => {
-      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v1");
+      localStorage.setItem("gym_lang", "en"); localStorage.setItem("gym_onboarded", "1"); localStorage.setItem("gym_terms_ok", "terms.v2");
       localStorage.setItem("gym_plan", "male"); localStorage.setItem("gym_style", "gym");
       localStorage.setItem("gym_split", JSON.stringify({ days: 4, where: "home", tools: [] }));
       sessionStorage.setItem("gymauth_session", JSON.stringify({ token: "tok", exp: Math.floor(Date.now() / 1000) + 3600, source: "local", profile: { name: "T", email: "t@example.com" } }));

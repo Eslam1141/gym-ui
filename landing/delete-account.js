@@ -15,7 +15,7 @@
     var btn = document.getElementById("langBtn");
     btn.textContent = l === "ar" ? "English" : "العربية";
     btn.setAttribute("aria-label", l === "ar" ? "Switch to English" : "التبديل إلى العربية");
-    document.title = l === "ar" ? "حذف حسابك في إتقدم | إتقدم" : "Delete your Etqadem account | Etqadem";
+    document.title = l === "ar" ? "حذف حسابك في اتقدم | اتقدم" : "Delete your Etqadem account | Etqadem";
   }
 
   apply(lang);

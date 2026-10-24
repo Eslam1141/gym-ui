@@ -57,5 +57,21 @@
     }, text);
   }
 
+  // Native modal dialogs keep Tab inside the page but not inside the dialog: after the last
+  // control, focus leaves for the browser's own UI. Wrap it so a keyboard user stays in the sheet.
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Tab" || e.defaultPrevented) return;
+    var open = document.querySelectorAll("dialog[open]");
+    var dlg = null;
+    for (var i = open.length - 1; i >= 0 && !dlg; i--) if (open[i].matches(":modal")) dlg = open[i];
+    if (!dlg) return;
+    var list = Array.prototype.filter.call(dlg.querySelectorAll(FOCUSABLE), function (n) { return n.getClientRects().length > 0; });
+    if (!list.length) return;
+    var at = list.indexOf(document.activeElement);
+    if (!e.shiftKey && at === list.length - 1) { e.preventDefault(); list[0].focus(); }
+    else if (e.shiftKey && at <= 0) { e.preventDefault(); list[list.length - 1].focus(); }
+  });
+
   window.GymDom = { h: h, lang: lang, makeT: makeT, policyLink: policyLink };
 })();

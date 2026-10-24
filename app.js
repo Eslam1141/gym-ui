@@ -411,6 +411,7 @@ window.GymExerciseShape = function(name){
 const T = {
   appTitle:["Etqadem","اتقدم"],
   homeLink:["Etqadem home","الصفحة الرئيسية لاتقدم"],
+  closeVideo:["Close video","إغلاق الفيديو"],
   obTitle:["One step forward, every day.","اتقدم خطوة كل يوم"],
   obSub:["Your plan, logging, rest timer, form videos and AI coach — in one app.","خطتك، تسجيل تمارينك، مؤقت الراحة، فيديوهات الأداء ومدرّب ذكي — في تطبيق واحد."],
   obStart:["Start Changing Yourself","ابدأ بتغيير نفسك"],
@@ -421,7 +422,7 @@ const T = {
   obWhy1:["Keep progress across devices","احفظ تقدّمك عبر الأجهزة"],
   obWhy2:["All training days & important notes","كل أيام التمرين والملاحظات المهمة"],
   obWhy3:["A personalised AI coach","مدرّب ذكاء اصطناعي مخصّص"],
-  obLegal:["By continuing, you agree to our <a href=\"/terms\">Terms</a> and <a href=\"/privacy\">Privacy Policy</a> and confirm you're 18 or older.","بالمتابعة، أنت توافق على <a href=\"/terms\">شروط الاستخدام</a> و<a href=\"/privacy\">سياسة الخصوصية</a> وتؤكد أن عمرك 18 عامًا أو أكثر."],
+  obLegal:["By continuing, you agree to our <a href=\"/terms\">Terms</a> and <a href=\"/privacy\">Privacy Policy</a>, confirm you're 18 or older, and understand that the <a href=\"/terms#ai-coach\">AI coach</a> is powered by Anthropic (US), can make mistakes and isn't medical advice.","بالمتابعة، أنت توافق على <a href=\"/terms\">شروط الاستخدام</a> و<a href=\"/privacy\">سياسة الخصوصية</a>، وتؤكد أن عمرك 18 عامًا أو أكثر، وتُقرّ بأن <a href=\"/terms#ai-coach\">المدرّب الذكي</a> يعمل بتقنية Anthropic (الولايات المتحدة)، وقد يخطئ، وليس نصيحة طبية."],
   resolvingSession:["Resolving your session…","جارٍ التحقق من جلستك…"],
   anonLockTitle:["Sign in to unlock everything","سجّل الدخول لفتح كل المزايا"],
   anonLockBody:["Full plans, sync across devices and the AI coach — free with an account.","الخطط الكاملة، المزامنة بين أجهزتك، والمدرّب الذكي — مجاناً مع حساب."],
@@ -629,8 +630,7 @@ const T = {
   premiumTitle:["Etqadem Premium","اتقدم بريميوم"],
   premiumSub:["Coming soon","قريباً"],
   premiumPerk1:["Higher AI-coach limits","حدود أعلى لمحادثات المدرّب الذكي"],
-  premiumPerk2:["Ramadan mode adjustments","تعديلات وضع رمضان"],
-  premiumPerk3:["Priority support","دعم ذو أولوية"],
+  premiumPerk2:["Priority support","دعم ذو أولوية"],
   premiumComingSoon:["Coming soon","قريباً"],
   daysLabel:["Days","الأيام"],
   navPlan:["Plan","الخطة"],
@@ -1800,6 +1800,7 @@ document.getElementById("resetLink").onclick = ()=>{
 const videoModal = document.getElementById("videoModal");
 const modalFrame = document.getElementById("modalFrame");
 const modalTitle = document.getElementById("modalTitle");
+let videoModalReturn = null;   // what had focus when the video opened
 
 function openVideoModal(ex){
   // never leave a second player running underneath
@@ -1807,13 +1808,18 @@ function openVideoModal(ex){
   modalTitle.textContent = exName(ex);
   modalFrame.innerHTML = `<iframe src="${GymUI.esc(ytEmbedSrc(ex.vid,true))}" allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   videoModal.classList.add("show");   // .show only hides the top bar (styles.css); GymMotion drives the visibility
+  videoModalReturn = document.activeElement;
   GymMotion.show(videoModal);
+  document.getElementById("modalClose").focus({ preventScroll: true });
 }
 function closeVideoModal(){
   modalFrame.innerHTML = ""; // stop playback
   videoModal.classList.remove("show");
   GymMotion.hide(videoModal);
+  if(videoModalReturn && videoModalReturn.isConnected) videoModalReturn.focus({ preventScroll: true });
+  videoModalReturn = null;
 }
+document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && videoModal.classList.contains("show")) closeVideoModal(); });
 document.getElementById("modalClose").onclick = closeVideoModal;
 videoModal.addEventListener("click", (e)=>{ if(e.target === videoModal) closeVideoModal(); });
 
