@@ -170,7 +170,7 @@
     quotaBody: ["You've used today's assessments. Try again after {t}.", "لقد استخدمت تقييمات اليوم. حاول مجدداً بعد {t}."],
     quotaBodyGeneric: ["You've used today's assessments. Try again tomorrow.", "لقد استخدمت تقييمات اليوم. حاول مجدداً غداً."],
     errTitle: ["Couldn't reach Etqadem Coach", "تعذّر الوصول إلى المدرّب اتقدم"],
-    errBody: ["Etqadem Coach service isn't responding right now. Please try again in a moment.", "خدمة المدرّب لا تستجيب حالياً. يرجى المحاولة بعد قليل."],
+    errBody: ["Etqadem Coach isn't responding right now. Please try again in a moment.", "خدمة المدرّب لا تستجيب حالياً. يرجى المحاولة بعد قليل."],
     err502: ["The AI service is temporarily unavailable. Please try again shortly.", "خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. حاول بعد قليل."],
     retry: ["Try again", "أعد المحاولة"],
     readyToast: ["Your plan is ready", "خطتك جاهزة"],
