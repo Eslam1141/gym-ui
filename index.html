@@ -209,15 +209,18 @@
 
     <div id="watchMount" hidden></div>
 
+    <!-- #sessionHint and #sessionBtn have no data-i18n on purpose: updateSessionUI (app.js) owns their
+         text. A later applyStaticI18n() pass (auth-email.js runs one) would otherwise put "Start Workout" /
+         "Not started yet" back over a running timer. -->
     <div class="session-card" id="sessionCard">
       <div class="session-info">
         <div class="label" data-i18n="workoutTimer">Workout Timer</div>
         <div class="time" id="sessionTime">00:00:00</div>
-        <div class="hint" id="sessionHint" data-i18n="notStarted">Not started yet</div>
+        <div class="hint" id="sessionHint">Not started yet</div>
       </div>
       <div class="session-actions">
         <button class="session-btn ghost" id="sessionPauseBtn" hidden>Pause</button>
-        <button class="session-btn" id="sessionBtn" data-i18n="startWorkout">Start Workout</button>
+        <button class="session-btn" id="sessionBtn">Start Workout</button>
       </div>
     </div>
 
