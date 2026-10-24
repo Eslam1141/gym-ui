@@ -13,7 +13,7 @@
       hero_h1: "Your whole gym day, one free app",
       hero_sub: "A training split built around your equipment, set logging with a rest timer, a video for every exercise, a food calorie calculator and an AI coach that answers in Arabic or English.",
       cta: "Start free", cta_how: "See how it works",
-      photo_alt: "A lifter under a barbell in a squat rack",
+      photo_alt: "A lifter seen from behind, gripping a barbell in a squat rack",
       shot_top_alt: "Etqadem workout screen with the weekly calendar and workout timer",
       shot_list_alt: "Etqadem exercise list with sets, reps and rest buttons",
       shot_men_alt: "Etqadem men's plan in teal",
@@ -60,8 +60,6 @@
       plan_m: "Men's plan", plan_f: "Women's plan",
       final_h: "Ready for today's session?", final_p: "It's free. Sign in with Google, or look around without an account.",
       foot_privacy: "Privacy Policy", foot_terms: "Terms of Use", foot_delete: "Delete account",
-      credit_pre: "Photo:", credit_post: ". Cropped and recolored.",
-      credit2_pre: "Animated emoji:", credit2_post: ". Resized."
     },
     ar: {
       title: "اتقدم | تطبيق جيم مجاني مع مدرب ذكي بالعربي",
@@ -72,7 +70,7 @@
       hero_h1: "تطبيق واحد مجاني لكل يوم جيم",
       hero_sub: "تقسيمة تمرين على قد معداتك، تسجيل المجموعات مع مؤقت راحة، فيديو لكل تمرين، حاسبة سعرات للأكل ومدرب ذكي يرد بالعربي أو الإنجليزي.",
       cta: "ابدأ مجاناً", cta_how: "شاهد كيف يعمل",
-      photo_alt: "لاعب تحت البار في قفص السكوات",
+      photo_alt: "لاعب من الخلف يمسك البار في قفص السكوات",
       shot_top_alt: "شاشة التمرين في اتقدم مع تقويم الأسبوع ومؤقت التمرين",
       shot_list_alt: "قائمة تمارين اتقدم مع المجموعات والتكرارات وأزرار الراحة",
       shot_men_alt: "خطة الرجال في اتقدم باللون الأخضر المزرق",
@@ -118,8 +116,6 @@
       plan_m: "خطة الرجال", plan_f: "خطة النساء",
       final_h: "جاهز لتمرين اليوم؟", final_p: "التطبيق مجاني. سجّل بحساب Google، أو تجوّل بدون حساب.",
       foot_privacy: "سياسة الخصوصية", foot_terms: "شروط الاستخدام", foot_delete: "حذف الحساب",
-      credit_pre: "الصورة:", credit_post: ". تم القص وتغيير الألوان.",
-      credit2_pre: "الإيموجي المتحرك:", credit2_post: ". تم تصغير الحجم."
     }
   };
 

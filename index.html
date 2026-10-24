@@ -525,10 +525,10 @@
 <script src="muscle-map.js"></script>
 <script src="splits.js"></script>
 <script src="app.js"></script>
-<!-- html2canvas: powers coach.js's "Save Image" export of the result card;
-     coach.js checks `typeof html2canvas` and falls back to window.print()
-     if this CDN load fails (offline, blocked, etc). -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous" defer></script>
+<!-- html2canvas 1.4.1 (MIT), self-hosted: powers coach.js's "Save Image" export of the
+     result card; coach.js checks `typeof html2canvas` and falls back to
+     window.print() if it is missing. -->
+<script src="vendor/html2canvas.min.js" defer></script>
 <!-- dom.js (window.GymDom: h/lang/makeT) must come before every screen
      module below; deferred scripts run in document order. -->
 <script src="dom.js" defer></script>

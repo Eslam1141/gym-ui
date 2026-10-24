@@ -324,8 +324,7 @@ section h3 { margin: 0; font-weight: 700; font-size: 1.25rem; line-height: 1.3; 
 .foot-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; }
 .foot-links { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 0 24px; }
 .foot-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--paper); font-weight: 600; text-underline-offset: 3px; }
-.credit, .copy { margin: 0; font-size: .875rem; color: var(--muted); }
-.credit a { color: var(--paper); text-underline-offset: 3px; }
+.copy { margin: 0; font-size: .875rem; color: var(--muted); }
 .copy { flex-basis: 100%; }
 
 /* Wider screens */

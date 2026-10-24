@@ -63,6 +63,7 @@ const ASSETS = [
   "./dom.js",
   "./config.js",
   "./manifest.json",
+  "./vendor/html2canvas.min.js",
   "./icons/logo-etq.svg",
   "./icons/coach.svg",
   "./icons/avatar-default.svg",
@@ -112,7 +113,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
-  // Cross-origin requests (Google avatars, cdnjs) go
+  // Cross-origin requests (Google avatars) go
   // straight to the network: this worker's own CSP connect-src would block
   // them if it fetched them itself.
   if (url.origin !== self.location.origin) return;
