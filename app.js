@@ -230,6 +230,15 @@ const DAYS_EXTRA = [
     {id:"gm_bandohext", en:"Band Overhead Triceps Extension", sets:3, reps:"12-15", rest:45, vid:"Yi_zNoIsNcc", shape:"triceps_long", tier:"easy", tools:["band"]},
     {id:"gm_bandrevcurl", en:"Band Reverse-Grip Curl", sets:3, reps:"12-15", rest:45, vid:"ze32_Pas8ho", shape:"biceps_long", tier:"easy", tools:["band"]},
     {id:"gm_pullover", en:"Dumbbell Pullover", sets:3, reps:"10-12", rest:60, vid:"jQjWlIwG4sI", shape:"back_lats", tier:"medium", tools:["dumbbell"]},
+    {id:"gu_dips", en:"Chest Dips", sets:3, reps:"8-12", rest:90, vid:"g3o0dC_qCns", shape:"chest_lower", shape2:"triceps_lateral", tier:"medium", tools:["machine"]},
+    {id:"gu_hipabd", en:"Hip Abduction Machine", sets:3, reps:"12-15", rest:45, vid:"G_8LItOiZ0Q", shape:"glutes", tier:"easy", tools:["machine"]},
+    {id:"gu_hipthrust", en:"Barbell Hip Thrust", sets:4, reps:"8-12", rest:90, vid:"5S8SApGU_Lk", shape:"glutes", tier:"hard", tools:["barbell", "bench"]},
+    {id:"gu_shrug", en:"Barbell Shrug", sets:3, reps:"10-15", rest:60, vid:"9xGqgGFAtiM", shape:"back_lower", tier:"medium", tools:["barbell"]},
+    {id:"gu_preacher", en:"Preacher Curl", sets:3, reps:"10-12", rest:45, vid:"g7hiWfUH6i8", shape:"biceps_short", tier:"easy", tools:["machine"]},
+    {id:"gu_revpec", en:"Reverse Pec Deck (Rear Delt Fly)", sets:3, reps:"12-15", rest:45, vid:"v0rJuhEa59c", shape:"shoulder_rear", tier:"easy", tools:["machine"]},
+    {id:"gu_cablelat", en:"Cable Lateral Raise", sets:3, reps:"12-15", rest:30, vid:"Z5FA9aq3L6A", shape:"shoulder_side", tier:"easy", tools:["cable"]},
+    {id:"gu_cablecrunch", en:"Weighted Cable Crunch (core)", sets:3, reps:"12-15", rest:45, vid:"ToJeyhydUxU", shape:"core_upper", tier:"medium", tools:["cable"]},
+    {id:"gu_widepull", en:"Wide-grip Lat Pulldown", sets:3, reps:"8-12", rest:90, vid:"O-_EOo6IY3U", shape:"back_lats", tier:"medium", tools:["cable"]},
   ]},
 ];
 
@@ -260,6 +269,7 @@ const MUSCLE_SHAPES = [
 
 // ---------------- i18n ----------------
 const AR_EX = {
+  "Chest Dips":"ديبس للصدر (جهاز)","Hip Abduction Machine":"جهاز تبعيد الفخذ","Barbell Shrug":"رفع الأكتاف بالبار (ترابيس)","Preacher Curl":"مرجحة بايسبس على جهاز بريتشر",
   "Barbell Bench Press":"بنش بريس بالبار","Incline Dumbbell Press":"بنش عالي بالدمبل","Cable Chest Fly":"تفتيح صدر بالكابل",
   "Cable Lateral Raise":"رفرفة جانبي بالكابل","Overhead Cable Triceps Extension":"تمديد ترايسبس خلف الرأس بالكابل","Cable Rope Pushdown":"دفع ترايسبس بالحبل",
   "Lat Pulldown / Pull-up":"سحب أمامي / عقلة","Chest-Supported Row":"تجديف بإسناد الصدر","Seated Cable Row":"تجديف بالكابل جالساً",
@@ -1094,6 +1104,19 @@ function findDay(dayId){
   const old = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male", tools: splitChoice.tools });
   return old.days.find(d=>d.id===dayId);
 }
+// The Plan tab's split week in the shape the coach /assess request takes (English names and
+// shape ids whatever the UI language), or null for Classic / when another program is showing.
+window.GymApp.coachSplit = function(){
+  const sp = activeStyle === "gym" ? splitPlan() : null;
+  if(!sp || !sp.days || !sp.days.length) return null;
+  const clip = v=> String(v == null ? "" : v).trim().slice(0, 80);
+  const days = sp.days.slice(0, 7).map(d=>({
+    name: clip(d.label),
+    moves: (d.exercises || []).slice(0, 10).map(e=>({ name: clip(e.en), part: clip(e.shape) })).filter(m=>m.name && m.part)
+  })).filter(d=>d.name && d.moves.length);
+  if(!days.length) return null;
+  return { name: clip(`${splitChoice.days} days \u00b7 ${splitChoice.where === "home" ? "Home" : "Gym"}`), days };
+};
 window.GymApp.dayExercises = function(dayId){
   const day = findDay(dayId);
   return day ? day.exercises : [];
