@@ -2756,3 +2756,67 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
 @media (prefers-reduced-motion: reduce){
   .set-chk, .set-chk svg{ transition:none; }
 }
+
+/* ============================================================
+   Connection awareness (net.js, offline.html): the offline banner, the full
+   "You're offline" screen, the "needs internet" tab card and its inline note.
+   ============================================================ */
+.net-banner{
+  position:fixed; z-index:130; inset-inline:12px;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  max-width:520px; margin-inline:auto;
+  display:flex; align-items:center; gap:var(--space-3);
+  padding-block:var(--space-2); padding-inline:var(--space-4) var(--space-2);
+  background:var(--panel2); color:var(--paper);
+  border:1px solid var(--line-strong); border-inline-start:4px solid var(--warn); border-radius:var(--radius);
+  box-shadow:var(--elev-2);
+  transform:translateY(calc(var(--toast-lift, 0px) * -1));
+  animation:net-in var(--dur-med) var(--ease-out) both;
+}
+.net-banner[hidden]{ display:none; }
+.net-banner-ic{ flex:none; display:grid; place-items:center; color:var(--warn); }
+.net-banner-msg{ flex:1; min-width:0; margin:0; font-size:var(--text-sm); line-height:var(--lh-body); }
+.net-banner-x{
+  flex:none; display:grid; place-items:center; width:44px; height:44px;
+  background:none; border:0; border-radius:var(--radius-pill); color:var(--paper-dim); cursor:pointer;
+}
+.net-banner-x:hover{ background:var(--panel); color:var(--paper); }
+.net-banner-x:focus-visible, .net-screen-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+@keyframes net-in{ from{ opacity:0; margin-bottom:-8px; } to{ opacity:1; margin-bottom:0; } }
+@media (min-width:900px){
+  .net-banner{ bottom:24px; inset-inline:calc(var(--side-w) + 12px) 12px; }
+}
+
+.net-screen{
+  position:fixed; z-index:300; inset:0; overflow:auto;
+  display:grid; place-items:center;
+  padding:calc(env(safe-area-inset-top) + var(--space-6)) calc(env(safe-area-inset-right) + var(--space-6)) calc(env(safe-area-inset-bottom) + var(--space-6)) calc(env(safe-area-inset-left) + var(--space-6));
+  background:var(--bg); color:var(--paper); text-align:center;
+  animation:net-fade var(--dur-med) var(--ease) both;
+}
+.net-screen[hidden]{ display:none; }
+@keyframes net-fade{ from{ opacity:0; } to{ opacity:1; } }
+body.net-blocked{ overflow:hidden; }
+.net-screen-inner{ width:100%; max-width:340px; }
+.net-art{ display:block; margin:0 auto var(--space-5); color:var(--paper-dim); }
+.net-art-on{ fill:var(--paper); }
+.net-art-head{ fill:var(--primary-text); }
+.net-screen-title{ margin:0 0 var(--space-2); font-size:var(--text-xl); line-height:var(--lh-tight); font-weight:var(--fw-bold); }
+.net-screen-body{ margin:0 0 var(--space-6); font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.net-screen-btn{
+  min-height:48px; min-width:180px; padding:0 var(--space-8); border:0; border-radius:var(--radius-pill);
+  background:var(--primary); color:var(--on-primary); font:inherit; font-weight:var(--fw-bold); cursor:pointer;
+}
+.net-screen-btn:hover{ background:var(--primary-hover); }
+.net-screen-btn:disabled{ opacity:.7; cursor:default; }
+.net-screen-msg{ min-height:1.55em; margin:var(--space-3) 0 0; font-size:var(--text-sm); color:var(--warn); }
+
+.net-card{
+  margin:var(--space-4); padding:var(--space-8) var(--space-5); text-align:center;
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg);
+}
+.net-card .net-art{ width:120px; height:auto; }
+.net-card-title{ margin:0 0 var(--space-2); font-size:var(--text-lg); line-height:var(--lh-tight); font-weight:var(--fw-bold); }
+.net-card-body{ margin:0 auto var(--space-5); max-width:34ch; font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.net-need{ margin:var(--space-2) var(--space-1) 0; font-size:var(--text-sm); line-height:var(--lh-body); color:var(--warn); }
+html[data-offline] [data-needs-net]{ opacity:.55; }

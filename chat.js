@@ -620,6 +620,8 @@
   }
 
   function sendMessage(text) {
+    // The chips and retry buttons reach here without passing the send button's data-needs-net guard.
+    if (window.GymNet && GymNet.isOffline()) { GymNet.note(sendBtn); return; }
     var token = authToken();
     if (!token) { if (window.GymUI) GymUI.promptSignIn(); return; }
     if (activeTypewriterCancel) { activeTypewriterCancel(); activeTypewriterCancel = null; } // this new send supersedes any still-typing previous reply
