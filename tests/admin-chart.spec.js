@@ -98,9 +98,9 @@ test("sign-in rows: E-mail, Google, Both; Apple only when the API sends it", asy
   const rows = a.page.locator(".adm-t-prov .adm-bars > div");
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toContainText("E-mail");
-  await expect(rows.nth(0)).toContainText("10 · 25%");
+  await expect(rows.nth(0)).toContainText("8 · 20%");
   await expect(rows.nth(1)).toContainText("Google");
-  await expect(rows.nth(1)).toContainText("32 · 80%");
+  await expect(rows.nth(1)).toContainText("30 · 75%");
   await expect(rows.nth(2)).toContainText("Both");
   await expect(rows.nth(2)).toContainText("2 · 5%");
   await expect(a.page.locator(".adm-t-prov")).not.toContainText("Can use");

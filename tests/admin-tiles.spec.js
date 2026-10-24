@@ -75,18 +75,19 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
-test("sign-in methods tile counts linked accounts toward both providers", async ({ browser }) => {
+test("sign-in methods tile shows exclusive buckets that add up to the total", async ({ browser }) => {
   const { context, page } = await openAdmin(browser);
   const rows = page.locator(".adm-t-prov .adm-bars > div");
   await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toContainText("E-mail");
-  await expect(rows.nth(0)).toContainText("334 · 27%");
-  await expect(rows.nth(1)).toContainText("Google");
-  await expect(rows.nth(1)).toContainText("934 · 76%");
+  await expect(rows.nth(0)).toContainText("E-mail only");
+  await expect(rows.nth(0)).toContainText("300 · 24%");
+  await expect(rows.nth(1)).toContainText("Google only");
+  await expect(rows.nth(1)).toContainText("900 · 73%");
   await expect(rows.nth(2)).toContainText("Both");
   await expect(rows.nth(2)).toContainText("34 · 3%");
+  expect(300 + 900 + 34).toBe(STATS.totalUsers);
   const w = await rows.nth(1).locator("i").evaluate((i) => i.style.width);
-  expect(w).toBe("76%");
+  expect(w).toBe("73%");
   await context.close();
 });
 
