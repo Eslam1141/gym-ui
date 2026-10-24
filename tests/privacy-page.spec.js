@@ -405,7 +405,7 @@ test("assessment form (AR): age 17 is rejected in Arabic", async ({ browser }) =
 });
 
 test("server 400 age_below_minimum (form bypassed) shows the 18+ message, EN and AR", async ({ browser }) => {
-  for (const [lang, text] of [["en", "Etqadem is for people 18 and older, so the AI coach can't build a plan for this age."], ["ar", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب الذكي إعداد خطة لهذا العمر."]]) {
+  for (const [lang, text] of [["en", "Etqadem is for people 18 and older, so Etqadem Coach can't build a plan for this age."], ["ar", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب اتقدم إعداد خطة لهذا العمر."]]) {
     const { context, page } = await openApp(browser, { signedIn: true, lang, ls: { gym_coach_form_draft: { age: "30", heightCm: "175", weightKg: "80" } } });
     await context.route(/\/api\/v1\/me\/consents/, (route) => json(route, 200, { consents: [{ type: "coach_ai", textVersion: "coach_ai.v1", grantedAt: "2026-10-17T09:00:00Z" }] }));
     await context.route(/\/api\/v1\/assistant\/assessment/, (route) => json(route, 400, { error: { code: "age_below_minimum", message: "age" } }));

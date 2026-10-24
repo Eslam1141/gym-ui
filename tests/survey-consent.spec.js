@@ -271,7 +271,7 @@ test("Withdraw failing keeps the row and says so", async ({ browser }) => {
 const AR = {
   title: "قبل أن نبدأ",
   l1: "أسئلة سريعة عن هدفك وجسمك وتمرينك. بعض الإجابات، مثل وزنك، معلومات صحية.",
-  l2: "نحفظها في حسابك (على خوادمنا خارج بلدك) لنختار خطتك المبدئية ونملأ نموذج المدرّب. ولا يُرسَل شيء إلى المدرّب الذكي إلا بعد أن تشغّله.",
+  l2: "نحفظها في حسابك (على خوادمنا خارج بلدك) لنختار خطتك المبدئية ونملأ نموذج المدرّب. ولا يُرسَل شيء إلى المدرّب اتقدم إلا بعد أن تشغّله.",
   l3: "لا تريد الآن؟ يمكنك استخدام التطبيق كالمعتاد. وتستطيع سحب موافقتك في أي وقت من المزيد ← الخصوصية والبيانات.",
   statement: "أوافق على أن يحفظ اتقدم هذه الإجابات، بما فيها المعلومات الصحية، لهذه الأغراض.",
   link: "كيف نستخدم إجاباتك", agree: "أوافق وأتابع", later: "ليس الآن"
@@ -279,7 +279,7 @@ const AR = {
 const EN = {
   title: "Before we start",
   l1: "A few quick questions about your goal, body and training. Some answers, like your weight, are health information.",
-  l2: "We save them to your account (on our servers outside your country) to pick your starter plan and fill in your coach form. Nothing goes to the AI coach until you turn it on.",
+  l2: "We save them to your account (on our servers outside your country) to pick your starter plan and fill in your coach form. Nothing goes to Etqadem Coach until you turn it on.",
   l3: "Not now? You can still use the app. You can withdraw any time in More → Privacy & data.",
   statement: "I agree that Etqadem saves these answers, including health information, for these purposes.",
   link: "How we use your answers", agree: "Agree and continue", later: "Not now"

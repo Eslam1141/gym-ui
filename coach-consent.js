@@ -27,19 +27,19 @@
   if (!window.GymDom) throw new Error("coach-consent.js: dom.js must load first");
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
-    title: ["Before you use the AI coach", "قبل استخدام المدرّب الذكي"],
-    notice: ["Etqadem's AI coach is powered by Anthropic, an AI company in the United States. To build your plan, reply in the chat and estimate meals from photos, we send Anthropic only what the coach needs: your age, sex, height, weight, goal and activity level; any allergies, notes and InBody numbers you add; your calorie and macro targets; today's food log; your chat messages; meal photos you choose to send; and whether Ramadan mode is on. Some of this is health information. We don't send your name, email or account ID. Anthropic uses this data only to answer us and doesn't use it to train AI. It normally deletes it within 30 days. The coach's answers are estimates and general guidance, not medical advice. You can still use workouts and food logging without the AI coach.",
-      "يعمل المدرّب الذكي في اتقدم بتقنية شركة Anthropic، وهي شركة ذكاء اصطناعي في الولايات المتحدة الأمريكية. ولإعداد خطتك والرد عليك في الدردشة وتقدير وجباتك من الصور، نرسل إلى Anthropic ما يحتاجه المدرّب فقط: عمرك وجنسك وطولك ووزنك وهدفك ومستوى نشاطك؛ وأي حساسية غذائية أو ملاحظات أو أرقام InBody تضيفها؛ وأهدافك من السعرات الحرارية والعناصر الغذائية؛ وسجل طعامك لليوم؛ ورسائلك في الدردشة؛ وصور الوجبات التي تختار إرسالها؛ وما إذا كان وضع رمضان مفعّلًا. وبعض هذه البيانات معلومات صحية. لا نرسل اسمك أو بريدك الإلكتروني أو معرّف حسابك. تستخدم Anthropic هذه البيانات للرد علينا فقط، ولا تستخدمها في تدريب الذكاء الاصطناعي، وتحذفها عادةً خلال 30 يومًا. إجابات المدرّب تقديرات وإرشادات عامة، وليست نصيحة طبية. ويمكنك مواصلة استخدام التمارين وتسجيل الطعام من دون المدرّب الذكي."],
-    agree: ["I'm 18 or older, and I agree that Etqadem sends this information, including my health information, to Anthropic in the United States so the AI coach can work. I can withdraw this at any time in More → Privacy & data.",
-      "عمري 18 عامًا أو أكثر، وأوافق على أن ترسل اتقدم هذه المعلومات، بما فيها معلوماتي الصحية، إلى شركة Anthropic في الولايات المتحدة الأمريكية لكي يعمل المدرّب الذكي. ويمكنني سحب هذه الموافقة في أي وقت من: المزيد ← الخصوصية والبيانات."],
+    title: ["Before you use Etqadem Coach", "قبل استخدام المدرّب اتقدم"],
+    notice: ["Etqadem Coach, our AI coach, is powered by Anthropic, an AI company in the United States. To build your plan, reply in the chat and estimate meals from photos, we send Anthropic only what Etqadem Coach needs: your age, sex, height, weight, goal and activity level; any allergies, notes and InBody numbers you add; your calorie and macro targets; today's food log; your chat messages; meal photos you choose to send; and whether Ramadan mode is on. Some of this is health information. We don't send your name, email or account ID. Anthropic uses this data only to answer us and doesn't use it to train AI. It normally deletes it within 30 days. Etqadem Coach's answers are estimates and general guidance, not medical advice. You can still use workouts and food logging without Etqadem Coach.",
+      "يعمل المدرّب اتقدم، مدرّبنا الذكي، بتقنية شركة Anthropic، وهي شركة ذكاء اصطناعي في الولايات المتحدة الأمريكية. ولإعداد خطتك والرد عليك في الدردشة وتقدير وجباتك من الصور، نرسل إلى Anthropic ما يحتاجه المدرّب فقط: عمرك وجنسك وطولك ووزنك وهدفك ومستوى نشاطك؛ وأي حساسية غذائية أو ملاحظات أو أرقام InBody تضيفها؛ وأهدافك من السعرات الحرارية والعناصر الغذائية؛ وسجل طعامك لليوم؛ ورسائلك في الدردشة؛ وصور الوجبات التي تختار إرسالها؛ وما إذا كان وضع رمضان مفعّلًا. وبعض هذه البيانات معلومات صحية. لا نرسل اسمك أو بريدك الإلكتروني أو معرّف حسابك. تستخدم Anthropic هذه البيانات للرد علينا فقط، ولا تستخدمها في تدريب الذكاء الاصطناعي، وتحذفها عادةً خلال 30 يومًا. إجابات المدرّب تقديرات وإرشادات عامة، وليست نصيحة طبية. ويمكنك مواصلة استخدام التمارين وتسجيل الطعام من دون المدرّب اتقدم."],
+    agree: ["I'm 18 or older, and I agree that Etqadem sends this information, including my health information, to Anthropic in the United States so Etqadem Coach can work. I can withdraw this at any time in More → Privacy & data.",
+      "عمري 18 عامًا أو أكثر، وأوافق على أن ترسل اتقدم هذه المعلومات، بما فيها معلوماتي الصحية، إلى شركة Anthropic في الولايات المتحدة الأمريكية لكي يعمل المدرّب اتقدم. ويمكنني سحب هذه الموافقة في أي وقت من: المزيد ← الخصوصية والبيانات."],
     policy: ["Privacy Policy", "سياسة الخصوصية"],
-    go: ["Turn on the AI coach", "تفعيل المدرّب الذكي"],
+    go: ["Turn on Etqadem Coach", "تفعيل المدرّب اتقدم"],
     saving: ["Saving…", "جارٍ الحفظ…"],
     cancel: ["Not now", "ليس الآن"],
-    saveErr: ["Couldn't save your agreement, so the AI coach is still off. Check your connection and try again.",
-      "تعذّر حفظ موافقتك، لذا ما زال المدرّب الذكي متوقفًا. تحقق من اتصالك وحاول مرة أخرى."],
-    unavailable: ["The AI coach can't check your settings right now. Try again in a moment.",
-      "تعذّر على المدرّب الذكي التحقق من إعداداتك الآن. حاول مرة أخرى بعد قليل."]
+    saveErr: ["Couldn't save your agreement, so Etqadem Coach is still off. Check your connection and try again.",
+      "تعذّر حفظ موافقتك، لذا ما زال المدرّب اتقدم متوقفًا. تحقق من اتصالك وحاول مرة أخرى."],
+    unavailable: ["Etqadem Coach can't check your settings right now. Try again in a moment.",
+      "تعذّر على المدرّب اتقدم التحقق من إعداداتك الآن. حاول مرة أخرى بعد قليل."]
   };
   var s = GymDom.makeT(STR);
 

@@ -109,7 +109,7 @@ test("failing while away: error toast opens Coach on the error", async ({ browse
   await expect(page.locator("#gymToast.show")).toContainText("Couldn't build your plan");
   await expect(coachBtn(page).locator(".nav-dot")).toBeVisible();
   await page.locator("#gymToast .gym-toast-action").click();
-  await expect(page.locator("#coachBody .coach-state h2")).toHaveText("Couldn't reach the coach");
+  await expect(page.locator("#coachBody .coach-state h2")).toHaveText("Couldn't reach Etqadem Coach");
   await expect(coachBtn(page).locator(".nav-dot")).toHaveCount(0);
   expect(posts.length).toBe(1);
   await context.close();

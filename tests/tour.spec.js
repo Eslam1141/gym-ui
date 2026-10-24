@@ -81,7 +81,7 @@ test.describe("tour versions", () => {
     expect(total).toBe(`1 of ${texts.length}`);
     expect(texts.length).toBeLessThanOrEqual(6);
     expect(has(texts, "Pick today's workout here. Your days follow your training split.")).toBe(true);
-    expect(has(texts, "Tap the bubble to chat with the coach from any screen. Drag it")).toBe(true);
+    expect(has(texts, "Tap the bubble to chat with Etqadem Coach from any screen. Drag it")).toBe(true);
     expect(has(texts, "Tap a day to see or fix what you did")).toBe(true);
     expect(has(texts, "New: the Watch tab")).toBe(false);
     expect(has(texts, "See which muscles you trained this week")).toBe(false);
@@ -121,7 +121,7 @@ test.describe("tour versions", () => {
     await expect(tourCard(page)).toBeVisible({ timeout: 10000 });
     const texts = await walk(page);
     expect(texts).toHaveLength(1);                                    // Food 2 adds one step
-    expect(texts[0]).toContain("Tell the coach what you ate");
+    expect(texts[0]).toContain("Tell Etqadem Coach what you ate");
     expect((await seenOf(page)).food).toBe(2);
     await context.close();
   });
@@ -190,7 +190,7 @@ test.describe("coach bubble step", () => {
       if ((await page.locator("#tour .tour-text").textContent()).includes("Tap the bubble")) break;
       await page.click("#tour .tour-next");
     }
-    await expect(page.locator("#tour .tour-text")).toContainText("Tap the bubble to chat with the coach from any screen. Drag it where it is out of your way.");
+    await expect(page.locator("#tour .tour-text")).toContainText("Tap the bubble to chat with Etqadem Coach from any screen. Drag it where it is out of your way.");
     await page.waitForTimeout(600);                                   // the spotlight glides in
     const spot = await page.locator("#tour .tour-spot").boundingBox();
     const fab = await page.locator("#coachFab").boundingBox();

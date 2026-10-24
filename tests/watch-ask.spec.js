@@ -33,7 +33,7 @@ test("Connect shows the disclosure BEFORE the permission sheet; Continue then re
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText("What we read (read-only): steps, active calories, heart rate, resting heart rate, sleep and weight.");
   await expect(sheet).toContainText("Why: to show your activity next to your plan.");
-  await expect(sheet).toContainText("It stays on this phone. We don't send it to our servers, the AI coach or anyone else.");
+  await expect(sheet).toContainText("It stays on this phone. We don't send it to our servers, Etqadem Coach or anyone else.");
   await expect(sheet).toContainText("disconnect any time in Profile");
   await expect(sheet).toContainText("not medical advice");
   await expect(sheet.locator("a.pol-link")).toHaveAttribute("href", "/privacy#health-connect");
