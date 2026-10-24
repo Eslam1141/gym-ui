@@ -96,20 +96,28 @@ test.describe("day celebration", () => {
     }
   });
 
-  test("animated emoji is decorative, loads on demand, falls back to the character", async ({ browser }) => {
+  test("streak icon is our own inline SVG: decorative, built on demand, static under reduced motion", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
     await ready(page, true);
-    expect(await page.locator(".celebrate-emoji img").count()).toBe(0);
+    expect(await page.locator(".celebrate-emoji svg").count()).toBe(0);
     await lastCheck(page).click();
-    const img = page.locator(".celebrate-emoji img");
-    await expect(img).toHaveAttribute("src", "icons/emoji/fire.webp", T);
-    await expect(img).toHaveAttribute("alt", "");
+    const icon = page.locator(".celebrate-emoji svg.ci-fire");
+    await expect(icon).toHaveCount(1, T);
     await expect(page.locator(".celebrate-emoji")).toHaveAttribute("aria-hidden", "true");
     await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
-    await expect.poll(() => img.evaluate((i) => i.complete && i.naturalWidth > 0), T).toBe(true);
-    await page.evaluate(() => { document.querySelector(".celebrate-emoji img").dispatchEvent(new Event("error")); });
-    await expect(page.locator(".celebrate-emoji")).toHaveText("\u{1F525}");
-    await expect(page.locator(".celebrate-emoji img")).toHaveCount(0);
+    expect(await page.locator(".celebrate-emoji img").count()).toBe(0);
+    expect(await page.evaluate(() => performance.getEntriesByType("resource").some((r) => /icons\/emoji/.test(r.name)))).toBe(false);
+    await expect.poll(() => icon.locator(".ci-flame").evaluate((e) => getComputedStyle(e).animationName), T).toBe("ci-flicker");
+    await context.close();
+  });
+
+  test("streak icon does not animate when reduced motion is on", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await ready(page, true);
+    await lastCheck(page).click();
+    await expect(page.locator(".celebrate-emoji svg.ci-fire")).toHaveCount(1, T);
+    expect(await page.locator(".celebrate-emoji .ci-flame").evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
     await context.close();
   });
 
