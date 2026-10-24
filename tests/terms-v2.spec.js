@@ -55,7 +55,7 @@ for (const lang of ["en", "ar"]) {
     const { context, page } = await openApp(browser, { signedIn: true, lang, setup: consentRoutes(cs) });
     await expect(page.locator("#bootLoader")).toBeHidden({ timeout: 8000 });
     await page.click("#coachFab");
-    await expect(page.locator("#coachChatTitle")).toHaveText(lang === "en" ? "AI coach chat" : "دردشة المدرّب الذكي");
+    await expect(page.locator("#coachChatTitle")).toHaveText(lang === "en" ? "Etqadem Coach" : "المدرّب اتقدم");
     // the note line under the messages is now just the Privacy link (the meal-photo notice further down keeps naming Anthropic on purpose)
     await expect(page.locator("#coachChatNote")).toHaveText(lang === "en" ? "Privacy" : "الخصوصية");
     await expect(page.locator("#coachChatNote a")).toHaveAttribute("href", /\/privacy#ai-coach/);

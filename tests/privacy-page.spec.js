@@ -270,8 +270,8 @@ test("delete-account page: export is a ZIP, the coach holds plans and check-ins 
 // ---------------- sign-up agreement line (replaces the 18+ popup) ----------------
 
 const AGREE = {
-  en: { text: "By continuing, you agree to our Terms and Privacy Policy, confirm you're 18 or older, and understand that the AI coach is powered by Anthropic (US), can make mistakes and isn't medical advice.", terms: "Terms", privacy: "Privacy Policy" },
-  ar: { text: "بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية، وتؤكد أن عمرك 18 عامًا أو أكثر، وتُقرّ بأن المدرّب الذكي يعمل بتقنية Anthropic (الولايات المتحدة)، وقد يخطئ، وليس نصيحة طبية.", terms: "شروط الاستخدام", privacy: "سياسة الخصوصية" }
+  en: { text: "By continuing, you agree to our Terms and Privacy Policy, confirm you're 18 or older, and understand that Etqadem Coach, our AI coach, is powered by Anthropic (US), can make mistakes and isn't medical advice.", terms: "Terms", privacy: "Privacy Policy" },
+  ar: { text: "بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية، وتؤكد أن عمرك 18 عامًا أو أكثر، وتُقرّ بأن المدرّب اتقدم، وهو مدرّب ذكاء اصطناعي، يعمل بتقنية Anthropic (الولايات المتحدة)، وقد يخطئ، وليس نصيحة طبية.", terms: "شروط الاستخدام", privacy: "سياسة الخصوصية" }
 };
 
 test("agreement line: shown under the sign-in buttons with Terms and Privacy links, no popup (EN and AR)", async ({ browser }) => {

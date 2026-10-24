@@ -40,15 +40,15 @@ Watch and Health Connect data shown in Etqadem comes from third-party devices an
 - **Your risk.** Exercise and diet changes carry a risk of injury, illness or, in rare cases, death. **You choose to take part at your own risk**, and you are responsible for deciding what is safe for your body, your equipment and your surroundings.
 - **Estimates only.** Calorie and nutrient figures, targets, body-composition readings and similar numbers are estimates. Check allergen and ingredient information yourself.
 
-### 5. The AI Coach {#ai-coach}
+### 5. Etqadem Coach, our AI coach {#ai-coach}
 
-The AI Coach builds plans, answers chat messages, runs weekly check-ins and estimates calories from meal photos. **It is an artificial-intelligence system, not a person.** It is powered by Claude, a model made by Anthropic, PBC, an AI company in the United States, which processes your requests for us as our service provider.
+Etqadem Coach, our AI coach, builds plans, answers chat messages, runs weekly check-ins and estimates calories from meal photos. **It is an artificial-intelligence system, not a person.** It is powered by Claude, a model made by Anthropic, PBC, an AI company in the United States, which processes your requests for us as our service provider.
 
-- **Optional, and only with your consent.** The AI Coach works only after you give the separate in-app AI Coach consent. Photos of InBody results need their own consent too. You can withdraw either at any time in More → Privacy & data. What we send to Anthropic, and what we don't, is explained in the [Privacy Policy](/privacy#ai-coach).
-- **AI answers can be wrong.** The AI Coach's answers, plans and calorie estimates can be wrong, incomplete, out of date or unsuitable for you, even when they sound confident. No person at Etqadem checks them before you see them.
-- **Not medical advice.** The AI Coach gives general fitness and nutrition information only (see section 4). It is not a doctor, dietitian or physiotherapist, and it can't examine you or know your full medical history. Don't use it to diagnose or treat a condition, to decide on medicines, or for allergy or safety decisions.
-- **See a professional.** Talk to a doctor or registered dietitian before following an AI plan if you have a medical condition, an injury, an allergy, an eating disorder, are pregnant or breastfeeding, or plan to fast (including in Ramadan). In an emergency, call your local emergency number. Don't ask the AI Coach.
-- **Your decision.** You decide whether to follow anything the AI Coach suggests. You are responsible for checking it against your own body, your equipment and your surroundings.
+- **Optional, and only with your consent.** Etqadem Coach works only after you give the separate in-app Etqadem Coach consent. Photos of InBody results need their own consent too. You can withdraw either at any time in More → Privacy & data. What we send to Anthropic, and what we don't, is explained in the [Privacy Policy](/privacy#ai-coach).
+- **AI answers can be wrong.** Etqadem Coach's answers, plans and calorie estimates can be wrong, incomplete, out of date or unsuitable for you, even when they sound confident. No person at Etqadem checks them before you see them.
+- **Not medical advice.** Etqadem Coach gives general fitness and nutrition information only (see section 4). It is not a doctor, dietitian or physiotherapist, and it can't examine you or know your full medical history. Don't use it to diagnose or treat a condition, to decide on medicines, or for allergy or safety decisions.
+- **See a professional.** Talk to a doctor or registered dietitian before following an AI plan if you have a medical condition, an injury, an allergy, an eating disorder, are pregnant or breastfeeding, or plan to fast (including in Ramadan). In an emergency, call your local emergency number. Don't ask Etqadem Coach.
+- **Your decision.** You decide whether to follow anything Etqadem Coach suggests. You are responsible for checking it against your own body, your equipment and your surroundings.
 - **Use it fairly.** Don't try to get harmful or illegal content from it, don't enter other people's personal or health information, and don't try to get around its usage limits. We may limit how often you can use it.
 
 ### 6. Acceptable use {#acceptable-use}
@@ -170,15 +170,15 @@ Privacy requests: **{{PRIVACY_EMAIL}}**
 - **المخاطرة على مسؤوليتك.** تنطوي التمارين وتغيير النظام الغذائي على خطر الإصابة أو المرض، وفي حالات نادرة الوفاة. و**أنت تختار المشاركة على مسؤوليتك**، وتتحمل قرار ما هو آمن لجسمك ومعداتك ومكان تمرينك.
 - **أرقام تقديرية.** السعرات والعناصر الغذائية والأهداف وقراءات تركيب الجسم وما يشبهها أرقام تقديرية. تحقق بنفسك من مسببات الحساسية والمكوّنات.
 
-### 5. المدرّب الذكي {#ai-coach}
+### 5. المدرّب اتقدم، المدرّب الذكي {#ai-coach}
 
-يبني المدرّب الذكي الخطط، ويرد على رسائل المحادثة، ويجري متابعة أسبوعية، ويقدّر السعرات من صور الوجبات. **وهو نظام ذكاء اصطناعي وليس إنسانًا.** ويعمل بنموذج Claude من شركة Anthropic, PBC، وهي شركة ذكاء اصطناعي في الولايات المتحدة الأمريكية تعالج طلباتك لصالحنا بصفتها مزوّد خدمة لدينا.
+يبني المدرّب اتقدم، وهو مدرّبنا الذكي، الخطط، ويرد على رسائل المحادثة، ويجري متابعة أسبوعية، ويقدّر السعرات من صور الوجبات. **وهو نظام ذكاء اصطناعي وليس إنسانًا.** ويعمل بنموذج Claude من شركة Anthropic, PBC، وهي شركة ذكاء اصطناعي في الولايات المتحدة الأمريكية تعالج طلباتك لصالحنا بصفتها مزوّد خدمة لدينا.
 
-- **اختياري، وبموافقتك فقط.** لا يعمل المدرّب الذكي إلا بعد أن تمنح موافقة منفصلة داخل التطبيق، كما تحتاج صور نتائج InBody إلى موافقة خاصة بها. ويمكنك سحب أيٍّ منهما في أي وقت من: المزيد ← الخصوصية والبيانات. وما نرسله إلى Anthropic وما لا نرسله موضّح في [سياسة الخصوصية](/privacy#ai-coach).
-- **قد تكون إجابات الذكاء الاصطناعي خاطئة.** قد تكون إجابات المدرّب الذكي وخططه وتقديراته للسعرات خاطئة أو ناقصة أو قديمة أو غير مناسبة لك، حتى لو بدت واثقة. ولا يراجعها أي شخص في اتقدم قبل أن تراها.
-- **ليست نصيحة طبية.** يقدّم المدرّب الذكي معلومات عامة عن اللياقة والتغذية فقط (انظر القسم 4). وهو ليس طبيبًا ولا أخصائي تغذية ولا معالجًا فيزيائيًا، ولا يستطيع فحصك أو معرفة تاريخك الطبي كاملًا. فلا تستخدمه لتشخيص حالة أو علاجها، أو لاتخاذ قرارات بشأن الأدوية، أو في قرارات تتعلق بالحساسية أو السلامة.
-- **استشر مختصًا.** تحدّث إلى طبيب أو أخصائي تغذية معتمد قبل اتباع خطة من الذكاء الاصطناعي إذا كان لديك مرض أو إصابة أو حساسية أو اضطراب في الأكل، أو كنتِ حاملًا أو مرضعًا، أو كنت تنوي الصيام (ومنه صيام رمضان). وفي حالات الطوارئ اتصل برقم الطوارئ في بلدك، ولا تسأل المدرّب الذكي.
-- **القرار قرارك.** أنت من يقرر اتباع ما يقترحه المدرّب الذكي أو عدم اتباعه، وأنت مسؤول عن التحقق من مناسبته لجسمك ومعداتك ومكان تمرينك.
+- **اختياري، وبموافقتك فقط.** لا يعمل المدرّب اتقدم إلا بعد أن تمنح موافقة منفصلة داخل التطبيق، كما تحتاج صور نتائج InBody إلى موافقة خاصة بها. ويمكنك سحب أيٍّ منهما في أي وقت من: المزيد ← الخصوصية والبيانات. وما نرسله إلى Anthropic وما لا نرسله موضّح في [سياسة الخصوصية](/privacy#ai-coach).
+- **قد تكون إجابات الذكاء الاصطناعي خاطئة.** قد تكون إجابات المدرّب اتقدم وخططه وتقديراته للسعرات خاطئة أو ناقصة أو قديمة أو غير مناسبة لك، حتى لو بدت واثقة. ولا يراجعها أي شخص في اتقدم قبل أن تراها.
+- **ليست نصيحة طبية.** يقدّم المدرّب اتقدم معلومات عامة عن اللياقة والتغذية فقط (انظر القسم 4). وهو ليس طبيبًا ولا أخصائي تغذية ولا معالجًا فيزيائيًا، ولا يستطيع فحصك أو معرفة تاريخك الطبي كاملًا. فلا تستخدمه لتشخيص حالة أو علاجها، أو لاتخاذ قرارات بشأن الأدوية، أو في قرارات تتعلق بالحساسية أو السلامة.
+- **استشر مختصًا.** تحدّث إلى طبيب أو أخصائي تغذية معتمد قبل اتباع خطة من الذكاء الاصطناعي إذا كان لديك مرض أو إصابة أو حساسية أو اضطراب في الأكل، أو كنتِ حاملًا أو مرضعًا، أو كنت تنوي الصيام (ومنه صيام رمضان). وفي حالات الطوارئ اتصل برقم الطوارئ في بلدك، ولا تسأل المدرّب اتقدم.
+- **القرار قرارك.** أنت من يقرر اتباع ما يقترحه المدرّب اتقدم أو عدم اتباعه، وأنت مسؤول عن التحقق من مناسبته لجسمك ومعداتك ومكان تمرينك.
 - **استخدمه بإنصاف.** لا تحاول الحصول منه على محتوى ضار أو غير قانوني، ولا تُدخل بيانات شخصية أو صحية لأشخاص آخرين، ولا تحاول تجاوز حدود الاستخدام. ويجوز لنا تقييد عدد مرات استخدامه.
 
 ### 6. الاستخدام المقبول {#acceptable-use}

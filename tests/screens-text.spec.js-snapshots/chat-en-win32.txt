@@ -185,7 +185,7 @@ Protein:
 00:00
 Rest
 00:00:00
-AI coach chat
+Etqadem Coach
 Ask a quick question…
 Want a full plan? Generate one
 Help me with my Upper workout
