@@ -118,7 +118,16 @@
     gm_bandlat: L("Band Lateral Raise", "iQlrRrZTrBs", "shoulder_side", null, "easy", ["band"], "isolation", "15-20", 30),
     gm_bandohext: L("Band Overhead Triceps Extension", "Yi_zNoIsNcc", "triceps_long", null, "easy", ["band"], "isolation", "12-15", 45),
     gm_bandrevcurl: L("Band Reverse-Grip Curl", "ze32_Pas8ho", "biceps_long", null, "easy", ["band"], "isolation", "12-15", 45),
-    gm_pullover: L("Dumbbell Pullover", "jQjWlIwG4sI", "back_lats", null, "medium", ["dumbbell"], "secondary", "10-12", 60)
+    gm_pullover: L("Dumbbell Pullover", "jQjWlIwG4sI", "back_lats", null, "medium", ["dumbbell"], "secondary", "10-12", 60),
+    gu_dips: L("Chest Dips", "g3o0dC_qCns", "chest_lower", "triceps_lateral", "medium", ["machine"], "secondary", "8-12", 90),
+    gu_hipabd: L("Hip Abduction Machine", "G_8LItOiZ0Q", "glutes", null, "easy", ["machine"], "isolation", "12-15", 45),
+    gu_hipthrust: L("Barbell Hip Thrust", "5S8SApGU_Lk", "glutes", null, "hard", ["barbell", "bench"], "compound", "8-12", 90),
+    gu_shrug: L("Barbell Shrug", "9xGqgGFAtiM", "back_lower", null, "medium", ["barbell"], "isolation", "10-15", 60),
+    gu_preacher: L("Preacher Curl", "g7hiWfUH6i8", "biceps_short", null, "easy", ["machine"], "isolation", "10-12", 45),
+    gu_revpec: L("Reverse Pec Deck (Rear Delt Fly)", "v0rJuhEa59c", "shoulder_rear", null, "easy", ["machine"], "isolation", "12-15", 45),
+    gu_cablelat: L("Cable Lateral Raise", "Z5FA9aq3L6A", "shoulder_side", null, "easy", ["cable"], "isolation", "12-15", 30),
+    gu_cablecrunch: L("Weighted Cable Crunch (core)", "ToJeyhydUxU", "core_upper", null, "medium", ["cable"], "secondary", "12-15", 45),
+    gu_widepull: L("Wide-grip Lat Pulldown", "O-_EOo6IY3U", "back_lats", null, "medium", ["cable"], "secondary", "8-12", 90)
   };
 
   // ---- parts: one slot target each, with moves ranked best first. `f` re-ranks for the women's
