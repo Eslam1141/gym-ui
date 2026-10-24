@@ -233,7 +233,7 @@
   // Keeps device/UI-only prefs. Called on sign-out and on an account switch,
   // synchronously before any rest-queue flush can run under the new token, so
   // the non-gym_ prefixes (gymrest_pending is a completion queue) go too.
-  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_", "etqwatch_"];
+  var USER_KEY_PREFIXES = ["gymrest_", "gymday_", "gymchat_", "gymcoach_", "etqwatch_", "gymsync_"];
   function clearUserData() {
     clearCachedSession(); // don't let a stale cached token restore the old account
     var keep = { gym_onboarded: 1, gym_lang: 1, gym_tab: 1, gym_anon: 1, gym_terms_ok: 1 };
@@ -360,12 +360,36 @@
     try { document.dispatchEvent(new CustomEvent(name, { detail: detail })); } catch (e) {}
   }
 
+  // When the server last accepted this device's data (ms; device-local, per account:
+  // clearUserData drops it with the "gymsync_" prefix) and when this page loaded.
+  // hasUnsynced() compares each key's last-write time with them.
+  var SYNC_OK_KEY = "gymsync_ok";
+  var loadedAt = Date.now();
+  function lastSyncOkMs() {
+    try { return parseInt(localStorage.getItem(SYNC_OK_KEY), 10) || 0; } catch (e) { return 0; }
+  }
+  // True when this device holds changes the server has not seen: a gym_* key written
+  // after the last successful sync, or a completion still in the rest-days queue. Only
+  // meaningful for a device bound to an account (gym_user_sub): an anonymous device
+  // has nothing to sync, so nothing is "unsynced".
+  function hasUnsynced() {
+    try {
+      if (!localStorage.getItem("gym_user_sub")) return false;
+      var q = JSON.parse(localStorage.getItem("gymrest_pending") || "[]");
+      if (Array.isArray(q) && q.length) return true;
+    } catch (e) {}
+    var base = lastSyncOkMs() || loadedAt;
+    var m = readMeta();
+    return gymKeys().some(function (k) { return typeof m[k] === "number" && m[k] > base; });
+  }
+
   function syncNow(reason) {
     if (reason !== "debounce" && reason !== "manual" && isSignedIn()) emit("gym:synctick", reason);
     if (syncing || !isSignedIn()) return Promise.resolve(false);
     syncing = true;
     log("[sync] start", reason);
     var body = JSON.stringify({ entries: buildEntries() });
+    var sentAt = nowMs();
     return fetchWithTimeout(API_BASE + "/progress", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
@@ -385,6 +409,7 @@
       })
       .then(function (doc) {
         if (!doc) return false;
+        try { localStorage.setItem(SYNC_OK_KEY, String(sentAt)); } catch (e) {}
         var changed = applyMerged(doc.entries);
         // A device still running an older app.js (pre male-plan-id rewrite)
         // can push old-id gym_checks/gym_weights/gym_sessions data at any
@@ -408,7 +433,11 @@
         log("[sync] ok, changed=", changed);
         return changed;
       })
-      .catch(function (e) { log("[sync] failed", e && e.message); return false; })
+      .catch(function (e) {
+        log("[sync] failed", e && e.message);
+        if (window.GymNet) GymNet.suspect(); // a dead connection that navigator.onLine still calls online
+        return false;
+      })
       .finally(function () { syncing = false; });
   }
 
@@ -749,6 +778,7 @@
       if (r.status === 200 && validPair(r.body)) {
         var method = rec.method === "local" ? "local" : "google";
         saveSession(r.body, method);
+        refreshFailures = 0;
         acceptToken(r.body.accessToken, method);
         return "ok";
       }
@@ -769,8 +799,20 @@
         refreshTimer = setTimeout(function () { refreshSession("rate-limit"); }, Math.min(Math.max(r.retryAfter, 5), 300) * 1000);
         return "retry";
       }
+      retryRefreshLater();
       return "offline"; // keep the session; online / visible / the next 401 try again
     });
+  }
+
+  // The refresh could not reach the server (offline, a 5xx): the session is intact,
+  // so try again on a backoff (5 s, 15 s, 45 s ... capped at 5 min) as well as on the
+  // online / visible events. Reset by the next successful refresh.
+  var refreshFailures = 0;
+  function retryRefreshLater() {
+    var wait = Math.min(300, 5 * Math.pow(3, refreshFailures++));
+    if (window.GymNet) GymNet.suspect();
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () { refreshSession("retry"); }, wait * 1000);
   }
 
   // On resume / online: refresh when there is no live access token or it is
@@ -1109,6 +1151,13 @@
     if (!shouldResolveSilently()) return;
     clearSignInPending();
     try { sessionStorage.removeItem("gym_switch"); } catch (e) {}
+    // A stored refresh token is still a live session: the cold-start refresh just
+    // hasn't got through yet (no network, a 5xx). Not a reason to ask for a sign-in;
+    // let the app show and keep retrying in the background (retryRefreshLater).
+    if (!isSignedIn() && sessionStore().get()) {
+      if (window.GymUI && typeof GymUI.endResolving === "function") GymUI.endResolving();
+      return;
+    }
     if (!isSignedIn() && window.GymUI && typeof GymUI.promptSignIn === "function") GymUI.promptSignIn();
   }
 
@@ -1232,6 +1281,11 @@
     onLocalWrite: onLocalWrite,
     syncNow: function (r) { return syncNow(r || "manual"); },
     isSignedIn: isSignedIn,
+    // A refresh token is stored: the user has a session even while no access token
+    // is live yet (offline cold start). Server features still need isSignedIn().
+    hasSession: function () { return !!sessionStore().get(); },
+    // Local changes the server has not accepted yet (see hasUnsynced above).
+    hasUnsynced: hasUnsynced,
     // Current Google ID token for auth..."Bearer" calls to gym-be / gym-assistant.
     // null when signed out or the token is within 30s of expiry.
     token: function () { return isSignedIn() ? idToken : null; },

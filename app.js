@@ -1237,6 +1237,14 @@ if(activeSession && activeSession.segStart === undefined){
   activeSession = { dayId: activeSession.dayId, startedAt: t0, running: true, accumSec: 0, segStart: t0 };
   saveJSON("gym_session_active", activeSession);
 }
+// The running timer is a device-local fact but the "current day" is synced, so a pull
+// (another device, a re-sign-in) can point activeDay elsewhere and hide the timer as
+// if it was never started. Whenever the day is re-derived from storage, the day with
+// a live timer wins (in memory only: the synced pref is left to the other device).
+function keepTimerDay(){
+  if(activeSession && DAYS.some(d=>d.id===activeSession.dayId)) activeDay = activeSession.dayId;
+}
+keepTimerDay();
 
 function sessionKey(dayId){ return todayStr() + "_" + dayId; }
 
@@ -1754,6 +1762,7 @@ window.GymAppRebuild = function(){
   restSlot = null;
   activeDay = localStorage.getItem(activeDayStoreKey()) || DAYS[0].id;
   if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
+  keepTimerDay();
   animateCards = true;
   renderAll();
 };

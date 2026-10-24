@@ -925,7 +925,10 @@
       resetUserState();
       lastUserSub = sub;
     }
+    if (!authed && window.GymNet && GymNet.isOffline() && window.GymSync && GymSync.hasSession && GymSync.hasSession()) { mount(GymNet.card("food")); return; }
     if (!authed) { renderTeaser(); return; }
+    // The log lives on the server: offline, say so instead of a spinner that ends in an error.
+    if (window.GymNet && GymNet.isOffline() && !state.meals.length) { mount(GymNet.card("food")); return; }
     // If the tab was left open across midnight, "today" (and any date the
     // user hadn't navigated away from) should move forward with it.
     var freshToday = todayStr(0);
