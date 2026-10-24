@@ -230,7 +230,8 @@
     });
     GymAct.bind(document.getElementById("tbMenuSignOut"), function () {
       setMenuOpen(false);
-      if (window.GymSync && typeof GymSync.signOut === "function") GymSync.signOut();
+      var out = function () { if (window.GymSync && typeof GymSync.signOut === "function") GymSync.signOut(); };
+      if (window.GymNet) GymNet.guardSignOut(out); else out();
     }, { cooldown: 1000 });
     document.addEventListener("click", function (e) {
       if (menu && !menu.hidden && !menu.contains(e.target)) setMenuOpen(false);

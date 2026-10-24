@@ -243,6 +243,12 @@
   // hero back and skip straight past the Start splash to the actual choices,
   // so the Google button is reachable in one tap, not two.
   function promptSignIn() {
+    // A saved session that has no access token yet is still being restored, not signed out:
+    // a locked control must not throw the login screen over it.
+    if (!isAuthed() && window.GymSync && GymSync.hasSession && GymSync.hasSession()) {
+      if (window.GymNet) { GymNet.isOffline() ? GymNet.note(document.activeElement || document.body) : GymNet.suspect(); }
+      return;
+    }
     clearResolvingFallback();
     showOnboarding();
     showObStep("choices");

@@ -31,6 +31,9 @@ const ASSETS = [
   "./chat.js",
   "./food.js",
   "./sync.js",
+  "./net.js",
+  "./offline.html",
+  "./offline.js",
   "./auth-email.js",
   "./auth-email.css",
   "./privacy.js",
@@ -135,7 +138,7 @@ self.addEventListener("fetch", (event) => {
       // password-reset route are not cache keys themselves (the ASSETS
       // list holds ./index.html), so serve the cached shell for any
       // page navigation instead of the browser's offline error page.
-      if (event.request.mode === "navigate") return caches.match("./index.html");
+      if (event.request.mode === "navigate") return caches.match("./index.html").then((shell) => shell || caches.match("./offline.html"));
       return hit;
     });
 

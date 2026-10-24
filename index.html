@@ -491,7 +491,7 @@
       </div>
     </div>
     <p id="coachChatNote" class="coach-chat-note"></p>
-    <form id="coachChatForm" class="coach-chat-form">
+    <form id="coachChatForm" class="coach-chat-form" data-net-host>
       <div id="coachPhotoChip" class="coach-photo-chip" hidden>
         <img id="coachPhotoThumb" alt="" width="44" height="44" />
         <div class="coach-photo-chip-body"><span id="coachPhotoChipText"></span><small id="coachPhotoChipTip"></small></div>
@@ -501,13 +501,13 @@
         <button type="button" role="menuitem" id="coachPhotoTake"></button>
         <button type="button" role="menuitem" id="coachPhotoPick"></button>
       </div>
-      <button type="button" id="coachPhotoBtn" aria-haspopup="true" aria-expanded="false">
+      <button type="button" id="coachPhotoBtn" aria-haspopup="true" aria-expanded="false" data-needs-net>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
       </button>
       <input id="coachPhotoCamera" type="file" accept="image/*" capture="environment" hidden />
       <input id="coachPhotoGallery" type="file" accept="image/jpeg,image/png,image/webp" hidden />
       <input id="coachChatInput" type="text" maxlength="600" autocomplete="off" />
-      <button type="submit" id="coachChatSend" aria-label="Send">
+      <button type="submit" id="coachChatSend" aria-label="Send" data-needs-net>
         <svg viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </form>
@@ -539,6 +539,7 @@
 <script src="chat.js" defer></script>
 <script src="food.js" defer></script>
 <script src="sync.js" defer></script>
+<script src="net.js" defer></script>
 <script src="auth-email.js" defer></script>
 <script src="privacy.js" defer></script>
 <script src="onboarding.js" defer></script>

@@ -1064,6 +1064,7 @@
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (window.GymNet && GymNet.isOffline()) { GymNet.note(form.querySelector("[type=submit]") || form); return; }
       if (!refreshValidity()) {
         var firstBad = form.querySelector(".coach-field.bad");
         if (firstBad && firstBad.scrollIntoView) firstBad.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1705,11 +1706,15 @@
   }
   function paint() {
     var authed = window.GymUI && GymUI.isAuthed && GymUI.isAuthed();
+    var net = window.GymNet;
+    // Offline with a saved session (token not restored yet) is not "signed out": say it needs internet.
+    if (!authed && net && net.isOffline() && window.GymSync && GymSync.hasSession && GymSync.hasSession()) { deferred = null; mount(net.card("coach")); return; }
     if (!authed) { deferred = null; renderTeaser(); return; }
     if (inflight) { renderLoading(); return; }
     if (deferred) { var d = deferred; deferred = null; d(); return; }
     var last = loadJSON(LAST_KEY, null);
     if (last && last.computed) renderResult(last);
+    else if (net && net.isOffline()) mount(net.card("coach")); // the form's only action needs the server
     else renderForm();
   }
 
