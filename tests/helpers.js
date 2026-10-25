@@ -111,4 +111,32 @@ async function openApp(browser, opts) {
   return { context, page, server, consoleErrors };
 }
 
-module.exports = { openApp, NOW, TODAY, YESTERDAY, DAY_ID, EX_IDS };
+// Ticks the first `n` sets of one exercise (all of them when n is omitted), moving the fake clock
+// past the 60 s minimum gap before each tap. Resolves to how many it ticked.
+// gapMs sets the spacing: use ~150000 over a whole day when the 50 min gym minimum matters.
+async function tickSets(page, exId, n, gapMs) {
+  const sets = page.locator(`.set-chk[data-set-ex="${exId}"]`);
+  const total = n == null ? await sets.count() : n;
+  for (let i = 0; i < total; i++) {
+    await page.clock.fastForward(gapMs || 61000);
+    await sets.nth(i).click();
+  }
+  return total;
+}
+
+// A gymday_verify seed (pass as `ls`): today's Classic Upper day with every set ticked 150 s apart
+// from 60 min before NOW, except the exercises in `skip`. Finishing the rest with tickSets then
+// makes a day long enough (gym minimum 50 min) to be judged verified.
+function verifiedSeed(skip) {
+  const counts = { mua_bench: 4, mua_pulldown: 4, mua_ohp: 3, mua_row: 4, mua_lateral: 3, mua_facepull: 3 };
+  const start = Date.parse(NOW) - 60 * 60000;
+  const ticks = {};
+  let n = 0;
+  EX_IDS.forEach((id) => {
+    if ((skip || []).includes(id)) return;
+    ticks[id] = Array.from({ length: counts[id] }, () => start + 150000 * n++);
+  });
+  return { gymday_verify: { [TODAY + "_" + DAY_ID]: { start, last: start + 150000 * (n - 1), ticks, state: "" } } };
+}
+
+module.exports = { openApp, tickSets, verifiedSeed, NOW, TODAY, YESTERDAY, DAY_ID, EX_IDS };

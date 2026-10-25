@@ -1,7 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const fs = require("fs");
 const path = require("path");
-const { openApp, TODAY } = require("./helpers");
+const { openApp, tickSets, TODAY } = require("./helpers");
 
 test.setTimeout(60000);
 const T = { timeout: 8000 };
@@ -73,7 +73,7 @@ test.describe("choosing a split", () => {
     await expect(cards.first().locator(".ex-tools")).toHaveAttribute("aria-label", /^Tools: .+/);
     // a set tick goes through setExDone: gym_checks gets the exercise once every set is on
     const sets = cards.first().locator(".set-chk");
-    for (let i = 0; i < (await sets.count()); i++) await sets.nth(i).click();
+    for (let i = 0; i < (await sets.count()); i++) { await page.clock.fastForward(61000); await sets.nth(i).click(); }
     await expect(cards.first()).toHaveClass(/done/);
     const checks = await stored(page, "gym_checks");
     const key = Object.keys(checks).find((k) => /^\d{4}-\d\d-\d\d_sp4gm_upperA$/.test(k));
@@ -248,7 +248,7 @@ test.describe("choosing a split", () => {
     await chip(page, 4).click();
     const first = await page.evaluate(() => DAYS[0].exercises[0].id);
     await page.evaluate(() => GymUI.navigate("plan", { instant: true }));
-    await page.locator('#exList .check[data-id="' + first + '"]').click();
+    await tickSets(page, first);
     const k4 = TODAY + "_sp4gm_upperA";
     expect((await stored(page, "gym_checks"))[k4][first]).toBe(true);
     // switch to 5 days, then Home with tools, then Classic, then back to 4: the record is untouched

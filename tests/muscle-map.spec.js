@@ -3,7 +3,7 @@
 // Fake clock: Fri 2026-10-02 10:00 Cairo. Weeks run Saturday-Friday (GymDate.weekKey),
 // so this week is 2026-09-26 .. 2026-10-02.
 const { test, expect } = require("@playwright/test");
-const { openApp } = require("./helpers");
+const { openApp, tickSets } = require("./helpers");
 
 async function app(browser, opts) {
   const o = await openApp(browser, opts || {});
@@ -120,7 +120,7 @@ test("works for built-in split day ids (sp4gm_upperA style)", async ({ browser }
 test("switch keeps checks: plan, style and AI-plan changes mid-week do not lose a tick", async ({ browser }) => {
   const { context, page } = await app(browser, { signedIn: true });
   await page.waitForSelector(".check[data-id]");
-  await page.locator('.check[data-id="mua_bench"]').click();   // Classic men, Upper day
+  await tickSets(page, "mua_bench");   // Classic men, Upper day
   expect((await cov(page)).chest_mid).toBe(1);
 
   await page.evaluate(() => document.querySelector('[data-plan-btn="female"]').click());   // other plan (button lives on another tab)
@@ -171,7 +171,7 @@ test("reduced motion: nothing animates", async ({ browser }) => {
   const { context, page } = await app(browser, { signedIn: true, contextOptions: { reducedMotion: "reduce" } });
   await page.waitForSelector(".check[data-id]");
   await page.locator("#weekMap summary").click();
-  await page.locator('.check[data-id="mua_bench"]').click();   // a region rises: would pulse otherwise
+  await tickSets(page, "mua_bench");   // a region rises: would pulse otherwise
   await expect(page.locator('#weekMap [data-region="chest_mid"]')).toHaveAttribute("aria-label", /trained once/i);
   const moving = await page.evaluate(() => [...document.querySelectorAll("#weekMap, #weekMap *")].filter((e) => {
     const s = getComputedStyle(e);
@@ -186,7 +186,7 @@ test("with motion allowed, a region that just rose pulses once (control for the 
   const { context, page } = await app(browser, { signedIn: true });
   await page.waitForSelector(".check[data-id]");
   await page.locator("#weekMap summary").click();
-  await page.locator('.check[data-id="mua_bench"]').click();
+  await tickSets(page, "mua_bench");
   const name = await page.evaluate(() => getComputedStyle(document.querySelector('#weekMap [data-region="chest_mid"]')).animationName);
   expect(name).toBe("wm-rise");
   await context.close();

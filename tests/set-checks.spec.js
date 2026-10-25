@@ -8,7 +8,10 @@ const sets = (page) => firstCard(page).locator(".set-chk");
 
 async function tickAll(page) {
   const n = await sets(page).count();
-  for (let i = 0; i < n; i++) await sets(page).nth(i).click();
+  for (let i = 0; i < n; i++) {
+    await page.clock.fastForward(61000); // the 60 s minimum gap between ticks
+    await sets(page).nth(i).click();
+  }
   return n;
 }
 
@@ -36,24 +39,25 @@ test.describe("per-set checkboxes", () => {
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("gym_checks")));
     const key = Object.keys(stored).find((k) => k.startsWith(TODAY + "_"));
     expect(Object.values(stored[key]).filter(Boolean)).toHaveLength(1);
+    await page.clock.fastForward(61000);
     await sets(page).nth(n - 1).click();
     await expect(firstCard(page)).not.toHaveClass(/done/);
     await expect(firstCard(page).locator(".check")).not.toHaveClass(/on/);
     await context.close();
   });
 
-  test("the big checkbox ticks every set", async ({ browser }) => {
+  test("the big checkbox no longer ticks sets", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true });
     await firstCard(page).locator(".check").click();
-    await expect(firstCard(page).locator(".set-chk.on")).toHaveCount(await sets(page).count());
-    await firstCard(page).locator(".check").click();
     await expect(firstCard(page).locator(".set-chk.on")).toHaveCount(0);
+    await expect(firstCard(page)).not.toHaveClass(/done/);
     await context.close();
   });
 
   test("partial ticks survive a reload", async ({ browser }) => {
     const { context, page } = await openApp(browser, { signedIn: true });
     await sets(page).nth(0).click();
+    await page.clock.fastForward(61000);
     await sets(page).nth(1).click();
     await page.reload();
     await expect(firstCard(page)).toBeVisible(T);

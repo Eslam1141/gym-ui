@@ -442,6 +442,8 @@ const T = {
   styleGym:["Gym","جيم"], styleCal:["In-House / Bodyweight","منزلي / وزن الجسم"],
   langBtn:["العربية","English"],
   // ---- top-right header / profile / notifications (header.js, profile.js, notifications.js) ----
+  tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
+  tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
   hdrStreakPending:["{n}-day streak, today not trained yet","سلسلة {n} يوم، لم تتمرن اليوم بعد"],
   // ---- rest days + save-yesterday prompt (rest-days.js) ----
@@ -1446,6 +1448,86 @@ function refreshWeekMap(){
   if(host && window.GymMuscleMap) GymMuscleMap.render(host, { sex: figureSex() });
 }
 
+// Single path for "exercise done" so the big checkbox and the last set tick
+// share the same progress / streak / calendar side effects.
+function setExDone(id, on){
+  const k = sessionKey(activeDay);
+  const wasComplete = isDayComplete(activeDay);
+  checks[k] = checks[k] || {};
+  checks[k][id] = on;
+  saveJSON("gym_checks", checks);
+  if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
+  refreshWeekMap();
+  const el = exList.querySelector(`.check[data-id="${id}"]`);
+  if(el){
+    const was = el.classList.contains("on");
+    el.classList.toggle("on", on);
+    if(on && !was && window.GymMotion) GymMotion.pop(el);
+    const card = el.closest(".ex-card");
+    if(card) card.classList.toggle("done", on);
+  }
+  updateProgress();
+  // Record the moment this day's checklist *transitions* to complete
+  // (not on every click once already complete) so applyDayRotation()
+  // can auto-select the next day in rotation on a later day's visit.
+  if(!wasComplete && isDayComplete(activeDay)){
+    saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
+    if(window.GymCelebrate) GymCelebrate.day(activeDay);
+  }
+  if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
+    window.GymCalendar.onCheckChanged(activeDay, todayStr());
+  }
+}
+function paintSets(id, state){
+  exList.querySelectorAll(`.set-chk[data-set-ex="${id}"]`).forEach((b, i)=>{
+    b.classList.toggle("on", !!state[i]);
+    b.setAttribute("aria-checked", String(!!state[i]));
+  });
+}
+// A short plain toast (set ticks are refused with one, and the big checkbox explains itself).
+function toastMsg(message){
+  if(window.GymToast && typeof window.GymToast.show === "function") window.GymToast.show({ message, duration: 3500 });
+}
+// One set tick or un-tick. A tick goes through GymVerify first (60 s since the last
+// accepted tick, workout timer started on the first tick). { ok, on, waitSec }
+function toggleSet(id, i){
+  const day = DAYS.find(d=>d.id===activeDay);
+  const ex = day && day.exercises.find(x=>x.id===id);
+  if(!ex) return { ok:false };
+  const date = todayStr(), k = sessionKey(activeDay);
+  const st = setState(k, ex, !!(checks[k] || {})[id]);
+  const on = !st[i];
+  if(on){
+    const first = !GymVerify.hasTicks(date, activeDay);
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    // a timer started before the first tick is the workout's start (but not one left running since yesterday)
+    if(first && activeSession && activeSession.dayId === activeDay && activeSession.startedAt >= midnight.getTime()){
+      GymVerify.setTimerStart(date, activeDay, activeSession.startedAt);
+    }
+    const r = GymVerify.tryTick(date, activeDay, id, i, Date.now());
+    if(!r.ok){
+      toastMsg(t("tickWait").replace("{s}", r.waitSec));
+      return { ok:false, waitSec:r.waitSec };
+    }
+    if(first && !activeSession){
+      const t0 = GymVerify.timerStart(date, activeDay);
+      activeSession = { dayId: activeDay, startedAt: t0, running: true, accumSec: 0, segStart: t0 };
+      saveJSON("gym_session_active", activeSession);
+      updateSessionUI();
+    }
+  } else {
+    GymVerify.untick(date, activeDay, id, i);
+  }
+  st[i] = on;
+  setChecks[k] = setChecks[k] || {};
+  setChecks[k][id] = st;
+  saveSetChecks();
+  paintSets(id, st);
+  const all = st.every(Boolean);
+  if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
+  return { ok:true, on };
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
@@ -1548,82 +1630,21 @@ function renderExercises(){
   if(play) setTimeout(()=>exList.querySelectorAll(".mus-settle").forEach(e=>e.classList.remove("mus-settle")), 1200);
   animateCards = false;
 
-  // --- checkbox: flip just this card, no list rebuild ---
-  // Single path for "exercise done" so the big checkbox and the last set tick
-  // share the same progress / streak / calendar side effects.
-  function setExDone(id, on){
-    const k = sessionKey(activeDay);
-    const wasComplete = isDayComplete(activeDay);
-    checks[k] = checks[k] || {};
-    checks[k][id] = on;
-    saveJSON("gym_checks", checks);
-    if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
-    refreshWeekMap();
-    const el = exList.querySelector(`.check[data-id="${id}"]`);
-    if(el){
-      const was = el.classList.contains("on");
-      el.classList.toggle("on", on);
-      if(on && !was && window.GymMotion) GymMotion.pop(el);
-      const card = el.closest(".ex-card");
-      if(card) card.classList.toggle("done", on);
-    }
-    updateProgress();
-    // Record the moment this day's checklist *transitions* to complete
-    // (not on every click once already complete) so applyDayRotation()
-    // can auto-select the next day in rotation on a later day's visit.
-    if(!wasComplete && isDayComplete(activeDay)){
-      saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
-      if(window.GymCelebrate) GymCelebrate.day(activeDay);
-    }
-    if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
-      window.GymCalendar.onCheckChanged(activeDay, todayStr());
-    }
-  }
-  function paintSets(id, state){
-    exList.querySelectorAll(`.set-chk[data-set-ex="${id}"]`).forEach((b, i)=>{
-      b.classList.toggle("on", !!state[i]);
-      b.setAttribute("aria-checked", String(!!state[i]));
-    });
-  }
+  // The big checkbox no longer completes anything: a day counts set by set (see verify.js).
   exList.querySelectorAll(".check").forEach(el=>{
-    el.onclick = ()=>{
-      const id = el.dataset.id;
-      const k = sessionKey(activeDay);
-      const on = !((checks[k] || {})[id]);
-      const ex = day.exercises.find(x=>x.id===id);
-      if(ex){
-        const st = Array(setCount(ex)).fill(on);
-        setChecks[k] = setChecks[k] || {};
-        setChecks[k][id] = st;
-        saveSetChecks();
-        paintSets(id, st);
-      }
-      setExDone(id, on);
-    };
+    el.onclick = ()=> toastMsg(t("tickEachSet"));
   });
 
   // --- set checkboxes: all sets ticked = exercise done, untick one = not done ---
   exList.querySelectorAll(".set-chk").forEach(btn=>{
     btn.onclick = ()=>{
-      const id = btn.dataset.setEx, i = +btn.dataset.set;
-      const k = sessionKey(activeDay);
-      const ex = day.exercises.find(x=>x.id===id);
-      if(!ex) return;
-      const st = setState(k, ex, !!(checks[k] || {})[id]);
-      st[i] = !st[i];
-      setChecks[k] = setChecks[k] || {};
-      setChecks[k][id] = st;
-      saveSetChecks();
-      paintSets(id, st);
-      if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn); }
-      if(st[i]){
-        // same value the card's Rest button uses; restarts a running timer
-        const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
-        const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
-        if(rest > 0) startRestTimer(rest, restBtn.dataset.name);
-      }
-      const all = st.every(Boolean);
-      if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
+      const r = toggleSet(btn.dataset.setEx, +btn.dataset.set);
+      if(!r.ok || !r.on) return;
+      hapticTick(); if(window.GymMotion) GymMotion.pop(btn);
+      // same value the card's Rest button uses; restarts a running timer
+      const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
+      const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
+      if(rest > 0) startRestTimer(rest, restBtn.dataset.name);
     };
   });
 
@@ -1962,7 +1983,7 @@ function restTick(){
     timerBar.classList.add("done"); // the ring fills and pops while the widget leaves
     stopRestTimer();
     const sub = kind === "ex" ? preciseStr("exOverBody").replace("{n}", held) : t("restOverBody").replace("{name}", restName);
-    if(kind === "ex") fillExerciseSeconds(exId, held);
+    if(kind === "ex"){ fillExerciseSeconds(exId, held); tickAfterHold(exId); }
     // Back from a long screen-off: the native alert already rang, so don't ring a second time.
     if(notifScheduled && Date.now() - endedAt > ALARM_LATE_MS){
       notifScheduled = false;
@@ -1982,6 +2003,15 @@ function stopRestTimer(){
   readyShown = 0;
   timerBar.classList.remove("show", "ending", "ready");
   holdScreenAwake(false);
+}
+// A finished hold ticks the exercise's next open set, under the same 60 s rule as a tap.
+function tickAfterHold(id){
+  const day = DAYS.find(d=>d.id===activeDay);
+  const ex = day && day.exercises.find(x=>x.id===id);
+  if(!ex) return;
+  const k = sessionKey(activeDay);
+  const i = setState(k, ex, !!(checks[k] || {})[id]).indexOf(false);
+  if(i >= 0) toggleSet(id, i);
 }
 // Puts the seconds held into the card's reps field so the set can be saved.
 function fillExerciseSeconds(id, secs){
@@ -2406,7 +2436,8 @@ sessionBtn.onclick = GymAct.once(()=>{
       alert(t("dayAlreadyDone"));
       return;
     }
-    const now = Date.now();
+    // a day that already has ticks keeps counting from its first tick (the workout timer can't be reset)
+    const now = GymVerify.timerStart(todayStr(), activeDay) || Date.now();
     activeSession = { dayId: activeDay, startedAt: now, running: true, accumSec: 0, segStart: now };
     saveJSON("gym_session_active", activeSession);
   }

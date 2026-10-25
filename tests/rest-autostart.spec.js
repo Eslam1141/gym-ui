@@ -37,7 +37,7 @@ test.describe("rest timer starts on set tick", () => {
     const { context, page } = await openApp(browser, { signedIn: true });
     await expect(firstCard(page)).toBeVisible(T);
     await firstCard(page).locator(".check").click();
-    await expect(firstCard(page).locator(".set-chk.on")).toHaveCount(await sets(page).count());
+    await expect(firstCard(page).locator(".set-chk.on")).toHaveCount(0);
     await expect(dock(page)).not.toHaveClass(/show/);
     await context.close();
   });
