@@ -70,8 +70,8 @@ async function shot(page, name, o) {
 
 for (const lang of ["en", "ar"]) {
   const L = lang === "ar"
-    ? { title: "قبل استخدام المدرّب الذكي", go: "تفعيل المدرّب الذكي", cancel: "ليس الآن", off: "إيقاف المدرّب الذكي", unavail: "تعذّر على المدرّب الذكي التحقق" }
-    : { title: "Before you use the AI coach", go: "Turn on the AI coach", cancel: "Not now", off: "Turn off AI coach", unavail: "The AI coach can't check your settings" };
+    ? { title: "قبل استخدام المدرّب اتقدم", go: "تفعيل المدرّب اتقدم", cancel: "ليس الآن", off: "إيقاف المدرّب اتقدم", unavail: "تعذّر على المدرّب اتقدم التحقق" }
+    : { title: "Before you use Etqadem Coach", go: "Turn on Etqadem Coach", cancel: "Not now", off: "Turn off Etqadem Coach", unavail: "Etqadem Coach can't check your settings" };
 
   for (const theme of ["light", "dark"]) {
     test(`[${lang}/${theme}] first plan submit shows the sheet; Continue waits for the tick; consent is POSTed, then the plan is requested`, async ({ browser }) => {

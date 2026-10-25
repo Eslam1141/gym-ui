@@ -40,7 +40,7 @@
   var IB_CONSENT_VERSION = "2026-10-16";
 
   var STR = {
-    teaseTitle: ["Meet your AI coach", "تعرّف على مدرّبك الذكي"],
+    teaseTitle: ["Meet Etqadem Coach", "تعرّف على المدرّب اتقدم"],
     teaseBody: ["A diet and training plan built from your body numbers and goal. Free with an account.",
       "خطة غذاء وتمرين مبنية على أرقام جسمك وهدفك. مجاناً مع حساب."],
     teaseB1: ["Calorie & macro targets from your stats", "أهداف السعرات والماكروز من بياناتك"],
@@ -130,7 +130,7 @@
     vRequired: ["Required", "مطلوب"],
     vRange: ["Enter {min}–{max}", "أدخل {min}–{max}"],
     vRangeU: ["Enter {min}–{max} {u}", "أدخل {min}–{max} {u}"],
-    ageBelowMin: ["Etqadem is for people 18 and older, so the AI coach can't build a plan for this age.", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب الذكي إعداد خطة لهذا العمر."],
+    ageBelowMin: ["Etqadem is for people 18 and older, so Etqadem Coach can't build a plan for this age.", "اتقدم مخصّص لمن بلغوا 18 عامًا فأكثر، لذلك لا يستطيع المدرّب اتقدم إعداد خطة لهذا العمر."],
     vAgeMin: ["Must be 18 or older", "يجب أن يكون العمر 18 عاماً فأكثر"],
     vInt: ["Whole number only", "رقم صحيح فقط"],
     vNotesMax: ["Max 300 characters", "الحد الأقصى 300 حرف"],
@@ -164,13 +164,13 @@
     btnDetail: ["More detail", "تفاصيل أكثر"],
     btnApply: ["Use workout as my plan", "استخدم التمرين كخطتي"],
     btnHistory: ["History", "السجل"],
-    askCoach: ["Have a quick question? Chat with your coach", "لديك سؤال سريع؟ دردش مع مدرّبك"],
+    askCoach: ["Have a quick question? Chat with Etqadem Coach", "لديك سؤال سريع؟ دردش مع المدرّب اتقدم"],
     applied: ["Added to your plans →", "أُضيفت إلى خططك ←"],
     quotaTitle: ["Daily limit reached", "بلغت الحد اليومي"],
     quotaBody: ["You've used today's assessments. Try again after {t}.", "لقد استخدمت تقييمات اليوم. حاول مجدداً بعد {t}."],
     quotaBodyGeneric: ["You've used today's assessments. Try again tomorrow.", "لقد استخدمت تقييمات اليوم. حاول مجدداً غداً."],
-    errTitle: ["Couldn't reach the coach", "تعذّر الوصول إلى المدرّب"],
-    errBody: ["The coach service isn't responding right now. Please try again in a moment.", "خدمة المدرّب لا تستجيب حالياً. يرجى المحاولة بعد قليل."],
+    errTitle: ["Couldn't reach Etqadem Coach", "تعذّر الوصول إلى المدرّب اتقدم"],
+    errBody: ["Etqadem Coach isn't responding right now. Please try again in a moment.", "خدمة المدرّب لا تستجيب حالياً. يرجى المحاولة بعد قليل."],
     err502: ["The AI service is temporarily unavailable. Please try again shortly.", "خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. حاول بعد قليل."],
     retry: ["Try again", "أعد المحاولة"],
     readyToast: ["Your plan is ready", "خطتك جاهزة"],
@@ -1153,7 +1153,7 @@
 
   // Compact plain-text summary of the most recent result, for the floating
   // chat's context — so a follow-up question doesn't require re-explaining
-  // the plan the coach itself just generated. Deliberately short (exercise
+  // the plan Etqadem Coach itself just generated. Deliberately short (exercise
   // names + sets/reps, not full meal item lists) to keep the chat request
   // small. Returns "" when there's nothing to summarize.
   function planSummary() {
