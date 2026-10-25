@@ -452,6 +452,8 @@ const T = {
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
   tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
+  hdrOnHold:["on hold","معلّقة"],
+  hdrStreakHeld:["{n}-day streak, {h} day(s) on hold awaiting review","سلسلة {n} يوم، {h} يوم معلّق بانتظار المراجعة"],
   hdrStreakPending:["{n}-day streak, today not trained yet","سلسلة {n} يوم، لم تتمرن اليوم بعد"],
   // ---- rest days + save-yesterday prompt (rest-days.js) ----
   restBadge:["Rest day","يوم راحة"],

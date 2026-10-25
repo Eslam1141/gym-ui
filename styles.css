@@ -2386,6 +2386,7 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
   font-variant-numeric:tabular-nums;
 }
 .tb-streak[hidden]{ display:none; }
+.tb-streak .tb-hold{ margin-inline-start:var(--space-2); font-size:var(--text-xs); font-weight:var(--fw-bold); color:var(--warn); }
 .tb-slot{ display:inline-flex; }
 .tb-slot:empty{ display:none; }
 .tb-avatar-wrap{ position:relative; display:inline-flex; }
