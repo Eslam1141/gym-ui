@@ -320,7 +320,8 @@
         // Evidence the server can't read must not strand the day: send it the old way instead.
         if (code === "invalid_evidence" && item.evidence) return send({ date: item.date, dayId: item.dayId }, withToday);
         // A wrong device clock makes the server refuse our `today`; its legacy window is UTC+-1.
-        if (code === "invalid_request" && withToday !== false) return send(item, false);
+        // Evidence is only accepted together with `today`, so that retry goes the legacy way, without it.
+        if (code === "invalid_request" && withToday !== false) return send({ date: item.date, dayId: item.dayId }, false);
         return "held";
       });
     }).catch(function () { return "queued"; });

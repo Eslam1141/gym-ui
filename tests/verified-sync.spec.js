@@ -63,6 +63,19 @@ test.describe("completion evidence and review states", () => {
     await context.close();
   });
 
+  test("device clock off: the no-today retry drops the evidence and the queue empties", async ({ browser }) => {
+    const { context, server } = await openApp(browser, {
+      signedIn: true, server: { rejectToday: true },
+      ls: { gymrest_pending: [{ date: YESTERDAY, dayId: DAY_ID, evidence: { v: 1, kind: "live", plan: "gym", timerStart: null, elapsedSec: 0, sets: [] } }] }
+    });
+    await expect.poll(() => posts(server).length, T).toBe(2);
+    expect(posts(server)[0].body).toMatchObject({ date: YESTERDAY, today: TODAY, evidence: { v: 1 } });
+    expect(posts(server)[1].body).toEqual({ date: YESTERDAY, dayId: DAY_ID });
+    await expect.poll(() => server.records.length, T).toBe(1);
+    await expect.poll(() => context.pages()[0].evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending") || "[]")), T).toEqual([]);
+    await context.close();
+  });
+
   test("short day celebrates with held copy", async ({ browser }) => {
     // 18 sets a minute apart from 18 min ago: gaps are fine, the day is under the 50 min gym minimum
     const { context, page } = await openApp(browser, nearlyDone({}, { startAgoMin: 18, stepMs: 61000 }));
