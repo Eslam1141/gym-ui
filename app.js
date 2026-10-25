@@ -442,6 +442,11 @@ const T = {
   styleGym:["Gym","جيم"], styleCal:["In-House / Bodyweight","منزلي / وزن الجسم"],
   langBtn:["العربية","English"],
   // ---- top-right header / profile / notifications (header.js, profile.js, notifications.js) ----
+  swapBtn:["Machine busy?","الجهاز مشغول؟"],
+  swapTitle:["Swap {name} for","استبدل {name} بـ"],
+  swapNone:["No alternative with your equipment","لا يوجد بديل بأدواتك"],
+  swappedFrom:["Swapped from {name}","بدلًا من {name}"],
+  swapUndo:["Undo","تراجع"],
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
   tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
@@ -1119,10 +1124,25 @@ window.GymApp.coachSplit = function(){
   if(!days.length) return null;
   return { name: clip(`${splitChoice.days} days \u00b7 ${splitChoice.where === "home" ? "Home" : "Gym"}`), days };
 };
-window.GymApp.dayExercises = function(dayId){
-  const day = findDay(dayId);
+// A day as it is on `date` (default today): moves swapped with "Machine busy?" (swap.js) take
+// the original's slot, so ticks, evidence, the muscle map and the calendar all see the new move.
+function dayView(day, date){
+  if(!day || !window.GymSwap) return day;
+  const m = GymSwap.map(date || todayStr(), day.id);
+  if(!Object.keys(m).length) return day;
+  return Object.assign({}, day, { exercises: day.exercises.map(ex=> m[ex.id] ? GymSwap.expand(ex, m[ex.id]) : ex) });
+}
+window.GymApp.dayExercises = function(dayId, date){
+  const day = dayView(findDay(dayId), date);
   return day ? day.exercises : [];
 };
+// Equipment a swap may use: null = any (gym plans), else the tools of a home plan.
+window.GymApp.swapTools = function(dayId){
+  if(window.GymVerify && GymVerify.planOf(dayId) !== "home") return null;
+  return /^sp/.test(dayId || "") ? splitChoice.tools : ["band"];
+};
+window.GymApp.exName = ex=> exName(ex);
+window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
 // Marks every exercise of a past day's checklist as done (rest-days.js "save
 // yesterday"). Goes through the in-memory `checks` so the next toggle's
 // saveJSON doesn't overwrite it with a stale copy.
@@ -1456,7 +1476,7 @@ function setExDone(id, on){
   checks[k] = checks[k] || {};
   checks[k][id] = on;
   saveJSON("gym_checks", checks);
-  if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
+  if(on) rememberTags(k, (dayView(DAYS.find(d=>d.id === activeDay)) || { exercises:[] }).exercises.filter(e=>e.id === id));
   refreshWeekMap();
   const el = exList.querySelector(`.check[data-id="${id}"]`);
   if(el){
@@ -1483,6 +1503,9 @@ function paintSets(id, state){
     b.classList.toggle("on", !!state[i]);
     b.setAttribute("aria-checked", String(!!state[i]));
   });
+  // "Machine busy?" and Undo only exist until the first set of that exercise is ticked
+  const card = exList.querySelector(`.check[data-id="${id}"]`);
+  if(card) card.closest(".ex-card").querySelectorAll("[data-swap], [data-swapundo]").forEach(el=>{ el.hidden = state.some(Boolean); });
 }
 // A short plain toast (set ticks are refused with one, and the big checkbox explains itself).
 function toastMsg(message){
@@ -1491,7 +1514,7 @@ function toastMsg(message){
 // One set tick or un-tick. A tick goes through GymVerify first (60 s since the last
 // accepted tick, workout timer started on the first tick). { ok, on, waitSec }
 function toggleSet(id, i){
-  const day = DAYS.find(d=>d.id===activeDay);
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
   const ex = day && day.exercises.find(x=>x.id===id);
   if(!ex) return { ok:false };
   const date = todayStr(), k = sessionKey(activeDay);
@@ -1531,7 +1554,7 @@ function toggleSet(id, i){
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
-  const day = DAYS.find(d=>d.id===activeDay);
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
   dayMuscles.textContent = dayLabel(day) + " — " + musLabel(day);
   renderMuscleTiles(day);
   const key = sessionKey(day.id);
@@ -1559,6 +1582,7 @@ function renderExercises(){
     // Plans saved before a clip matched (or whose name now matches an alias) get it here; none = "coming soon".
     if(!ex.vid){ const v = window.GymExerciseVideo ? GymExerciseVideo(ex.en) : ""; if(v) ex.vid = v; }
     const hasVid = !!ex.vid;
+    const anyTick = setState(key, ex, done).some(Boolean);
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
     const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
     const exSh = window.GymMuscleArt ? exShapes(ex) : null;
@@ -1578,6 +1602,8 @@ function renderExercises(){
           ${mus.chip}
         </div>
       </div>
+      ${ex.swapFrom ? `<div class="ex-swapped"><span>${esc(t("swappedFrom").replace("{name}", exName(ex.swapFrom)))}</span>
+        <button type="button" class="ex-swap-undo" data-swapundo="${esc(ex.swapFrom.id)}"${anyTick ? " hidden" : ""}>${t("swapUndo")}</button></div>` : ``}
       <div class="ex-meta">
         <span><b>${esc(ex.sets)}</b> ${t("sets")}</span>
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
@@ -1608,6 +1634,10 @@ function renderExercises(){
         <button class="btn-sm" data-save="${eid}">
           <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
           ${t("save")}
+        </button>
+        <button type="button" class="btn-sm swap" data-swap="${eid}"${anyTick ? " hidden" : ""}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10.2l-2.6-2.6L16 3l5 5-5 5-1.4-1.4L17.2 9H7zm10 10H6.8l2.6 2.6L8 21l-5-5 5-5 1.4 1.4L6.8 15H17z"/></svg>
+          ${t("swapBtn")}
         </button>
         <button class="btn-sm rest" data-rest="${esc(ex.rest)}" data-name="${nm}">
           <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11H8v-2h3V7h2z"/></svg>
@@ -1677,6 +1707,19 @@ function renderExercises(){
     };
   });
 
+  const swapped = ()=>{ renderExercises(); updateProgress(); refreshWeekMap(); };
+  exList.querySelectorAll("[data-swap]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const ex = day.exercises.find(x=>x.id === btn.dataset.swap);
+      if(ex) GymSwap.open(ex, ex.swapFrom ? ex.swapFrom.id : ex.id, activeDay, swapped);
+    };
+  });
+  exList.querySelectorAll("[data-swapundo]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const orig = btn.dataset.swapundo, cur = (GymSwap.map(todayStr(), activeDay))[orig];
+      if(GymSwap.undo(todayStr(), activeDay, orig)){ GymVerify.clearExercise(todayStr(), activeDay, cur); swapped(); }
+    };
+  });
   exList.querySelectorAll("[data-rest]").forEach(btn=>{
     btn.onclick = ()=> startRestTimer(parseInt(btn.dataset.rest), btn.dataset.name);
   });
@@ -1728,7 +1771,7 @@ function renderNotes(){
 // updateProgress() (active day's progress pill/bar) and isDayComplete()
 // (blocking timer start / driving day-rotation) so the two never drift.
 function dayProgress(dayId){
-  const day = DAYS.find(d=>d.id===dayId);
+  const day = dayView(DAYS.find(d=>d.id===dayId));
   if(!day) return { done:0, total:0 };
   const dayChecks = checks[sessionKey(dayId)] || {};
   const total = day.exercises.length;
@@ -2006,7 +2049,7 @@ function stopRestTimer(){
 }
 // A finished hold ticks the exercise's next open set, under the same 60 s rule as a tap.
 function tickAfterHold(id){
-  const day = DAYS.find(d=>d.id===activeDay);
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
   const ex = day && day.exercises.find(x=>x.id===id);
   if(!ex) return;
   const k = sessionKey(activeDay);

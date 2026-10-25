@@ -90,6 +90,11 @@
     return Object.keys(e.ticks).some(function (id) { return e.ticks[id].some(function (ms) { return ms > 0; }); });
   }
 
+  function exerciseTicked(date, dayId, exId) {
+    var e = readAll()[keyOf(date, dayId)];
+    return !!(e && e.ticks[exId] && e.ticks[exId].some(function (ms) { return ms > 0; }));
+  }
+
   function timerStart(date, dayId) {
     var e = readAll()[keyOf(date, dayId)];
     return e && e.start ? e.start : 0;
@@ -176,6 +181,7 @@
     untick: untick,
     clearExercise: clearExercise,
     hasTicks: hasTicks,
+    exerciseTicked: exerciseTicked,
     timerStart: timerStart,
     setTimerStart: setTimerStart,
     evidence: evidence,

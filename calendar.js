@@ -68,8 +68,8 @@
     return d;
   }
 
-  function dayExercises(dayId) {
-    return (window.GymApp && window.GymApp.dayExercises) ? (window.GymApp.dayExercises(dayId) || []) : [];
+  function dayExercises(dayId, date) {
+    return (window.GymApp && window.GymApp.dayExercises) ? (window.GymApp.dayExercises(dayId, date) || []) : [];
   }
 
   // ---------------- completion data ----------------
@@ -95,7 +95,7 @@
       var date = key.slice(0, 10);
       if (date < from || date > to) return;
       var dayId = key.slice(11);
-      var exercises = dayExercises(dayId);
+      var exercises = dayExercises(dayId, date);
       if (!exercises.length) return;
       var dayChecks = checks[key];
       if (!dayChecks || typeof dayChecks !== "object") return;
@@ -145,7 +145,7 @@
   // app.js calls this right after updateProgress() on every checkbox toggle.
   function onCheckChanged(dayId, date) {
     try {
-      var exercises = dayExercises(dayId);
+      var exercises = dayExercises(dayId, date);
       if (!exercises.length) return;
       var checks = JSON.parse(localStorage.getItem("gym_checks") || "{}");
       var dayChecks = checks[date + "_" + dayId] || {};
@@ -330,7 +330,7 @@
       entry = local;
     }
 
-    var exercises = dayExercises(entry.dayId);
+    var exercises = dayExercises(entry.dayId, dateKey);
     var checks = {};
     try { checks = JSON.parse(localStorage.getItem("gym_checks") || "{}")[dateKey + "_" + entry.dayId] || {}; } catch (e) {}
 

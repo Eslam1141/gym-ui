@@ -495,6 +495,38 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 /* No demo clip yet: calm, non-interactive stand-in for the Video button */
 .btn-sm.video-soon{ background:transparent; border-style:dashed; color:var(--paper-dim); font-weight:600; cursor:default; }
 .btn-sm svg{ width:13px; height:13px; fill:currentColor; flex:none; }
+.btn-sm[hidden]{ display:none; }
+
+/* "Machine busy?" (swap.js): the swapped-from line on a card, and the alternatives sheet (.syd shell) */
+.ex-swapped{
+  display:flex; align-items:center; flex-wrap:wrap; column-gap:var(--space-2);
+  margin:var(--space-2) 0 0; margin-inline-start:38px;
+  font-size:var(--text-sm); color:var(--paper-dim);
+}
+.ex-swap-undo{
+  min-height:44px; padding:0 var(--space-2); background:none; border:0; cursor:pointer;
+  font-family:inherit; font-size:inherit; font-weight:var(--fw-bold);
+  color:var(--primary-text); text-decoration:underline; text-underline-offset:3px;
+}
+.ex-swap-undo[hidden]{ display:none; }
+.ex-swap-undo:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.swap-panel{ max-height:calc(100dvh - var(--space-6)); overflow-y:auto; }
+.swap-list{ list-style:none; margin:0 0 var(--space-4); padding:0; display:flex; flex-direction:column; gap:var(--space-2); }
+.swap-opt{
+  display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:64px;
+  padding:var(--space-2); text-align:start; cursor:pointer; font-family:inherit;
+  background:var(--panel2); color:var(--paper); border:1px solid var(--line-strong); border-radius:var(--radius);
+  transition:border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.swap-opt:hover{ border-color:var(--primary-text); }
+.swap-opt:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.swap-thumb{ flex:none; width:72px; aspect-ratio:16 / 9; border-radius:6px; overflow:hidden; background:var(--line); }
+.swap-thumb img{ display:block; width:100%; height:100%; object-fit:cover; }
+.swap-opt-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.swap-opt-name{ font-size:var(--text-base); font-weight:var(--fw-bold); line-height:var(--lh-tight); }
+.swap-opt-mus{ font-size:var(--text-sm); color:var(--paper-dim); }
+.swap-none{ margin:0 0 var(--space-5); font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.swap-none[hidden], .swap-list[hidden]{ display:none; }
 
 /* inline video */
 .video-wrap{
