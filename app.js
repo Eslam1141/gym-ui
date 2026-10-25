@@ -485,10 +485,10 @@ const T = {
   restErrWindow:["Only today and yesterday can be changed.","يمكن تغيير اليوم والأمس فقط."],
   restErrNet:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى."],
   sydTitle:["Did you finish yesterday's workout but forget to mark it?","هل أنهيت تمرين أمس ونسيت تسجيله؟"],
-  sydBody:["You checked {d} of {t} exercises for {day}. Saving it keeps your streak going.","أنجزت {d} من {t} تمارين في {day}. حفظه يُبقي سلسلتك مستمرة."],
-  sydYes:["Yes, save it","نعم، احفظه"],
+  sydBody:["You checked {d} of {t} exercises for {day}. Send it for review? It counts toward your streak once approved.","أنجزت {d} من {t} تمارين في {day}. هل ترسله للمراجعة؟ سيُحتسب في سلسلتك بعد الموافقة."],
+  sydYes:["Send for review","أرسله للمراجعة"],
   sydNo:["No, I didn't","لا، لم أنهِه"],
-  sydSaved:["Yesterday's workout saved","تم حفظ تمرين أمس"],
+  sydSaved:["Sent for review","تم الإرسال للمراجعة"],
   sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
   sydSignIn:["Sign in to save yesterday's workout","سجّل دخولك عشان يتحفظ تمرين امبارح"],
   queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
@@ -1145,19 +1145,6 @@ window.GymApp.swapTools = function(dayId){
 };
 window.GymApp.exName = ex=> exName(ex);
 window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
-// Marks every exercise of a past day's checklist as done (rest-days.js "save
-// yesterday"). Goes through the in-memory `checks` so the next toggle's
-// saveJSON doesn't overwrite it with a stale copy.
-window.GymApp.markDayComplete = function(date, dayId){
-  const day = findDay(dayId);
-  if(!day) return;
-  const k = date + "_" + dayId;
-  checks[k] = checks[k] || {};
-  day.exercises.forEach(ex=>{ checks[k][ex.id] = true; });
-  saveJSON("gym_checks", checks);
-  rememberTags(k, day.exercises);
-  refreshWeekMap();
-};
 // Strings and language for the weekly muscle map (muscle-map.js), and the tags of
 // one exercise of a day in any plan we can still see (Classic, either persona,
 // the AI plan). null when the plan that had it is gone: the map then falls back

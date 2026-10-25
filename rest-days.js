@@ -7,9 +7,11 @@
  * source of truth (calendar.js feeds it from GET /workouts/complete). Signed
  * out / anonymous -> the same rules enforced locally in gymrest_days (no API).
  *
- * Save yesterday: on app open, if yesterday has partial local checks but no
- * completion or rest day, ask once whether the user finished it. Never asks
- * about older days; "No" is remembered per date.
+ * Save yesterday: on app open, if yesterday has partial local checks or set
+ * ticks but no completion or rest day, ask once whether to send it for review.
+ * It goes to gym-be as a pending day (evidence kind save_yesterday) and counts
+ * toward the streak once an admin approves it; the exercises are never ticked
+ * for the user. Never asks about older days; "No" is remembered per date.
  *
  * Completion queue: POST /workouts/complete always sends the client-local
  * `today`. A network/5xx failure queues the item (gymrest_pending); a
@@ -401,22 +403,34 @@
     writeJSON(LS_DISMISSED, l.slice(-14));
   }
 
-  // Best partial day for `date`, or null. A fully checked day (any bucket)
-  // means it was already completed, so nothing to ask.
+  // Best partial day for `date`, or null. An exercise counts as started when it is
+  // checked or has a set tick (the per-set ticks are gone after midnight, the tick
+  // times stay). A fully checked day (any bucket) means it was already completed,
+  // so nothing to ask.
   function partialFor(date) {
     var checks = readJSON("gym_checks", {});
+    var ticked = window.GymVerify ? GymVerify.tickedDays(date) : {};
     var best = null;
     var prefix = date + "_";
-    for (var key in checks) {
-      if (key.indexOf(prefix) !== 0) continue;
-      var dayId = key.slice(prefix.length);
-      var ex = window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId) : [];
-      if (!ex.length || !checks[key]) continue;
-      var done = ex.filter(function (e) { return !!checks[key][e.id]; }).length;
-      if (done === ex.length) return null;
+    var ids = {};
+    Object.keys(checks).forEach(function (key) { if (key.indexOf(prefix) === 0) ids[key.slice(prefix.length)] = 1; });
+    Object.keys(ticked).forEach(function (dayId) { ids[dayId] = 1; });
+    for (var dayId in ids) {
+      var ex = window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId, date) : [];
+      var c = checks[prefix + dayId] || {};
+      if (!ex.length) continue;
+      var started = ticked[dayId] || [];
+      var done = ex.filter(function (e) { return !!c[e.id] || started.indexOf(e.id) !== -1; }).length;
+      if (ex.every(function (e) { return !!c[e.id]; })) return null;
       if (done > 0 && (!best || done > best.done)) best = { dayId: dayId, done: done, total: ex.length };
     }
     return best;
+  }
+
+  // Already sent for review from this device (the only record a signed-out user has).
+  function heldLocally(date, dayId) {
+    var st = window.GymVerify ? GymVerify.localState(date, dayId) : "";
+    return st === "pending" || st === "flagged";
   }
 
   function onboardingOpen() { var ob = document.getElementById("onboarding"); return !!ob && !ob.hidden; }
@@ -439,7 +453,7 @@
     if (!isAuthed() && !(window.GymUI && GymUI.isAnon && GymUI.isAnon())) return;
     if (dismissedList().indexOf(date) !== -1) { resolvedFor = date; return; }
     var partial = partialFor(date);
-    if (!partial) { resolvedFor = date; return; }
+    if (!partial || heldLocally(date, partial.dayId)) { resolvedFor = date; return; }
     if (queue().some(function (x) { return x.date === date; })) { resolvedFor = date; return; }
     checking = true;
     alreadyRecorded(date).then(function (recorded) {
@@ -489,11 +503,12 @@
     q(".syd-backdrop").onclick = no.onclick;
     yes.onclick = function () {
       yes.disabled = no.disabled = true;
-      var run = isAuthed() ? submit(date, partial.dayId) : Promise.resolve("ok");
+      var ev = window.GymVerify ? GymVerify.evidence(date, partial.dayId, "save_yesterday") : undefined;
+      var run = isAuthed() ? submit(date, partial.dayId, ev) : Promise.resolve("ok");
       run.then(function (r) {
         close();
         if (r === "rejected") { dismiss(date); toast(str("sydTooLate")); return; }
-        if (window.GymApp && GymApp.markDayComplete) GymApp.markDayComplete(date, partial.dayId);
+        if (window.GymVerify) GymVerify.setLocalState(date, partial.dayId, "pending");
         toast(str("sydSaved"));
         if (window.GymCalendar && GymCalendar.reload) GymCalendar.reload();
       });

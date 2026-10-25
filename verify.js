@@ -90,6 +90,17 @@
     return Object.keys(e.ticks).some(function (id) { return e.ticks[id].some(function (ms) { return ms > 0; }); });
   }
 
+  // { dayId: [exId, ...] } for the exercises with at least one tick on `date`.
+  function tickedDays(date) {
+    var all = readAll(), out = {};
+    Object.keys(all).forEach(function (k) {
+      if (k.indexOf(date + "_") !== 0) return;
+      var ids = Object.keys(all[k].ticks).filter(function (id) { return all[k].ticks[id].some(function (ms) { return ms > 0; }); });
+      if (ids.length) out[k.slice(date.length + 1)] = ids;
+    });
+    return out;
+  }
+
   function exerciseTicked(date, dayId, exId) {
     var e = readAll()[keyOf(date, dayId)];
     return !!(e && e.ticks[exId] && e.ticks[exId].some(function (ms) { return ms > 0; }));
@@ -113,7 +124,7 @@
   // kind: "live" | "save_yesterday"
   function evidence(date, dayId, kind) {
     var e = readAll()[keyOf(date, dayId)] || { start: 0, last: 0, ticks: {} };
-    var exercises = window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId) : [];
+    var exercises = window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId, date) : [];
     var sets = [];
     var lastTick = 0;
     exercises.forEach(function (ex) {
@@ -182,6 +193,7 @@
     clearExercise: clearExercise,
     hasTicks: hasTicks,
     exerciseTicked: exerciseTicked,
+    tickedDays: tickedDays,
     timerStart: timerStart,
     setTimerStart: setTimerStart,
     evidence: evidence,

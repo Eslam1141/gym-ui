@@ -6,6 +6,7 @@ const T = { timeout: 8000 };
 const LAST = EX_IDS[EX_IDS.length - 1];
 const allButLast = () => ({ [TODAY + "_" + DAY_ID]: Object.fromEntries(EX_IDS.slice(0, -1).map((id) => [id, true])) });
 const posts = (server) => server.log.filter((e) => e.method === "POST" && e.path === "/workouts/complete");
+const chk = (page, ex, i) => page.locator(`.set-chk[data-set-ex="${ex}"][data-set="${i}"]`);
 const cell = (page, date) => page.locator(`.cal-day-cell[data-date="${date}"]`);
 
 // A signed-in day that is one exercise short, with the other exercises' ticks already on the device.
@@ -69,6 +70,26 @@ test.describe("completion evidence and review states", () => {
     await expect(page.locator(".celebrate-card")).toHaveClass(/show/, T);
     await expect(page.locator(".celebrate-card")).toContainText("Done! This day counts once it's reviewed.");
     await expect(page.locator(".celebrate-card")).not.toContainText(/streak|in a row/i);
+    await context.close();
+  });
+
+  test("crossing midnight leaves yesterday for save-yesterday", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, { signedIn: true });
+    await page.clock.setSystemTime(new Date("2026-10-02T20:58:00Z")); // 23:58 in Cairo
+    await expect(chk(page, "mua_bench", 0)).toBeVisible(T);
+    await chk(page, "mua_bench", 0).click();
+    await page.clock.fastForward(61000); // 23:59
+    await chk(page, "mua_bench", 1).click();
+    await page.clock.fastForward(3 * 60000); // 00:02 on the next day
+    await page.evaluate(() => GymRest.maybePrompt());
+    const sheet = page.locator("#saveYdaySheet");
+    await expect(sheet).toBeVisible(T);
+    await expect(sheet.locator(".syd-body")).toContainText("of 6");
+    await sheet.locator(".syd-yes").click();
+    await expect.poll(() => posts(server).length, T).toBe(1);
+    const body = posts(server)[0].body;
+    expect(body).toMatchObject({ date: TODAY, dayId: DAY_ID, evidence: { kind: "save_yesterday" } });
+    expect(body.evidence.sets.filter((s) => s.at)).toHaveLength(2);
     await context.close();
   });
 
