@@ -447,6 +447,8 @@ const T = {
   swapNone:["No alternative with your equipment","لا يوجد بديل بأدواتك"],
   swappedFrom:["Swapped from {name}","بدلًا من {name}"],
   swapUndo:["Undo","تراجع"],
+  celebHeld:["Done! This day counts once it's reviewed.","أحسنت! سيُحتسب هذا اليوم بعد مراجعته."],
+  restTodayHeld:["Done · awaiting review","تم · بانتظار المراجعة"],
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
   tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
@@ -1492,7 +1494,10 @@ function setExDone(id, on){
   // can auto-select the next day in rotation on a later day's visit.
   if(!wasComplete && isDayComplete(activeDay)){
     saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
-    if(window.GymCelebrate) GymCelebrate.day(activeDay);
+    // judged on the device with the same rules gym-be applies; a day that goes to review says so
+    const state = GymVerify.judge(GymVerify.evidence(todayStr(), activeDay, "live")).state;
+    GymVerify.setLocalState(todayStr(), activeDay, state);
+    if(window.GymCelebrate) GymCelebrate.day(activeDay, { held: state !== "verified" });
   }
   if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
     window.GymCalendar.onCheckChanged(activeDay, todayStr());

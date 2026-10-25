@@ -38,7 +38,7 @@
   --on-primary:#fff; --primary-text:#3CC2B8; --primary-soft:#0f3b39;
   --secondary:#047857; --highlight:#2BB3A3;
   --success:#2f9e4f; --success-text:#8fe0a3; --success-soft:#123320;
-  --warn:#f2c14e; --danger:#ff7b7b;
+  --warn:#f2c14e; --warn-soft:#3a2e10; --danger:#ff7b7b;
   --glow:rgba(60,194,184,0.18); --nav-bg:rgba(16,23,31,0.95);
   --glass:rgba(38,51,68,.72); --glass-line:rgba(255,255,255,.16);
   --scrim:rgba(8,7,6,.6);
@@ -96,7 +96,7 @@
   --primary-text:#0A6B67; --primary-soft:#CFE6E2;
   --secondary:#047857; --highlight:#2BB3A3;
   --success:#1B7F3F; --success-text:#1B6E3A; --success-soft:#DCEFE0;
-  --warn:#8A5A00; --danger:#B42318;
+  --warn:#8A5A00; --warn-soft:#F6E8C6; --danger:#B42318;
   --glow:rgba(11,122,117,0.14); --nav-bg:rgba(243,240,232,0.95);
   --glass:rgba(251,249,244,.78); --glass-line:rgba(20,22,27,.14);
   --scrim:rgba(20,22,27,.45);
@@ -2677,6 +2677,18 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
 .cal-day-cell.pending, .cal-grid-cell.pending{ background:transparent; border:1px dashed var(--primary-text); }
 .cal-day-cell.pending.today, .cal-grid-cell.pending.today{ border-color:var(--accent); }
 .cal-detail-status.pending{ color:var(--primary-text); background:transparent; border:1px dashed var(--primary-text); }
+/* Done, waiting for an admin to review it: amber, filled mark. Not counted yet, not lost. */
+.cal-day-cell.held, .cal-grid-cell.held{ position:relative; background:var(--warn-soft); border:1px solid var(--warn); }
+.cal-grid-cell.held{ color:var(--paper); }
+.cal-day-cell.held.today, .cal-grid-cell.held.today{ border-color:var(--accent); }
+.cal-held-mark, .cal-grid-cell.held::after{ position:absolute; inset-block-start:4px; inset-inline-end:4px; width:6px; height:6px; border-radius:50%; background:var(--warn); }
+.cal-grid-cell.held::after{ content:""; inset-block-start:5px; inset-inline-end:5px; }
+/* Reviewed and not counted: no colour, struck through */
+.cal-day-cell.rejected, .cal-grid-cell.rejected{ background:transparent; border:1px solid var(--line); color:var(--paper-dim); }
+.cal-day-cell.rejected .cal-num, .cal-grid-cell.rejected{ color:var(--paper-dim); text-decoration:line-through; text-decoration-thickness:1px; }
+.cal-detail-status.held{ color:var(--paper); background:var(--warn-soft); border:1px solid var(--warn); }
+.cal-detail-status.rejected{ color:var(--paper-dim); background:transparent; border:1px solid var(--line-strong); }
+.rest-card.is-held{ border-color:var(--warn); }
 .cal-rest-mark{
   position:absolute; inset-block-start:4px; inset-inline-end:4px;
   width:6px; height:6px; border-radius:50%;

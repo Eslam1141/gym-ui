@@ -28,6 +28,9 @@
     completed: ["Completed", "مكتمل"],
     inProgress: ["{d}/{t} exercises checked", "{d}/{t} تمارين مؤشَّرة"],
     syncing: ["Syncing, sign in to save", "بيتزامن، سجّل دخولك عشان يتحفظ"],
+    calHeld: ["Done · awaiting review", "تم · بانتظار المراجعة"],
+    calPending: ["Awaiting review", "بانتظار المراجعة"],
+    calRejected: ["Not counted", "لم يُحتسب"],
     trainingDaysLabel: ["Training days", "أيام التمرين"],
     trainingDaysHint: ["Pick the days you plan to train, so a missed day gets a smarter reminder.", "اختر أيام التمرين حتى يكون تذكير اليوم الفائت أذكى."],
     trainingDaysSignIn: ["Sign in to set your training days.", "سجّل الدخول لتحديد أيام تمرينك."]
@@ -101,13 +104,20 @@
       if (!dayChecks || typeof dayChecks !== "object") return;
       var done = exercises.filter(function (ex) { return !!dayChecks[ex.id]; }).length;
       var complete = done === exercises.length;
+      // A day sent for review (finished short, or saved the next day) is on hold, not green.
+      var held = isHeld(window.GymVerify ? GymVerify.localState(date, dayId) : "");
       var existing = map[date];
       if (!existing || done > existing.done || (done === existing.done && complete && !existing.complete)) {
-        map[date] = { complete: complete, dayId: dayId, done: done };
+        map[date] = { complete: complete && !held, held: held, dayId: dayId, done: done };
       }
     });
     return map;
   }
+
+  // Day states from gym-be: "" (older records), verified, approved count; flagged and pending are
+  // on hold for an admin; rejected does not count.
+  function isHeld(state) { return state === "flagged" || state === "pending"; }
+  function isCounted(state) { return !state || state === "verified" || state === "approved"; }
 
   function fetchServerCompletion(from, to) {
     var token = authToken();
@@ -117,7 +127,17 @@
       .then(function (res) { if (!res.ok) throw new Error("workouts " + res.status); return res.json(); })
       .then(function (doc) {
         var map = {};
-        (doc.records || []).forEach(function (r) { map[r.date] = { complete: true, dayId: r.dayId, server: true }; });
+        // counted beats held, and held beats rejected, when a date has more than one record
+        var rank = { complete: 3, held: 2, rejected: 1 };
+        (doc.records || []).forEach(function (r) {
+          var kind = isCounted(r.state) ? "complete" : isHeld(r.state) ? "held" : "rejected";
+          var cur = map[r.date];
+          if (cur && rank[cur.kind] >= rank[kind]) return;
+          var e = { complete: kind === "complete", dayId: r.dayId, server: true, kind: kind };
+          if (kind === "held") e.held = true;
+          if (kind === "rejected") e.rejected = true;
+          map[r.date] = e;
+        });
         if (window.GymRest) GymRest.setServer(from, to, doc.restDays, doc.restDaysLeftThisWeek);
         return map;
       })
@@ -131,6 +151,8 @@
   }
 
   // ---------------- POST-on-completion hook (called by app.js) ----------------
+  function liveEvidence(date, dayId) { return window.GymVerify ? GymVerify.evidence(date, dayId, "live") : undefined; }
+
   var postedKeys = {}; // "date_dayId" -> true, in-session guard against duplicate POSTs
 
   // rest-days.js sends the local `today` and owns retry (offline queue); it
@@ -139,7 +161,7 @@
     var key = date + "_" + dayId;
     if (postedKeys[key] || !window.GymRest) return;
     postedKeys[key] = true;
-    GymRest.submit(date, dayId).then(function (r) { if (r === "rejected") GymRest.notifyDropped(); });
+    GymRest.submit(date, dayId, liveEvidence(date, dayId)).then(function (r) { if (r === "rejected") GymRest.notifyDropped(); });
   }
 
   // app.js calls this right after updateProgress() on every checkbox toggle.
@@ -153,7 +175,7 @@
       if (done === exercises.length) {
         if (isAuthed()) postCompletion(date, dayId);
         // Session lapsed (not anon preview): keep it for the moment sign-in returns.
-        else if (window.GymRest) GymRest.enqueueLapsed(date, dayId);
+        else if (window.GymRest) GymRest.enqueueLapsed(date, dayId, liveEvidence(date, dayId));
       }
       if (date === todayKey()) refreshStrip();
     } catch (e) {}
@@ -199,13 +221,17 @@
       btn.type = "button";
       var rest = !!(entry && entry.rest && !entry.complete);
       var pend = !!(entry && entry.pending);
-      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (rest ? " rest" : "") + (pend ? " pending" : "") + (key === tKey ? " today" : "");
+      var held = !!(entry && entry.held && !entry.complete);
+      var rej = !!(entry && entry.rejected && !entry.complete && !held);
+      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (held ? " held" : "") + (rej ? " rejected" : "") + (rest ? " rest" : "") + (pend ? " pending" : "") + (key === tKey ? " today" : "");
       btn.dataset.date = key;
       btn.innerHTML =
         '<span class="cal-dow">' + dowShort(d.getDay()) + '</span>' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
         (rest ? '<span class="cal-rest-mark" aria-hidden="true"></span><span class="sr-only">' + s("restBadge") + '</span>' : '') +
-        (pend ? '<span class="sr-only">' + s("syncing") + '</span>' : '');
+        (pend ? '<span class="sr-only">' + s("syncing") + '</span>' : '') +
+        (held ? '<span class="cal-held-mark" aria-hidden="true"></span><span class="sr-only">' + s("calPending") + '</span>' : '') +
+        (rej ? '<span class="sr-only">' + s("calRejected") + '</span>' : '');
       btn.onclick = function () { openModal(d); };
       stripDays.appendChild(btn);
     });
@@ -293,6 +319,8 @@
         var key = fmtDate(d);
         var entry = map[key];
         if (entry && entry.complete) cell.className += " complete";
+        else if (entry && entry.held) cell.className += " held";
+        else if (entry && entry.rejected) cell.className += " rejected";
         else if (entry && entry.rest) cell.className += " rest";
         else if (entry && entry.pending) cell.className += " pending";
         if (key === tKey) cell.className += " today";
@@ -334,9 +362,14 @@
     var checks = {};
     try { checks = JSON.parse(localStorage.getItem("gym_checks") || "{}")[dateKey + "_" + entry.dayId] || {}; } catch (e) {}
 
-    var doneCount = entry.complete || entry.pending ? exercises.length : exercises.filter(function (ex) { return !!checks[ex.id]; }).length;
+    var ticked = exercises.filter(function (ex) { return !!checks[ex.id]; }).length;
+    var doneCount = entry.complete || entry.pending ? exercises.length : ticked;
     var status = entry.pending
       ? '<span class="cal-detail-status pending">' + s("syncing") + '</span>'
+      : entry.held
+      ? '<span class="cal-detail-status held">' + s(exercises.length && ticked === exercises.length ? "calHeld" : "calPending") + '</span>'
+      : entry.rejected
+      ? '<span class="cal-detail-status rejected">' + s("calRejected") + '</span>'
       : entry.complete
       ? '<span class="cal-detail-status done">' + s("completed") + '</span>'
       : '<span class="cal-detail-status">' + fmt(s("inProgress"), { d: doneCount, t: exercises.length }) + '</span>';

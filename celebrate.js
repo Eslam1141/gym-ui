@@ -3,9 +3,10 @@
  * dismisses itself; a tap or Escape closes it early). It never blocks the page:
  * only the card takes pointer events and there is no focus trap.
  *
- * API: GymCelebrate.day(dayId)  - training day just completed (fires at most
+ * API: GymCelebrate.day(dayId, opts) - training day just completed (fires at most
  *                                  once per date + dayId, remembered in
- *                                  localStorage under gymcel_done)
+ *                                  localStorage under gymcel_done). opts.held: the
+ *                                  day goes to review, so no streak number.
  *      GymCelebrate.rest()      - rest day just saved
  *
  * Streak copy uses GymHeader.me(): currentStreak, +1 while todayDone is still
@@ -210,9 +211,9 @@
     timer = setTimeout(dismiss, SHOW_MS);
   }
 
-  function day(dayId) {
+  function day(dayId, opts) {
     if (!claim(dayId || "day")) return;
-    var m = trainingText(streakAfterToday());
+    var m = opts && opts.held ? { text: str("celebHeld"), emoji: "muscle" } : trainingText(streakAfterToday());
     show("day", m.text, m.emoji);
     try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   }

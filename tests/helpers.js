@@ -23,8 +23,11 @@ async function mockApi(context, s) {
     s.log.push({ method: req.method(), path, query: url.search, body: req.method() === "POST" ? body() : null });
 
     if (path === "/me") {
+      // held records (flagged/pending) are "on hold": they neither break nor extend the streak
+      const held = s.records.filter((r) => r.state === "flagged" || r.state === "pending");
       return json(200, {
         id: "u1", email: "t@example.com", displayName: "Tester", currentStreak: s.streak, totalDaysTrained: 5,
+        heldDays: s.heldDays != null ? s.heldDays : held.length, todayHeld: s.todayHeld != null ? s.todayHeld : held.some((r) => r.date === TODAY),
         todayDone: s.todayDone, todayRested: s.restDays.includes(TODAY), trainingDays: [], isAdmin: !!s.isAdmin,
         ...(s.onboardingCompleted === undefined ? {} : { onboardingCompleted: s.onboardingCompleted })
       });
@@ -41,9 +44,11 @@ async function mockApi(context, s) {
       if (s.rejectToday && b.today) return json(400, { error: { code: "invalid_request", message: "today" } });
       if (s.poisonDay && b.dayId === s.poisonDay) return json(400, { error: { code: "invalid_request", message: "bad" } });
       if (status !== 200) return json(status, { error: { code: s.completeError, message: "x" } });
-      s.records.push({ date: b.date, dayId: b.dayId });
-      if (b.date === TODAY) s.todayDone = true;
-      return json(200, { ok: true });
+      // what gym-be answers: the stored record with its state ("verified" unless a test sets nextState)
+      const rec = { date: b.date, dayId: b.dayId, state: s.nextState || "verified" };
+      s.records.push(rec);
+      if (b.date === TODAY && (rec.state === "verified" || rec.state === "approved" || rec.state === "")) s.todayDone = true;
+      return json(201, rec);
     }
     if (path === "/workouts/rest" && req.method() === "POST") {
       if (s.restStatus) return json(s.restStatus, { error: { code: "unauthorized", message: "x" } });
@@ -125,18 +130,19 @@ async function tickSets(page, exId, n, gapMs) {
 }
 
 // A gymday_verify seed (pass as `ls`): today's Classic Upper day with every set ticked 150 s apart
-// from 60 min before NOW, except the exercises in `skip`. Finishing the rest with tickSets then
+// from 60 min before NOW (opts.startAgoMin / opts.stepMs change that), except the exercises in `skip`. Finishing the rest with tickSets then
 // makes a day long enough (gym minimum 50 min) to be judged verified.
-function verifiedSeed(skip) {
+function verifiedSeed(skip, opts) {
+  const stepMs = (opts && opts.stepMs) || 150000;
   const counts = { mua_bench: 4, mua_pulldown: 4, mua_ohp: 3, mua_row: 4, mua_lateral: 3, mua_facepull: 3 };
-  const start = Date.parse(NOW) - 60 * 60000;
+  const start = Date.parse(NOW) - ((opts && opts.startAgoMin) || 60) * 60000;
   const ticks = {};
   let n = 0;
   EX_IDS.forEach((id) => {
     if ((skip || []).includes(id)) return;
-    ticks[id] = Array.from({ length: counts[id] }, () => start + 150000 * n++);
+    ticks[id] = Array.from({ length: counts[id] }, () => start + stepMs * n++);
   });
-  return { gymday_verify: { [TODAY + "_" + DAY_ID]: { start, last: start + 150000 * (n - 1), ticks, state: "" } } };
+  return { gymday_verify: { [TODAY + "_" + DAY_ID]: { start, last: start + stepMs * (n - 1), ticks, state: "" } } };
 }
 
 module.exports = { openApp, tickSets, verifiedSeed, NOW, TODAY, YESTERDAY, DAY_ID, EX_IDS };

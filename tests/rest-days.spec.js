@@ -163,7 +163,7 @@ test.describe("rest days (signed in)", () => {
     await page.evaluate(() => window.GymRest.flushQueue());
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending"))), T)
       .toEqual([{ date: YESTERDAY, dayId: "bad_day" }]);
-    expect(server.records).toEqual([{ date: YESTERDAY, dayId: DAY_ID }]);
+    expect(server.records).toMatchObject([{ date: YESTERDAY, dayId: DAY_ID }]);
     // The today-less retry happens once per attempt, not in a loop.
     const poison = posts(server, "/workouts/complete").filter((r) => r.body.dayId === "bad_day");
     expect(poison.map((r) => "today" in r.body)).toEqual([true, false]);

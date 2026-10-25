@@ -98,6 +98,10 @@
     if (typeof left === "number") serverLeft = left;
   }
 
+  // A date the server (or this device) already has a completion for, whatever its review
+  // state: it can't take a rest mark (the server would answer already_trained).
+  function trained(entry) { return !!(entry && (entry.complete || entry.held || entry.rejected)); }
+
   // Adds rest entries to a calendar completion map. Training wins: a date with
   // a completion is never shown as rest.
   function decorate(map, from, to) {
@@ -109,7 +113,7 @@
     restList().forEach(function (k) {
       if (k < from || k > to) return;
       var e = map[k];
-      if (e && e.complete) return;
+      if (trained(e)) return;
       if (e) e.rest = true; else map[k] = { complete: false, rest: true };
     });
     return map;
@@ -149,7 +153,7 @@
     var list = localRest().filter(function (k) { return k !== date; });
     if (on) {
       var entry = window.GymCalendar && GymCalendar.localEntry ? GymCalendar.localEntry(date) : null;
-      if (entry && entry.complete) return { ok: false, message: str("restErrTrained") };
+      if (trained(entry)) return { ok: false, message: str("restErrTrained") };
       var ws = weekStart(date);
       if (list.filter(function (k) { return weekStart(k) === ws; }).length >= MAX_PER_WEEK) {
         return { ok: false, message: str("restErrLimit") };
@@ -184,7 +188,7 @@
 
   function actionButton(date, entry) {
     // null when nothing can be changed for this date (older day, or trained).
-    if (!isEditable(date) || (entry && entry.complete)) return null;
+    if (!isEditable(date) || trained(entry)) return null;
     var rest = isRest(date);
     var btn = document.createElement("button");
     btn.type = "button";
@@ -213,11 +217,12 @@
     var tKey = today();
     var entry = map && map[tKey];
     var me = window.GymHeader && GymHeader.me ? GymHeader.me() : null;
-    var trained = !!((entry && entry.complete) || (isAuthed() && me && me.todayDone === true));
-    var rest = !trained && isRest(tKey);
-    var state = trained ? "restTodayDone" : rest ? "restTodayRest" : "restTodayNone";
+    var done = !!((entry && entry.complete) || (isAuthed() && me && me.todayDone === true));
+    var held = !done && !!((entry && entry.held) || (isAuthed() && me && me.todayHeld === true));
+    var rest = !done && !held && isRest(tKey);
+    var state = done ? "restTodayDone" : held ? "restTodayHeld" : rest ? "restTodayRest" : "restTodayNone";
 
-    card.className = "rest-card" + (rest ? " is-rest" : "") + (trained ? " is-done" : "");
+    card.className = "rest-card" + (rest ? " is-rest" : "") + (done ? " is-done" : "") + (held ? " is-held" : "");
     card.innerHTML = "";
     var text = document.createElement("div");
     text.className = "rest-card-text";
@@ -227,7 +232,7 @@
     text.querySelector(".rest-card-state span:last-child").textContent = str(state);
     text.querySelector(".rest-card-left").textContent = leftText() + " · " + str("restHint");
     card.appendChild(text);
-    var btn = trained ? null : actionButton(tKey, entry);
+    var btn = done || held ? null : actionButton(tKey, entry);
     if (btn) card.appendChild(btn);
   }
 
@@ -236,7 +241,7 @@
     var old = host.querySelector(".rest-detail");
     if (old) old.remove();
     var btn = actionButton(date, entry);
-    var rest = isRest(date) && !(entry && entry.complete);
+    var rest = isRest(date) && !trained(entry);
     if (!btn && !rest) return;
     var box = document.createElement("div");
     box.className = "rest-detail";
@@ -296,6 +301,7 @@
   // Resolves "ok" | "queued" (will retry) | "held" (400 that may never succeed: kept, but must not block others) | "rejected" (date_out_of_window, never retry).
   function send(item, withToday) {
     var payload = { date: item.date, dayId: item.dayId };
+    if (item.evidence) payload.evidence = item.evidence;
     if (withToday !== false) payload.today = today();
     return fetchTimeout("/workouts/complete", {
       method: "POST",
@@ -309,6 +315,8 @@
       if (res.status !== 400) return "queued";
       return errCode(res).then(function (code) {
         if (code === "date_out_of_window") return "rejected";
+        // Evidence the server can't read must not strand the day: send it the old way instead.
+        if (code === "invalid_evidence" && item.evidence) return send({ date: item.date, dayId: item.dayId }, withToday);
         // A wrong device clock makes the server refuse our `today`; its legacy window is UTC+-1.
         if (code === "invalid_request" && withToday !== false) return send(item, false);
         return "held";
@@ -317,9 +325,11 @@
   }
 
   // Posts a completion; a retryable failure is queued instead of lost.
-  function submit(date, dayId) {
-    return send({ date: date, dayId: dayId }).then(function (r) {
-      if (r === "queued" || r === "held") enqueue({ date: date, dayId: dayId });
+  function submit(date, dayId, evidence) {
+    var item = { date: date, dayId: dayId };
+    if (evidence) item.evidence = evidence;
+    return send(item).then(function (r) {
+      if (r === "queued" || r === "held") enqueue(item);
       return r;
     });
   }
@@ -332,9 +342,9 @@
   }
 
   // Completion finished with no valid token: queue it, no network call.
-  function enqueueLapsed(date, dayId) {
+  function enqueueLapsed(date, dayId, evidence) {
     if (!lapsedUser()) return false;
-    enqueue({ date: date, dayId: dayId });
+    enqueue(evidence ? { date: date, dayId: dayId, evidence: evidence } : { date: date, dayId: dayId });
     return true;
   }
 

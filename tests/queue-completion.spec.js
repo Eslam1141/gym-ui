@@ -33,7 +33,7 @@ test.describe("completion while the session lapsed", () => {
   test("queued without a network call, sent the moment sign-in lands, cell turns green", async ({ browser }) => {
     const { context, page, server } = await openApp(browser, { sub: "sub1", checks: full(TODAY) });
     await complete(page, TODAY);
-    expect(await queueOf(page)).toEqual([{ date: TODAY, dayId: DAY_ID }]);
+    expect(await queueOf(page)).toMatchObject([{ date: TODAY, dayId: DAY_ID }]); // plus the evidence
     expect(posts(server)).toHaveLength(0);
     // Not green until the server confirms: shown as syncing.
     await page.evaluate(() => GymCalendar.reload());
@@ -42,7 +42,7 @@ test.describe("completion while the session lapsed", () => {
 
     expect(await signIn(page, "sub1")).toBe(true);
     await expect.poll(() => posts(server).length, { timeout: 3000 }).toBe(1);
-    expect(posts(server)[0].body).toEqual({ date: TODAY, dayId: DAY_ID, today: TODAY });
+    expect(posts(server)[0].body).toMatchObject({ date: TODAY, dayId: DAY_ID, today: TODAY });
     await expect.poll(() => queueOf(page), T).toEqual([]);
     await expect(page.locator("#calendarStrip .cal-day-cell.today")).toHaveClass(/complete/, T);
     await context.close();
@@ -55,14 +55,14 @@ test.describe("completion while the session lapsed", () => {
     });
     await complete(page, TODAY);
     await expect.poll(() => posts(server).length, T).toBe(1);
-    await expect.poll(() => queueOf(page), T).toEqual([{ date: TODAY, dayId: DAY_ID }]);
+    await expect.poll(() => queueOf(page), T).toMatchObject([{ date: TODAY, dayId: DAY_ID }]);
     await expect(page.locator("#gymToast.show")).toHaveCount(0); // queued, not "rejected"
 
     server.completeStatus = 200;
     expect(await signIn(page, "sub1")).toBe(true);
     await expect.poll(() => posts(server).length, { timeout: 3000 }).toBe(2);
     await expect.poll(() => queueOf(page), T).toEqual([]);
-    expect(server.records).toEqual([{ date: TODAY, dayId: DAY_ID }]);
+    expect(server.records).toMatchObject([{ date: TODAY, dayId: DAY_ID }]);
     await context.close();
   });
 
