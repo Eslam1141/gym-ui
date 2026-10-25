@@ -27,8 +27,8 @@
 
   var STR = {
     title: ["We've updated our Terms", "حدّثنا شروط الاستخدام"],
-    body: ["We've added a section on the AI coach: it's powered by Anthropic (US), its answers can be wrong, and it isn't medical advice. Please read the [Terms](/terms#ai-coach) and [Privacy Policy](/privacy). By tapping \"Agree and continue\", you accept them and confirm you're 18 or older.",
-      "أضفنا قسمًا عن المدرّب الذكي: يعمل بتقنية Anthropic (الولايات المتحدة)، وقد تكون إجاباته خاطئة، وليس نصيحة طبية. يُرجى قراءة [شروط الاستخدام](/terms#ai-coach) و[سياسة الخصوصية](/privacy). وبالضغط على «أوافق وأتابع» فإنك تقبلهما وتؤكد أن عمرك 18 عامًا أو أكثر."],
+    body: ["We've added a section on Etqadem Coach: it's powered by Anthropic (US), its answers can be wrong, and it isn't medical advice. Please read the [Terms](/terms#ai-coach) and [Privacy Policy](/privacy). By tapping \"Agree and continue\", you accept them and confirm you're 18 or older.",
+      "أضفنا قسمًا عن المدرّب اتقدم: يعمل بتقنية Anthropic (الولايات المتحدة)، وقد تكون إجاباته خاطئة، وليس نصيحة طبية. يُرجى قراءة [شروط الاستخدام](/terms#ai-coach) و[سياسة الخصوصية](/privacy). وبالضغط على «أوافق وأتابع» فإنك تقبلهما وتؤكد أن عمرك 18 عامًا أو أكثر."],
     agree: ["Agree and continue", "أوافق وأتابع"],
     later: ["Not now", "ليس الآن"],
     signOut: ["Sign out", "تسجيل الخروج"],

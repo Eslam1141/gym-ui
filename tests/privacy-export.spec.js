@@ -72,7 +72,7 @@ test("button is disabled with a preparing state while the export runs, and re-en
 
 test("assistant-unavailable and truncated headers show a warning after saving", async ({ browser }) => {
   const cases = [
-    ["X-Export-Assistant-Unavailable", /AI coach data couldn't be included/],
+    ["X-Export-Assistant-Unavailable", /Etqadem Coach data couldn't be included/],
     ["X-Export-Truncated", /only the newest part is included/]
   ];
   for (const [header, text] of cases) {

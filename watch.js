@@ -12,7 +12,7 @@
  * shows a calm message and never breaks the page.
  *
  * Privacy: watch data is read on demand, kept only in this phone's localStorage
- * and never sent anywhere (not gym-be, not the AI coach, not feedback or logs).
+ * and never sent anywhere (not gym-be, not Etqadem Coach, not feedback or logs).
  * The keys are deliberately NOT gym_-prefixed: sync.js uploads every gym_* key.
  * sync.js's clearUserData() wipes the "etqwatch_" prefix on sign-out / account
  * switch, and privacy.js wipes all local data on account delete.
@@ -95,8 +95,8 @@
       "**ما نقرؤه (للقراءة فقط):** الخطوات، والسعرات النشطة، ونبض القلب، ونبض الراحة، والنوم، والوزن."],
     discB2: ["**Why:** to show your activity next to your plan. We don't use it to change your plan.",
       "**لماذا:** لنعرض نشاطك بجانب خطتك. ولا نستخدمها لتغيير خطتك."],
-    discB3: ["**It stays on this phone.** We don't send it to our servers, the AI coach or anyone else. We never sell it or use it for ads.",
-      "**تبقى على هذا الهاتف.** لا نرسلها إلى خوادمنا ولا إلى المدرّب الذكي ولا إلى أي جهة أخرى. ولا نبيعها ولا نستخدمها في الإعلانات."],
+    discB3: ["**It stays on this phone.** We don't send it to our servers, Etqadem Coach or anyone else. We never sell it or use it for ads.",
+      "**تبقى على هذا الهاتف.** لا نرسلها إلى خوادمنا ولا إلى المدرّب اتقدم ولا إلى أي جهة أخرى. ولا نبيعها ولا نستخدمها في الإعلانات."],
     discB4: ["**You're in control.** Next, Android will ask you to allow each type. Change or disconnect any time in Profile → Watch & Health Connect, or in Health Connect.",
       "**القرار قرارك.** بعد ذلك سيطلب منك أندرويد السماح بكل نوع على حدة. ويمكنك التغيير أو الفصل في أي وقت من الملف الشخصي ← الساعة الذكية و\u00A0<span dir=\"ltr\">Health Connect</span>، أو من <span dir=\"ltr\">Health Connect</span>."],
     discNote: ["Watch numbers are estimates, not medical advice.", "أرقام الساعة تقديرية وليست نصيحة طبية."],

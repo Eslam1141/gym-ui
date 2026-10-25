@@ -36,7 +36,7 @@
   var h = GymDom.h, lang = GymDom.lang;
   var STR = {
     privacy: ["Privacy", "الخصوصية"],
-    fabLabel: ["Ask the nutrition coach", "اسأل مدرّب التغذية"],
+    fabLabel: ["Ask Etqadem Coach", "اسأل المدرّب اتقدم"],
     fabClose: ["Close the chat", "إغلاق الدردشة"],
     title: ["Etqadem Coach", "المدرّب اتقدم"],
     placeholder: ["Ask a quick question…", "اسأل سؤالاً سريعاً…"],
@@ -45,7 +45,7 @@
     thinking: ["Thinking…", "يفكّر…"],
     quota: ["You've reached today's chat limit. Try again after {t}.", "بلغت حد الدردشة اليومي. حاول بعد {t}."],
     quotaGeneric: ["You've reached today's chat limit. Try again tomorrow.", "بلغت حد الدردشة اليومي. حاول مجدداً غداً."],
-    err: ["Couldn't reach the coach. Try again.", "تعذّر الوصول إلى المدرّب. حاول مرة أخرى."],
+    err: ["Couldn't reach Etqadem Coach. Try again.", "تعذّر الوصول إلى المدرّب اتقدم. حاول مرة أخرى."],
     retry: ["Retry", "أعد المحاولة"],
     pmTitle: ["Add these to today's log?", "إضافة هذه إلى سجل اليوم؟"],
     pmMatching: ["Finding it in the food catalog…", "جارٍ البحث عنه في قائمة الأطعمة…"],
@@ -469,7 +469,7 @@
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
     noteEl.textContent = "";
-    noteEl.appendChild(GymDom.policyLink("ai-coach", s("privacy"), true));
+    noteEl.hidden = true; // no Privacy link in the chat: the consent sheet and photo notice carry it
     fab.setAttribute("aria-label", s(open ? "fabClose" : "fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
@@ -715,7 +715,7 @@
   }
 
   // ---------------- proposed meals (confirm card) ----------------
-  // The coach only PROPOSES; nothing reaches the food log until the user taps
+  // Etqadem Coach only PROPOSES; nothing reaches the food log until the user taps
   // Add. All model text goes in through text nodes (GymDom.h), never innerHTML.
   function authHeaders(json) {
     var hd = { "Authorization": "Bearer " + authToken() };

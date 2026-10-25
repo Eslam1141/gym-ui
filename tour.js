@@ -35,11 +35,11 @@
     coachForm: ["Fill in your numbers, then tap the button. You get a diet and training plan.", "أدخل أرقامك ثم اضغط الزر. تحصل على خطة غذاء وتمرين."],
     coachBuild: ["Prefer your own plan? Build a workout yourself instead.", "تفضّل خطتك الخاصة؟ ابنِ تمرينك بنفسك بدل ذلك."],
     coachInbody: ["Have an InBody or DEXA printout? A photo of it fills in the numbers for you.", "عندك نتيجة InBody أو DEXA؟ صورة منها تملأ الأرقام لك."],
-    coachBubble: ["Tap the bubble to chat with the coach from any screen. Drag it where it is out of your way.", "اضغط الفقاعة لتتحدث مع المدرب من أي شاشة. واسحبها إلى مكان لا يزعجك."],
+    coachBubble: ["Tap the bubble to chat with Etqadem Coach from any screen. Drag it where it is out of your way.", "اضغط الفقاعة لتتحدث مع المدرّب اتقدم من أي شاشة. واسحبها إلى مكان لا يزعجك."],
     foodTotals: ["Your calories and protein for the day. They are measured against your Coach plan.", "سعراتك وبروتينك لليوم. وتُقاس مقابل خطتك في المدرب."],
     foodSearch: ["Search a food, enter the grams, choose the meal. Egyptian and Gulf foods are included.", "ابحث عن طعام وأدخل الجرامات واختر الوجبة. والأطعمة المصرية والخليجية موجودة."],
     foodDate: ["Switch days to see or fix past meals.", "غيّر اليوم لترى وجبات سابقة أو تعدّلها."],
-    foodCoach: ["Skip the typing. Tell the coach what you ate, or send a photo, and it adds it here after you confirm.", "اختصر الكتابة. أخبر المدرب بما أكلته أو أرسل صورة، فيضيفه هنا بعد تأكيدك."],
+    foodCoach: ["Skip the typing. Tell Etqadem Coach what you ate, or send a photo, and it adds it here after you confirm.", "اختصر الكتابة. أخبر المدرّب اتقدم بما أكلته أو أرسل صورة، فيضيفه هنا بعد تأكيدك."],
     morePlan: ["Switch between the male and female plans.", "بدّل بين الخطة الرجالية والنسائية."],
     moreStyle: ["Train at the gym or at home.", "تمرّن في الجيم أو في البيت."],
     moreSplit: ["Choose how many days a week you train and what equipment you have. Your plan rebuilds to fit.", "اختر كم يومًا تتمرّن في الأسبوع وما المعدات المتاحة. وتُعاد خطتك لتناسبك."],
@@ -56,7 +56,7 @@
   // Each step: first matching visible selector wins; steps with no visible
   // target are dropped. since: the VERSION that added it (default 1); only:
   // "new" = people who never saw the screen, "returning" = a version bump only;
-  // once: explained on one screen per user, whichever they see first (the coach
+  // once: explained on one screen per user, whichever they see first (Etqadem Coach
   // bubble is on Plan and More; Food has its own line about logging meals).
   var BUBBLE = { sel: ["#coachFab"], text: "coachBubble", since: 2, once: "bubble" };
   var TOURS = {

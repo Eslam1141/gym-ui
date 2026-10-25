@@ -322,7 +322,7 @@ const AR_MUS = {
 
 // ---- exercise-name -> demo video lookup (reused for coach-generated plans) ----
 function _normEx(s){ return String(s||"").toLowerCase().replace(/\(.*?\)/g," ").replace(/[^a-z0-9]+/g," ").trim(); }
-// The AI coach names moves in its own words ("Bench Press", "Deadlift", "Push
+// Etqadem Coach names moves in its own words ("Bench Press", "Deadlift", "Push
 // Ups"...) that rarely match our catalog's exact labels. Map the common
 // generic/alternate names a model tends to use onto one of our real,
 // already-verified demo clips so more of a generated plan gets a video.
@@ -381,7 +381,7 @@ window.GymExerciseVideo = function(name){
   const k = _shapeKey(name);
   return (k && EX_VID[k]) || "";
 };
-// ---- exercise-name -> muscle tags (AI-coach plans, and plans saved before they carried tags) ----
+// ---- exercise-name -> muscle tags (Etqadem Coach plans, and plans saved before they carried tags) ----
 // Exact normalised name (English or Arabic) or an EX_ALIASES alias, never a
 // contains-match: a wrong muscle lit up is worse than no picture.
 // _normEx drops non-latin letters, which would collapse every Arabic name to ""; keep them here.
@@ -423,7 +423,7 @@ const T = {
   homeLink:["Etqadem home","الصفحة الرئيسية لاتقدم"],
   closeVideo:["Close video","إغلاق الفيديو"],
   obTitle:["One step forward, every day.","اتقدم خطوة كل يوم"],
-  obSub:["Your plan, logging, rest timer, form videos and AI coach — in one app.","خطتك، تسجيل تمارينك، مؤقت الراحة، فيديوهات الأداء ومدرّب ذكي — في تطبيق واحد."],
+  obSub:["Your plan, logging, rest timer, form videos and Etqadem Coach, our AI coach — in one app.","خطتك، تسجيل تمارينك، مؤقت الراحة، فيديوهات الأداء والمدرّب اتقدم، مدرّبنا الذكي — في تطبيق واحد."],
   obStart:["Start Changing Yourself","ابدأ بتغيير نفسك"],
   obContinue:["Continue without signing in","المتابعة بدون تسجيل الدخول"],
   fxTagline:["Every rep counts.","كل تكرار يُحسب."],
@@ -431,11 +431,11 @@ const T = {
   obWhy:["Why sign in?","لماذا تسجّل الدخول؟"],
   obWhy1:["Keep progress across devices","احفظ تقدّمك عبر الأجهزة"],
   obWhy2:["All training days & important notes","كل أيام التمرين والملاحظات المهمة"],
-  obWhy3:["A personalised AI coach","مدرّب ذكاء اصطناعي مخصّص"],
+  obWhy3:["Etqadem Coach, a personalised AI coach","المدرّب اتقدم، مدرّب ذكاء اصطناعي مخصّص"],
   obLegal:["By continuing, you agree to our <a href=\"/terms\">Terms</a> and <a href=\"/privacy\">Privacy Policy</a>, confirm you're 18 or older, and understand that <a href=\"/terms#ai-coach\">Etqadem Coach</a>, our AI coach, is powered by Anthropic (US), can make mistakes and isn't medical advice.","بالمتابعة، أنت توافق على <a href=\"/terms\">شروط الاستخدام</a> و<a href=\"/privacy\">سياسة الخصوصية</a>، وتؤكد أن عمرك 18 عامًا أو أكثر، وتُقرّ بأن <a href=\"/terms#ai-coach\">المدرّب اتقدم</a>، وهو مدرّب ذكاء اصطناعي، يعمل بتقنية Anthropic (الولايات المتحدة)، وقد يخطئ، وليس نصيحة طبية."],
   resolvingSession:["Resolving your session…","جارٍ التحقق من جلستك…"],
   anonLockTitle:["Sign in to unlock everything","سجّل الدخول لفتح كل المزايا"],
-  anonLockBody:["Full plans, sync across devices and the AI coach — free with an account.","الخطط الكاملة، المزامنة بين أجهزتك، والمدرّب الذكي — مجاناً مع حساب."],
+  anonLockBody:["Full plans, sync across devices and Etqadem Coach — free with an account.","الخطط الكاملة، المزامنة بين أجهزتك، والمدرّب اتقدم — مجاناً مع حساب."],
   anonSignIn:["Sign in with Google","سجّل الدخول عبر جوجل"],
   male:["Male","رجالي"],
   female:["Female","نسائي"],
@@ -650,7 +650,7 @@ const T = {
   premiumLabel:["Premium","بريميوم"],
   premiumTitle:["Etqadem Premium","اتقدم بريميوم"],
   premiumSub:["Coming soon","قريباً"],
-  premiumPerk1:["Higher AI-coach limits","حدود أعلى لمحادثات المدرّب الذكي"],
+  premiumPerk1:["Higher Etqadem Coach limits","حدود أعلى لمحادثات المدرّب اتقدم"],
   premiumPerk2:["Priority support","دعم ذو أولوية"],
   premiumComingSoon:["Coming soon","قريباً"],
   daysLabel:["Days","الأيام"],
@@ -1115,7 +1115,7 @@ function findDay(dayId){
   const old = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male", tools: splitChoice.tools });
   return old.days.find(d=>d.id===dayId);
 }
-// The Plan tab's split week in the shape the coach /assess request takes (English names and
+// The Plan tab's split week in the shape Etqadem Coach /assess request takes (English names and
 // shape ids whatever the UI language), or null for Classic / when another program is showing.
 window.GymApp.coachSplit = function(){
   const sp = activeStyle === "gym" ? splitPlan() : null;
@@ -1168,7 +1168,7 @@ window.GymApp.dayName = function(dayId){
   const day = findDay(dayId);
   return day ? dayLabel(day) : "";
 };
-// Localised label of the day the Plan screen is showing (the coach bubble's suggestions use it).
+// Localised label of the day the Plan screen is showing (Etqadem Coach bubble's suggestions use it).
 window.GymApp.activeDayName = function(){ return window.GymApp.dayName(activeDay); };
 
 function t(key){ const e = T[key]; return e ? (e[activeLang === "ar" ? 1 : 0]) : key; }
@@ -1185,7 +1185,7 @@ let activeDay = localStorage.getItem(activeDayStoreKey()) || DAYS[0].id;
 if(!DAYS.some(d=>d.id===activeDay)) activeDay = DAYS[0].id;
 
 // Auto-advance to the next day in rotation the day after a day was marked
-// fully complete (gym-style plans only — DAYS_PREVIEW and AI-coach custom
+// fully complete (gym-style plans only — DAYS_PREVIEW and Etqadem Coach custom
 // plans don't have a meaningful rotation to step through). This overrides
 // the normal last-selected-tab restore for exactly this one load; manual
 // tab taps still work exactly as before and simply override the suggestion.

@@ -30,9 +30,9 @@ async function openLanding(browser, lang, width) {
 
 const COPY = {
   en: { dir: "ltr", splits: "A split built around your equipment", map: "See which muscles you trained",
-    bubble: "Your coach, on every screen", watch: "Your watch, in the Watch tab", watchP: /Android app only/, desc: /training splits/ },
+    bubble: "Etqadem Coach, on every screen", watch: "Your watch, in the Watch tab", watchP: /Android app only/, desc: /training splits/ },
   ar: { dir: "rtl", splits: "تقسيمة تتبنى على معداتك", map: "شوف أي عضلات تمرّنت",
-    bubble: "مدربك في كل شاشة", watch: "ساعتك في تبويب ساعتي", watchP: /أندرويد فقط/, desc: /تقسيمات تمرين/ }
+    bubble: "المدرّب اتقدم في كل شاشة", watch: "ساعتك في تبويب ساعتي", watchP: /أندرويد فقط/, desc: /تقسيمات تمرين/ }
 };
 
 for (const lang of ["en", "ar"]) {
