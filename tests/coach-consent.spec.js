@@ -140,7 +140,7 @@ for (const lang of ["en", "ar"]) {
     await sheet(page).locator("label.cc-agree").click();
     await sheet(page).locator(".pv-btn-fill").click();
     await expect(page.locator("#coachChat.show")).toBeVisible();
-    await expect(page.locator("#coachChatNote")).toHaveText(lang === "ar" ? "الخصوصية" : "Privacy");   // the Anthropic note moved into the Terms (terms-v2.spec.js)
+    await expect(page.locator("#coachChatNote")).toBeHidden();   // no Privacy link in the chat; the consent sheet carries it
     await page.fill("#coachChatInput", "hi");
     await page.press("#coachChatInput", "Enter");
     await expect(page.locator(".coach-chat-msg.assistant")).toHaveText("Hello there.");

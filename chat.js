@@ -469,7 +469,7 @@
     iconHost.appendChild(mascotIcon());
     input.placeholder = s("placeholder");
     noteEl.textContent = "";
-    noteEl.appendChild(GymDom.policyLink("ai-coach", s("privacy"), true));
+    noteEl.hidden = true; // no Privacy link in the chat: the consent sheet and photo notice carry it
     fab.setAttribute("aria-label", s(open ? "fabClose" : "fabLabel"));
     fab.innerHTML = "";
     fab.appendChild(mascotIcon());
