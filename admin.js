@@ -211,7 +211,7 @@
   }
   function setTab(tab) {
     state.tab = tab;
-    ["overview", "users", "removed", "activity", "feedback"].forEach(function (t) {
+    ["overview", "users", "removed", "activity", "feedback", "review"].forEach(function (t) {
       var b = document.querySelector('[data-tab="' + t + '"]');
       b.setAttribute("aria-selected", t === tab ? "true" : "false");
     });
@@ -332,6 +332,7 @@
     if (state.tab === "overview") loadOverview(true);
     else if (state.tab === "users") loadList(true);
     loadFbBadge();
+    loadRvBadge();
   }
   // ---- sign-ups chart: HTML columns (labels stay readable at 375 px and RTL
   // just mirrors the flex row). "week" groups 7 days ending on the last day
@@ -950,6 +951,175 @@
     ]);
   }
 
+  // ---- review (workout days an admin has to approve or reject) ----
+  // Days the device or server could not verify wait here (state flagged or pending). Every
+  // field is user-controlled (name, email, day id, exercise ids): textContent only.
+  addStrings({
+    tabReview: ["Review", "المراجعة"],
+    rvEmpty: ["Nothing to review", "لا يوجد ما يُراجَع"],
+    rvApprove: ["Approve", "موافقة"],
+    rvReject: ["Reject", "رفض"],
+    rvNote: ["Note (optional)", "ملاحظة (اختيارية)"],
+    rvDone: ["Saved", "تم الحفظ"],
+    rvAlready: ["Already reviewed by someone else", "تمت مراجعته بالفعل"],
+    rvDuration: ["Workout time", "مدة التمرين"],
+    rvReported: ["reported {t}", "المُبلَّغ {t}"],
+    rvTimeline: ["Set ticks", "تسجيل الجولات"],
+    rvNoTicks: ["No set was ticked.", "لم تُعلَّم أي جولة."],
+    st_flagged: ["Flagged", "مُعلَّم"], st_pending: ["Pending", "معلّق"], st_approved: ["Approved", "مقبول"], st_rejected: ["Rejected", "مرفوض"],
+    rs_old_app: ["Old app version", "إصدار قديم من التطبيق"],
+    rs_save_yesterday: ["Saved the next day", "حُفظ في اليوم التالي"],
+    rs_late_sync: ["Synced late", "تمت المزامنة متأخرًا"],
+    rs_short_duration: ["Shorter than the minimum time", "أقصر من الحد الأدنى للوقت"],
+    rs_missing_sets: ["Not every set ticked", "لم تُعلَّم كل الجولات"],
+    rs_gap_too_short: ["Sets ticked under 60 s apart", "جولات بفاصل أقل من 60 ثانية"],
+    rs_tick_before_timer: ["Ticks before the timer started", "تعليم قبل بدء المؤقّت"],
+    rs_duplicate_date: ["Another day already counted on this date", "يوجد يوم محتسب آخر في هذا التاريخ"]
+  });
+  var RV_LIMIT = 50;
+  var rvCount = 0;
+  function setRvBadge(n) {
+    var b = document.getElementById("rvBadge");
+    if (!b) return;
+    n = Math.max(0, Number(n) || 0);
+    b.textContent = n > 99 ? "99+" : String(n);
+    b.hidden = n === 0;
+  }
+  function loadRvBadge() {
+    return api("/reviews/count").then(function (r) {
+      if (r.ok && r.data && typeof r.data.count === "number") { rvCount = r.data.count; setRvBadge(rvCount); }
+    });
+  }
+  function bumpRvBadge(delta) { rvCount = Math.max(0, rvCount + delta); setRvBadge(rvCount); }
+
+  // Known plan days read as "Men's plan · m_upper"; split, coach and custom days show the id alone.
+  function planDayLabel(dayId) {
+    var id = String(dayId == null ? "" : dayId);
+    for (var i = 0; i < WL_DAY_IDS.length; i++) if (WL_DAY_IDS[i][1].indexOf(id) !== -1) return s(WL_DAY_IDS[i][0]) + " · " + id;
+    return id;
+  }
+  function stateBadge(state) {
+    if (!state || state === "verified") return null;
+    return el("span", { class: "adm-badge adm-st adm-st-" + state, text: s("st_" + state) });
+  }
+  function mmss(sec) {
+    sec = Math.max(0, Math.round(sec));
+    return fmtNum(Math.floor(sec / 60)) + ":" + (sec % 60 < 10 ? fmtNum(0) : "") + fmtNum(sec % 60);
+  }
+  function timeOf(iso) {
+    var d = new Date(iso);
+    try { return d.toLocaleTimeString(AR ? "ar" : "en", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); } catch (e) { return String(iso); }
+  }
+
+  // ticks sorted by time, each with the seconds since the one before it
+  function rvTicks(ev) {
+    var t = ((ev && ev.sets) || []).filter(function (x) { return x && x.at; }).map(function (x) {
+      return { ms: Date.parse(x.at), ex: String(x.ex == null ? "" : x.ex), set: (+x.set || 0) + 1, at: x.at };
+    }).filter(function (x) { return !isNaN(x.ms); });
+    t.sort(function (a, b) { return a.ms - b.ms; });
+    t.forEach(function (x, i) { x.gap = i ? Math.round((x.ms - t[i - 1].ms) / 1000) : null; });
+    return t;
+  }
+
+  function reviewCard(it, onGone) {
+    var rec = it.record || {};
+    var ev = rec.evidence || null;
+    var ticks = rvTicks(ev);
+    var name = it.displayName || it.email || it.userId;
+    var head = el("div", { class: "adm-fb-head" }, [
+      el("b", null, [el("bdi", { text: name })]),
+      it.displayName && it.email ? el("span", { class: "adm-sub" }, [el("bdi", { text: it.email })]) : null,
+      stateBadge(rec.state),
+      el("span", { class: "adm-sub adm-fb-when", text: fmtDate(rec.date) })
+    ]);
+    var kv = el("dl", { class: "adm-kv" });
+    kv.appendChild(el("dt", { text: s("wlDayId") }));
+    kv.appendChild(el("dd", { dir: "auto", text: planDayLabel(rec.dayId) }));
+    if (ev) {
+      var start = ev.timerStart ? Date.parse(ev.timerStart) : NaN;
+      var measured = ticks.length && !isNaN(start) ? mmss((ticks[ticks.length - 1].ms - start) / 1000) : "—";
+      kv.appendChild(el("dt", { text: s("rvDuration") }));
+      kv.appendChild(el("dd", { class: "adm-rv-dur", text: measured + (ev.elapsedSec ? " (" + s("rvReported", { t: mmss(ev.elapsedSec) }) + ")" : "") }));
+    }
+    var reasons = (rec.reasons || []).map(function (r) {
+      return el("span", { class: "adm-badge adm-rv-reason", text: s("rs_" + r) === "rs_" + r ? r : s("rs_" + r) });
+    });
+    var timeline = el("details", { class: "adm-fb-ctx adm-rv-tl" }, [el("summary", { text: s("rvTimeline") + " (" + fmtNum(ticks.length) + ")" })]);
+    if (ticks.length) {
+      timeline.appendChild(el("ol", { class: "adm-rv-ticks" }, ticks.map(function (x) {
+        var short = x.gap != null && x.gap < 60;
+        return el("li", { class: short ? "is-short" : null }, [
+          el("span", { class: "adm-rv-t", text: timeOf(x.at) }),
+          el("span", { class: "adm-rv-ex", dir: "auto", text: x.ex + " #" + fmtNum(x.set) }),
+          el("span", { class: "adm-rv-gap", title: short ? s("rs_gap_too_short") : null, text: x.gap == null ? "" : "+" + fmtNum(x.gap) + "s" })
+        ]);
+      })));
+    } else {
+      timeline.appendChild(el("p", { class: "adm-sub", text: s("rvNoTicks") }));
+    }
+
+    var noteId = "rvNote" + it.userId + rec.date + rec.dayId;
+    var note = el("input", { type: "text", id: noteId, maxlength: "300", dir: "auto", class: "adm-rv-note" });
+    var status = el("p", { class: "adm-err", role: "alert" });
+    var approve = el("button", { type: "button", class: "adm-btn primary", text: s("rvApprove") });
+    var reject = el("button", { type: "button", class: "adm-btn danger", text: s("rvReject") });
+    function decide(kind) {
+      approve.disabled = reject.disabled = true;
+      status.textContent = "";
+      var path = "/reviews/" + encodeURIComponent(it.userId) + "/" + encodeURIComponent(rec.date) + "/" + encodeURIComponent(rec.dayId) + "/" + kind;
+      api(path, { method: "POST", body: { note: note.value.trim() } }).then(function (r) {
+        if (authFailed(r)) return;
+        if (r.ok) { bumpRvBadge(-1); onGone(s("rvDone"), false); return; }
+        if (r.status === 409 || r.code === "already_reviewed") { loadRvBadge(); onGone(s("rvAlready"), true); return; }
+        approve.disabled = reject.disabled = false;
+        status.textContent = errText(r);
+      });
+    }
+    approve.addEventListener("click", function () { decide("approve"); });
+    reject.addEventListener("click", function () { decide("reject"); });
+
+    return el("article", { class: "adm-section adm-fb adm-rv" }, [
+      head, kv,
+      reasons.length ? el("div", { class: "adm-rv-reasons" }, reasons) : null,
+      timeline,
+      el("label", { class: "adm-sub", for: noteId, text: s("rvNote") }), note,
+      el("div", { class: "adm-actions" }, [approve, reject]),
+      status
+    ]);
+  }
+
+  views.review = function () {
+    main.textContent = "";
+    var flash = el("p", { class: "adm-ok", role: "status", "aria-live": "polite" });
+    var host = el("div", { class: "adm-list" });
+    main.appendChild(flash);
+    main.appendChild(host);
+    function empty() { if (!host.children.length) host.appendChild(el("p", { class: "adm-msg", text: s("rvEmpty") })); }
+    api("/reviews?limit=" + RV_LIMIT).then(function (r) {
+      if (state.tab !== "review") return;
+      if (authFailed(r)) return;
+      if (!r.ok) {
+        main.textContent = "";
+        main.appendChild(el("p", { class: "adm-err", role: "alert", text: s("loadErr") }));
+        main.appendChild(el("button", { class: "adm-btn", text: s("retry"), onclick: function () { views.review(); } }));
+        return;
+      }
+      var items = (r.data && r.data.items) || [];
+      if (items.length < RV_LIMIT) { rvCount = items.length; setRvBadge(rvCount); }
+      items.forEach(function (it, i) {
+        var card = reviewCard(it, function (msg, isErr) {
+          card.remove();
+          flash.className = isErr ? "adm-err" : "adm-ok";
+          flash.textContent = msg;
+          empty();
+        });
+        card.style.setProperty("--i", Math.min(i, 12));
+        host.appendChild(card);
+      });
+      empty();
+    });
+  };
+
   // ---- workout log (admin edits a user's completions / rest days) ----
   // Every server string here (dayId, addedBy, user name/email, error text) is
   // user- or admin-controlled: textContent only, dir="auto" on free text, no
@@ -1200,6 +1370,7 @@
       list.appendChild(el("li", null, [el("button", { type: "button", class: "adm-log-item", onclick: function () { select(it.date, true); } }, [
         el("span", { class: "adm-log-date", text: dateLabel(it.date) }),
         it.rec ? el("b", { dir: "auto", text: String(it.rec.dayId == null ? "" : it.rec.dayId) }) : el("b", { text: s("wlRestRow") }),
+        it.rec ? stateBadge(it.rec.state) : null,
         src.source === "admin" ? el("span", { class: "adm-badge", text: s("wlAdminMark") }) : null,
         it.rec && it.rec.confirmedLate ? el("span", { class: "adm-badge", text: s("wlLate") }) : null,
         src.addedBy ? el("span", { class: "adm-sub", dir: "auto", text: s("wlAddedBy", { a: src.addedBy }) }) : null
@@ -1233,6 +1404,7 @@
         var ul = el("ul", { class: "adm-log-entries" });
         recs.forEach(function (x) {
           ul.appendChild(el("li", null, [el("b", { dir: "auto", text: String(x.dayId == null ? "" : x.dayId) }),
+            stateBadge(x.state),
             x.source === "admin" ? el("span", { class: "adm-badge", text: s("wlAdminMark") }) : null,
             x.confirmedLate ? el("span", { class: "adm-badge", text: s("wlLate") }) : null,
             x.addedBy ? el("span", { class: "adm-sub", dir: "auto", text: s("wlAddedBy", { a: x.addedBy }) }) : null]));
@@ -1360,6 +1532,7 @@
     document.getElementById("tabRemoved").textContent = s("tabRemoved");
     document.getElementById("tabActivity").textContent = s("tabActivity");
     document.getElementById("tabFeedback").insertBefore(document.createTextNode(s("tabFeedback")), document.getElementById("fbBadge"));
+    document.getElementById("tabReview").insertBefore(document.createTextNode(s("tabReview")), document.getElementById("rvBadge"));
     document.title = "Etqadem — " + s("title");
     var sess = session();
     if (!sess) return showMsg("noSession", true);
@@ -1372,6 +1545,7 @@
     var h = (location.hash || "").slice(1);
     setTab(views[h] ? h : "overview");
     loadFbBadge();
+    loadRvBadge();
     setInterval(liveTick, LIVE_MS);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") liveTick(); });
   }
