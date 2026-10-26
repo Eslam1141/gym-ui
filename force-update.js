@@ -225,7 +225,9 @@
   // No workout, no open sheet / dialog / ringing timer, no focused text field.
   api.isSafeToReload = function () {
     if (inWorkout()) return false;
-    if (document.querySelector('[role="dialog"]:not([hidden]), .sheet.open, .syd, #alarmBanner:not([hidden]), .m-ovl:not([hidden]), #survey:not([hidden]), .net-screen:not([hidden]), .pv-done:not([hidden]), #coachChat:not([hidden]), #tour:not([hidden])')) return false;
+    // Matches count only if actually rendered: a role=dialog child of a hidden parent (the tour card) stays in the DOM.
+    var open = document.querySelectorAll('[role="dialog"]:not([hidden]), .sheet.open, .syd, #alarmBanner:not([hidden]), .m-ovl:not([hidden]), #survey:not([hidden]), .net-screen:not([hidden]), .pv-done:not([hidden]), #coachChat:not([hidden]), #tour:not([hidden])');
+    if (Array.prototype.some.call(open, function (n) { return n.getClientRects().length > 0; })) return false;
     var a = document.activeElement;
     return !(a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable));
   };

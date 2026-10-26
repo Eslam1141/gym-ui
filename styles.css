@@ -2927,4 +2927,4 @@ html[data-fu-top] .wb-pal-head{ top:calc(var(--fu-top) + var(--wb-top-h)); }
 @keyframes fu-in{ from{ opacity:0; } to{ opacity:1; } }
 @media (prefers-reduced-motion:reduce){ .fu-page{ animation:none; } .fu-btn{ transition:none; } .fu-btn:active{ transform:none; } }
 html[data-fu-top] #onboarding, html[data-fu-top] #survey, html[data-fu-top] #coachChat, html[data-fu-top] .net-screen,
-html[data-fu-top] .pv-done, html[data-fu-top] #videoModal, html[data-fu-top] #calendarModal, html[data-fu-top] #tour{ top:var(--fu-top); }
+html[data-fu-top] .pv-done, html[data-fu-top] #videoModal, html[data-fu-top] #calendarModal{ top:var(--fu-top); } /* not #tour: it places its spotlight in viewport coordinates */

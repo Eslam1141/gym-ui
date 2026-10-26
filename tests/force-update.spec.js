@@ -423,7 +423,7 @@ test.describe("force update: auto-reload", () => {
     await context.close();
   });
 
-  test("a focused text field holds it off; leaving it (or resuming) lets it through", async ({ browser }) => {
+  test("a focused text field holds it off; the next resume after leaving it lets it through", async ({ browser }) => {
     const { context, page } = await openReload(browser);
     await page.evaluate(() => {
       const i = document.createElement("input");
@@ -438,6 +438,22 @@ test.describe("force update: auto-reload", () => {
     await page.evaluate(() => document.getElementById("fuProbe").blur());
     await resume(page);
     await expect.poll(() => reloads(page), T).toBe(1);
+    await context.close();
+  });
+
+  test("a role=dialog inside a hidden overlay (the tour card) does not hold it off", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    await page.evaluate(() => {
+      const wrap = document.createElement("div");
+      wrap.id = "fuHiddenWrap"; wrap.hidden = true;
+      const card = document.createElement("div");
+      card.setAttribute("role", "dialog"); card.textContent = "card";
+      wrap.appendChild(card);
+      document.body.appendChild(wrap);
+    });
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(true);
+    await page.evaluate(() => { document.getElementById("fuHiddenWrap").hidden = false; });
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(false);
     await context.close();
   });
 
@@ -482,7 +498,7 @@ test.describe("force update: auto-reload", () => {
     await context.close();
   });
 
-  test("away from the Plan tab it waits for the next resume; on Plan it goes at once", async ({ browser }) => {
+  test("away from the Plan tab it waits for the next resume", async ({ browser }) => {
     const { context, page } = await openReload(browser, { signedIn: true });
     await page.click('#appNav button[data-tab="more"]');
     await swUpdate(page);
