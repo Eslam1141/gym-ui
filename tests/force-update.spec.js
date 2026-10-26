@@ -104,3 +104,167 @@ test.describe("force update: workout-in-progress hooks", () => {
     await context.close();
   });
 });
+
+// ---- Task 3: the update-required page, the workout bar, the banner ----
+const MARKET = "market://details?id=com.etqadem.app";
+const STORE = "https://play.google.com/store/apps/details?id=com.etqadem.app";
+
+// Opens the app inside a faked native shell. cfg is the live app-config answer (change it to
+// change what the next fetch returns). The shell's version arrives 500 ms after load, like
+// App.getInfo() does after GymAppConfig.ready. native:false = a plain browser.
+async function openShell(browser, cfg, o) {
+  o = o || {};
+  return openApp(browser, Object.assign({
+    server: { verifyStrict: false },
+    setup: async (ctx) => {
+      await ctx.route("**/api/v1/app-config", (route) => {
+        const body = { verifyStrict: false };
+        if (cfg.min !== undefined) body.minAppVersion = cfg.min;
+        if (cfg.latest !== undefined) body.latestAppVersion = cfg.latest;
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+      });
+      if (o.native === false) return;
+      await ctx.addInitScript((v) => {
+        window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android" };
+        setTimeout(() => { window.GYM_APP_VERSION = v; }, 500);
+      }, o.version || "1.0.8");
+    }
+  }, o.open || {}));
+}
+const fu = {
+  block: (p) => p.locator("#force-update"),
+  bar: (p) => p.locator("#force-update-bar"),
+  banner: (p) => p.locator("#force-update-banner")
+};
+const blocking = (page) => page.evaluate(() => GymForceUpdate.isBlocking());
+const resume = (page) => page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+const recordOpens = (page) => page.evaluate(() => { window.__opened = []; GymForceUpdate.openUrl = (u) => { window.__opened.push(u); }; });
+
+test.describe("force update: page, bar, banner", () => {
+  test("below the minimum: the page shows (even though the version arrives late) and cannot be dismissed", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" });
+    await expect(fu.block(page)).toBeVisible(T);
+    await expect(fu.block(page)).toContainText("Update required");
+    expect(await blocking(page)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(fu.block(page)).toBeVisible();
+    await context.close();
+  });
+
+  test("a workout in progress gets the bar; the page takes over when the day is finished", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" }, { open: { signedIn: true, ls: session(ago(10 * 60000)) } });
+    await expect(fu.bar(page)).toBeVisible(T);
+    await expect(fu.bar(page)).toContainText("Your workout is saved");
+    await expect(fu.block(page)).toBeHidden();
+    expect(await blocking(page)).toBe(false);
+    for (const id of EX_IDS) await page.locator(`.check[data-id="${id}"]`).click();
+    await expect(fu.block(page)).toBeVisible(T);
+    await expect(fu.bar(page)).toBeHidden();
+    await context.close();
+  });
+
+  test("Update calls the native bridge once when it has one", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" });
+    await expect(fu.block(page)).toBeVisible(T);
+    await page.evaluate(() => {
+      window.__updates = 0;
+      GymNativeShell.startUpdate = () => { window.__updates++; return Promise.resolve("started"); };
+    });
+    await recordOpens(page);
+    await fu.block(page).getByRole("button", { name: "Update" }).click();
+    await expect.poll(() => page.evaluate(() => window.__updates), T).toBe(1);
+    expect(await page.evaluate(() => window.__opened)).toEqual([]);
+    expect(await blocking(page)).toBe(true);
+    await context.close();
+  });
+
+  test("Update without a bridge (APK 1.0.8) opens Google Play and shows the link as text; the block stays", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" });
+    await expect(fu.block(page)).toBeVisible(T);
+    expect(await page.evaluate(() => typeof GymNativeShell.startUpdate)).toBe("undefined");
+    await recordOpens(page);
+    await fu.block(page).getByRole("button", { name: "Update" }).click();
+    await expect.poll(() => page.evaluate(() => window.__opened), T).toEqual([MARKET]);
+    await expect(fu.block(page)).toContainText("Open Google Play and update Etqadem:");
+    await expect(fu.block(page)).toContainText(STORE);
+    expect(await blocking(page)).toBe(true);
+    await context.close();
+  });
+
+  test("Update falls back to Google Play when the in-app flow reports failure or throws", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" });
+    await expect(fu.block(page)).toBeVisible(T);
+    await recordOpens(page);
+    for (const impl of ["fail", "throw"]) {
+      await page.evaluate((impl) => {
+        GymNativeShell.startUpdate = impl === "fail" ? () => Promise.resolve("failed") : () => { throw new Error("x"); };
+      }, impl);
+      await fu.block(page).getByRole("button", { name: "Update" }).click();
+      await expect.poll(() => page.evaluate(() => window.__opened.length), T).toBe(impl === "fail" ? 1 : 2);
+    }
+    expect(await page.evaluate(() => window.__opened)).toEqual([MARKET, MARKET]);
+    expect(await blocking(page)).toBe(true);
+    await context.close();
+  });
+
+  test("Check again removes the block once the server value is gone", async ({ browser }) => {
+    const cfg = { min: "1.0.9" };
+    const { context, page } = await openShell(browser, cfg);
+    await expect(fu.block(page)).toBeVisible(T);
+    await fu.block(page).getByRole("button", { name: "Check again" }).click();
+    await expect(fu.block(page)).toBeVisible(); // still required: the server still says so
+    cfg.min = undefined;
+    await fu.block(page).getByRole("button", { name: "Check again" }).click();
+    await expect(fu.block(page)).toBeHidden(T);
+    expect(await blocking(page)).toBe(false);
+    await context.close();
+  });
+
+  test("resuming the app re-fetches the config: a lowered minimum clears the block", async ({ browser }) => {
+    const cfg = { min: "1.0.9" };
+    const { context, page } = await openShell(browser, cfg);
+    await expect(fu.block(page)).toBeVisible(T);
+    cfg.min = "1.0.8";
+    await resume(page);
+    await expect(fu.block(page)).toBeHidden(T);
+    await context.close();
+  });
+
+  test("banner: shows below latest, dismissal sticks across reloads, a newer latest brings it back", async ({ browser }) => {
+    const cfg = { min: "", latest: "1.1.0" };
+    const { context, page } = await openShell(browser, cfg, { version: "1.0.9" });
+    await expect(fu.banner(page)).toBeVisible(T);
+    await expect(fu.banner(page)).toContainText("A new version is available");
+    expect(await blocking(page)).toBe(false);
+    await fu.banner(page).getByRole("button", { name: "Close" }).click();
+    await expect(fu.banner(page)).toBeHidden();
+    await page.reload();
+    await page.waitForFunction(() => window.GYM_APP_VERSION);
+    await page.waitForTimeout(800);
+    await expect(fu.banner(page)).toBeHidden();
+    cfg.latest = "1.2.0";
+    await page.reload();
+    await expect(fu.banner(page)).toBeVisible(T);
+    await context.close();
+  });
+
+  test("a plain browser is never blocked, whatever the minimum says", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "9.9.9", latest: "9.9.9" }, { native: false });
+    await page.waitForTimeout(1200);
+    await expect(fu.block(page)).toBeHidden();
+    await expect(fu.banner(page)).toBeHidden();
+    expect(await blocking(page)).toBe(false);
+    await context.close();
+  });
+
+  test("Arabic: the page reads in Arabic, right to left", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" }, { open: { lang: "ar" } });
+    await expect(fu.block(page)).toBeVisible(T);
+    expect(await page.evaluate(() => document.documentElement.dir)).toBe("rtl");
+    await expect(fu.block(page)).toContainText("تحديث مطلوب");
+    await expect(fu.block(page)).toContainText("إصدار جديد من اتقدم جاهز. حدّث التطبيق لمتابعة التمرين.");
+    await expect(fu.block(page).getByRole("button", { name: "تحديث", exact: true })).toBeVisible();
+    await expect(fu.block(page).getByRole("button", { name: "تحقق مرة أخرى" })).toBeVisible();
+    await context.close();
+  });
+});
