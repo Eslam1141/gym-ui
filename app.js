@@ -447,6 +447,7 @@ const T = {
   swapNone:["No alternative with your equipment","لا يوجد بديل بأدواتك"],
   swappedFrom:["Swapped from {name}","بدلًا من {name}"],
   swapUndo:["Undo","تراجع"],
+  cancel:["Cancel","إلغاء"],
   celebHeld:["Done! This day counts once it's reviewed.","أحسنت! سيُحتسب هذا اليوم بعد مراجعته."],
   restTodayHeld:["Done · awaiting review","تم · بانتظار المراجعة"],
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],

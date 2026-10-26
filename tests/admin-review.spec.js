@@ -79,7 +79,8 @@ test("review tab lists newest first with reasons and timeline", async ({ browser
   expect(q.gets[0]).toBe("?limit=50");
   const first = rows(page).nth(0), second = rows(page).nth(1);
   await expect(first).toContainText("newest@example.com"); // no display name: the email stands in
-  await expect(first).toContainText("sp4gm_upperA");
+  await expect(first).toContainText("4-day gym split · Upper A");
+  await expect(first.locator(".adm-kv dd").first()).toHaveAttribute("title", "sp4gm_upperA");
   await expect(first.locator(".adm-st")).toHaveText("Pending");
   await expect(first.locator(".adm-rv-reason")).toHaveText(["Sets ticked under 60 s apart", "Not every set ticked"]);
   await expect(first.locator(".adm-rv-dur")).toHaveText("3:20 (reported 6:40)");
@@ -92,6 +93,8 @@ test("review tab lists newest first with reasons and timeline", async ({ browser
   await first.locator("summary").click();
   await expect(first.locator(".adm-rv-ticks li")).toHaveCount(3);
   await expect(first.locator(".adm-rv-ticks li.is-short")).toHaveCount(1);
+  await expect(first.locator(".adm-rv-ticks li").first().locator(".adm-rv-ex")).toHaveText("Barbell Bench Press #1");
+  await expect(first.locator(".adm-rv-ticks li").first().locator(".adm-rv-ex")).toHaveAttribute("title", "mua_bench");
   await expect(first.locator(".adm-rv-ticks li.is-short .adm-rv-gap")).toHaveText("+30s");
   await expect(first.locator(".adm-rv-ticks li").nth(2).locator(".adm-rv-gap")).toHaveText("+170s");
   await expect(badge(page)).toHaveText("2");

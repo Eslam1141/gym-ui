@@ -965,6 +965,8 @@
     rvDuration: ["Workout time", "مدة التمرين"],
     rvReported: ["reported {t}", "المُبلَّغ {t}"],
     rvTimeline: ["Set ticks", "تسجيل الجولات"],
+    rvSplitGym: ["{n}-day gym split", "تقسيمة الجيم {n} أيام"],
+    rvSplitHome: ["{n}-day home split", "تقسيمة المنزل {n} أيام"],
     rvNoTicks: ["No set was ticked.", "لم تُعلَّم أي جولة."],
     st_flagged: ["Flagged", "مُعلَّم"], st_pending: ["Pending", "معلّق"], st_approved: ["Approved", "مقبول"], st_rejected: ["Rejected", "مرفوض"],
     rs_old_app: ["Old app version", "إصدار قديم من التطبيق"],
@@ -993,8 +995,23 @@
   function bumpRvBadge(delta) { rvCount = Math.max(0, rvCount + delta); setRvBadge(rvCount); }
 
   // Known plan days read as "Men's plan · m_upper"; split, coach and custom days show the id alone.
+  // Split days ("sp4gm_upperA") read as "4-day gym split · Upper A" (splits.js has the labels).
+  function splitDayLabel(id) {
+    var m = /^sp(\d)([gh])([mf])_/.exec(id);
+    if (!m || !window.GymSplits) return null;
+    var plan = GymSplits.buildPlan({ days: +m[1], where: m[2] === "h" ? "home" : "gym", sex: m[3] === "f" ? "female" : "male" });
+    var d = plan.days.filter(function (x) { return x.id === id; })[0];
+    return d ? s(m[2] === "h" ? "rvSplitHome" : "rvSplitGym", { n: fmtNum(+m[1]) }) + " · " + (AR ? d.labelAr : d.label) : null;
+  }
+  // An exercise id as its name (splits.js library); the raw id when unknown.
+  function exerciseName(id) {
+    var ex = window.GymSplits && GymSplits.library[id];
+    return ex ? ex.en : id;
+  }
   function planDayLabel(dayId) {
     var id = String(dayId == null ? "" : dayId);
+    var sp = splitDayLabel(id);
+    if (sp) return sp;
     for (var i = 0; i < WL_DAY_IDS.length; i++) if (WL_DAY_IDS[i][1].indexOf(id) !== -1) return s(WL_DAY_IDS[i][0]) + " · " + id;
     return id;
   }
@@ -1034,7 +1051,7 @@
     ]);
     var kv = el("dl", { class: "adm-kv" });
     kv.appendChild(el("dt", { text: s("wlDayId") }));
-    kv.appendChild(el("dd", { dir: "auto", text: planDayLabel(rec.dayId) }));
+    kv.appendChild(el("dd", { dir: "auto", title: rec.dayId, text: planDayLabel(rec.dayId) }));
     if (ev) {
       var start = ev.timerStart ? Date.parse(ev.timerStart) : NaN;
       var measured = ticks.length && !isNaN(start) ? mmss((ticks[ticks.length - 1].ms - start) / 1000) : "—";
@@ -1050,7 +1067,7 @@
         var short = x.gap != null && x.gap < 60;
         return el("li", { class: short ? "is-short" : null }, [
           el("span", { class: "adm-rv-t", text: timeOf(x.at) }),
-          el("span", { class: "adm-rv-ex", dir: "auto", text: x.ex + " #" + fmtNum(x.set) }),
+          el("span", { class: "adm-rv-ex", dir: "auto", title: x.ex, text: exerciseName(x.ex) + " #" + fmtNum(x.set) }),
           el("span", { class: "adm-rv-gap", title: short ? s("rs_gap_too_short") : null, text: x.gap == null ? "" : "+" + fmtNum(x.gap) + "s" })
         ]);
       })));
