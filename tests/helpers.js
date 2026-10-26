@@ -22,6 +22,11 @@ async function mockApi(context, s) {
     const body = () => { try { return JSON.parse(req.postData() || "{}"); } catch (e) { return {}; } };
     s.log.push({ method: req.method(), path, query: url.search, body: req.method() === "POST" ? body() : null });
 
+    if (path === "/app-config") {
+      // verifyStrict defaults to TRUE here so the verified-training-days specs keep exercising the enforced rules
+      if (s.appConfigFail) return json(500, { error: { code: "internal", message: "down" } });
+      return json(200, { verifyStrict: s.verifyStrict !== false });
+    }
     if (path === "/me") {
       // held records (flagged/pending) are "on hold": they neither break nor extend the streak
       const held = s.records.filter((r) => r.state === "flagged" || r.state === "pending");
@@ -113,6 +118,7 @@ async function openApp(browser, opts) {
   await page.clock.install({ time: new Date(NOW) });
   await page.goto("/index.html");
   await page.waitForFunction(() => window.GymRest && window.GymDate, null, { timeout: 15000 });
+  await page.evaluate(() => window.GymAppConfig && window.GymAppConfig.ready); // the startup app-config fetch has settled
   return { context, page, server, consoleErrors };
 }
 

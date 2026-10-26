@@ -65,6 +65,7 @@ const ASSETS = [
   "./toast.js",
   "./dom.js",
   "./config.js",
+  "./app-config.js",
   "./manifest.json",
   "./vendor/html2canvas.min.js",
   "./icons/logo-etq.svg",

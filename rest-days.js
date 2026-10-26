@@ -432,10 +432,12 @@
     return best;
   }
 
+  function strictOn() { return !!(window.GymAppConfig && GymAppConfig.strict()); }
+
   // Already sent for review from this device (the only record a signed-out user has).
   function heldLocally(date, dayId) {
     var st = window.GymVerify ? GymVerify.localState(date, dayId) : "";
-    return st === "pending" || st === "flagged";
+    return st === "pending" || st === "flagged" || (!strictOn() && st === "verified");
   }
 
   function onboardingOpen() { var ob = document.getElementById("onboarding"); return !!ob && !ob.hidden; }
@@ -486,9 +488,9 @@
       '</div></div>';
     var q = function (s) { return sheet.querySelector(s); };
     q(".syd-title").textContent = str("sydTitle");
-    q(".syd-body").textContent = str("sydBody", { d: partial.done, t: partial.total, day: dayName });
+    q(".syd-body").textContent = str(strictOn() ? "sydBody" : "sydBodyCounted", { d: partial.done, t: partial.total, day: dayName });
     var yes = q(".syd-yes"), no = q(".syd-no");
-    yes.textContent = str("sydYes");
+    yes.textContent = str(strictOn() ? "sydYes" : "sydYesCounted");
     no.textContent = str("sydNo");
 
     function close() {
@@ -513,8 +515,9 @@
       run.then(function (r) {
         close();
         if (r === "rejected") { dismiss(date); toast(str("sydTooLate")); return; }
-        if (window.GymVerify) GymVerify.setLocalState(date, partial.dayId, "pending");
-        toast(str("sydSaved"));
+        // strict off: the day simply counts, no review
+        if (window.GymVerify) GymVerify.setLocalState(date, partial.dayId, strictOn() ? "pending" : "verified");
+        toast(str(strictOn() ? "sydSaved" : "sydSavedCounted"));
         if (window.GymCalendar && GymCalendar.reload) GymCalendar.reload();
       });
     };
