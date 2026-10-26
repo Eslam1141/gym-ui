@@ -492,9 +492,12 @@ const T = {
   restErrNet:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى."],
   sydTitle:["Did you finish yesterday's workout but forget to mark it?","هل أنهيت تمرين أمس ونسيت تسجيله؟"],
   sydBody:["You checked {d} of {t} exercises for {day}. Send it for review? It counts toward your streak once approved.","أنجزت {d} من {t} تمارين في {day}. هل ترسله للمراجعة؟ سيُحتسب في سلسلتك بعد الموافقة."],
+  sydBodyCounted:["You checked {d} of {t} exercises for {day}. Count it as trained?","أنجزت {d} من {t} تمارين في {day}. هل نحسبه يوم تمرين؟"],
+  sydYesCounted:["Count it","احسبه"],
   sydYes:["Send for review","أرسله للمراجعة"],
   sydNo:["No, I didn't","لا، لم أنهِه"],
   sydSaved:["Sent for review","تم الإرسال للمراجعة"],
+  sydSavedCounted:["Saved. Yesterday counts.","تم الحفظ. أمس محسوب."],
   sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
   sydSignIn:["Sign in to save yesterday's workout","سجّل دخولك عشان يتحفظ تمرين امبارح"],
   queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
@@ -1494,7 +1497,7 @@ function setExDone(id, on){
     saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
     // judged on the device with the same rules gym-be applies; a day that goes to review says so
     const ev = GymVerify.evidence(todayStr(), activeDay, "live");
-    const state = GymVerify.judge(ev).state;
+    const state = strictOn() ? GymVerify.judge(ev).state : "verified"; // strict off: every day counts (the evidence still goes to gym-be)
     GymVerify.setLocalState(todayStr(), activeDay, state);
     endWorkoutSession(); updateSessionUI(); // the workout is over: stop its timer, and any rest / exercise timer with it
     stopRestTimer();
@@ -1514,6 +1517,8 @@ function paintSets(id, state){
   const card = exList.querySelector(`.check[data-id="${id}"]`);
   if(card) card.closest(".ex-card").querySelectorAll("[data-swap], [data-swapundo]").forEach(el=>{ el.hidden = state.some(Boolean); });
 }
+// Verified training days are enforced only while gym-be's app-config says so (default off).
+function strictOn(){ return !!(window.GymAppConfig && GymAppConfig.strict()); }
 // A short plain toast (set ticks are refused with one, and the big checkbox explains itself).
 function toastMsg(message){
   if(window.GymToast && typeof window.GymToast.show === "function") window.GymToast.show({ message, duration: 3500 });
@@ -1534,7 +1539,7 @@ function toggleSet(id, i){
     if(first && activeSession && activeSession.dayId === activeDay && activeSession.startedAt >= midnight.getTime()){
       GymVerify.setTimerStart(date, activeDay, activeSession.startedAt);
     }
-    const r = GymVerify.tryTick(date, activeDay, id, i, Date.now());
+    const r = GymVerify.tryTick(date, activeDay, id, i, Date.now(), !strictOn());
     if(!r.ok){
       toastMsg(r.clock ? t("tickClock") : t("tickWait").replace("{s}", r.waitSec));
       return { ok:false, waitSec:r.waitSec };
@@ -1667,9 +1672,20 @@ function renderExercises(){
   if(play) setTimeout(()=>exList.querySelectorAll(".mus-settle").forEach(e=>e.classList.remove("mus-settle")), 1200);
   animateCards = false;
 
-  // The big checkbox no longer completes anything: a day counts set by set (see verify.js).
+  // Strict on: the big checkbox completes nothing, a day counts set by set (see verify.js).
+  // Strict off: it ticks every set (or clears them), and each tick is still recorded as evidence.
   exList.querySelectorAll(".check").forEach(el=>{
-    el.onclick = ()=> toastMsg(t("tickEachSet"));
+    el.onclick = ()=>{
+      if(strictOn()) return toastMsg(t("tickEachSet"));
+      const id = el.dataset.id;
+      const ex = day.exercises.find(x=>x.id===id);
+      if(!ex) return;
+      const k = sessionKey(activeDay);
+      const st = setState(k, ex, !!(checks[k] || {})[id]);
+      const want = !st.every(Boolean);
+      st.forEach((v, i)=>{ if(v !== want) toggleSet(id, i); });
+      if(want){ hapticTick(); if(window.GymMotion) GymMotion.pop(el); }
+    };
   });
 
   // --- set checkboxes: all sets ticked = exercise done, untick one = not done ---

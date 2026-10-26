@@ -105,7 +105,8 @@
       var done = exercises.filter(function (ex) { return !!dayChecks[ex.id]; }).length;
       var complete = done === exercises.length;
       // A day sent for review (finished short, or saved the next day) is on hold, not green.
-      var held = isHeld(window.GymVerify ? GymVerify.localState(date, dayId) : "");
+      // strict off: a leftover local held state (from when strict was on) is ignored
+      var held = !!(window.GymAppConfig && GymAppConfig.strict()) && isHeld(window.GymVerify ? GymVerify.localState(date, dayId) : "");
       var existing = map[date];
       if (!existing || done > existing.done || (done === existing.done && complete && !existing.complete)) {
         map[date] = { complete: complete && !held, held: held, dayId: dayId, done: done };

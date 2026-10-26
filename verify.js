@@ -54,16 +54,17 @@
 
   function setCountOf(ex) { return Math.min(MAX_SETS, Math.max(1, parseInt(ex.sets, 10) || 1)); }
 
-  function tryTick(date, dayId, exId, setIdx, nowMs) {
+  // lenient (strict mode off): the tick is recorded as evidence but never refused for timing.
+  function tryTick(date, dayId, exId, setIdx, nowMs, lenient) {
     var all = readAll();
     var e = entryOf(all, date, dayId);
     var gap = nowMs - e.last;
-    if (e.last && gap < 0) return { ok: false, clock: true }; // the phone's clock moved back past the last tick
-    if (e.last && gap < MIN_GAP_MS) return { ok: false, waitSec: Math.ceil((MIN_GAP_MS - gap) / 1000) };
+    if (!lenient && e.last && gap < 0) return { ok: false, clock: true }; // the phone's clock moved back past the last tick
+    if (!lenient && e.last && gap < MIN_GAP_MS) return { ok: false, waitSec: Math.ceil((MIN_GAP_MS - gap) / 1000) };
     var arr = e.ticks[exId] || (e.ticks[exId] = []);
     while (arr.length <= setIdx) arr.push(0);
     arr[setIdx] = nowMs;
-    e.last = nowMs;
+    if (nowMs > e.last) e.last = nowMs;
     if (!e.start) e.start = nowMs;
     writeAll(all);
     return { ok: true };
