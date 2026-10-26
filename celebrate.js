@@ -7,6 +7,8 @@
  *                                  once per date + dayId, remembered in
  *                                  localStorage under gymcel_done). opts.held: the
  *                                  day goes to review, so no streak number.
+ *                                  opts.durationSec: how long it took (timer start
+ *                                  to the last tick); adds "Finished in 42 min".
  *      GymCelebrate.rest()      - rest day just saved
  *
  * Streak copy uses GymHeader.me(): currentStreak, +1 while todayDone is still
@@ -211,10 +213,19 @@
     timer = setTimeout(dismiss, SHOW_MS);
   }
 
+  // "Finished in 42 min", or "Finished in 1 h 05 min" from an hour up.
+  function tookText(sec) {
+    var total = Math.max(1, Math.round(sec / 60));
+    if (total < 60) return str("celebTook", { m: num(total) });
+    var mm = (total % 60).toLocaleString(isAr() ? "ar-EG" : "en-US", { minimumIntegerDigits: 2 });
+    return str("celebTookH", { h: num(Math.floor(total / 60)), m: mm });
+  }
+
   function day(dayId, opts) {
     if (!claim(dayId || "day")) return;
     var m = opts && opts.held ? { text: str("celebHeld"), emoji: "muscle" } : trainingText(streakAfterToday());
-    show("day", m.text, m.emoji);
+    var text = opts && opts.durationSec > 0 ? m.text + ". " + tookText(opts.durationSec) : m.text;
+    show("day", text, m.emoji);
     try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   }
 

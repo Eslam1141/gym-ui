@@ -134,3 +134,39 @@ test("clock moved back shows the clock message, not a long wait", async ({ brows
   await expect(page.locator("#gymToast")).toContainText("Check your phone's clock", T);
   await context.close();
 });
+
+// ---- finishing the day ends the workout ----
+function finishSeed(startAgoMin, stepMs) {
+  const seed = verifiedSeed(["mua_facepull"], { startAgoMin, stepMs });
+  const start = seed.gymday_verify[TODAY + "_" + DAY_ID].start;
+  const checks = { [TODAY + "_" + DAY_ID]: Object.fromEntries(EX_IDS.slice(0, 5).map((id) => [id, true])) };
+  return { ...seed, gym_checks: checks, gym_session_active: { dayId: DAY_ID, startedAt: start, running: true, accumSec: 0, segStart: start } };
+}
+const sayings = (page) => page.locator(".celebrate .sr-only");
+
+for (const [lang, startAgo, step, expected] of [
+  ["en", 60, 150000, "Finished in 1 h 03 min"],
+  ["ar", 60, 150000, "أنهيت التمرين في ١ س ٠٣ د"],
+  ["en", 30, 60000, /Finished in 3\d min/],
+  ["ar", 30, 60000, /أنهيت التمرين في [٠-٩]+ دقيقة/]
+]) {
+  test("completing the day stops the workout timer and says how long it took (" + lang + ", " + startAgo + " min start)", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, lang, ls: finishSeed(startAgo, step) });
+    const dialogs = [];
+    page.on("dialog", (d) => { dialogs.push(d.message()); d.dismiss(); });
+    await page.waitForFunction(() => window.GymVerify && window.GymApp);
+    await tickSets(page, "mua_facepull");
+    await expect(sayings(page)).toContainText(expected, T);
+    expect(await page.evaluate(() => localStorage.getItem("gym_session_active"))).toBeNull();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("gym_sessions"))[activeDay]);
+    expect(saved).toHaveLength(1);
+    await expect(page.locator("#timerBar")).not.toHaveClass(/show/);
+    const shown = await page.locator("#sessionTime").textContent();
+    expect(shown).toMatch(/^\d\d:\d\d:\d\d$/);
+    expect(shown).not.toBe("00:00:00");
+    await page.clock.fastForward(180000);
+    await expect(page.locator("#sessionTime")).toHaveText(shown); // no further counting
+    expect(dialogs).toEqual([]);
+    await context.close();
+  });
+}

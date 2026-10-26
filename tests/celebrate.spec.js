@@ -22,7 +22,7 @@ test.describe("day celebration", () => {
     await tickSets(page, LAST);
     await expect(card(page)).toHaveClass(/show/, T);
     await expect(card(page)).toContainText("Two days in a row. Keep it going");
-    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
+    await expect(page.locator(".celebrate [role=status]")).toContainText("Two days in a row. Keep it going");
     await card(page).click();
     await expect(card(page)).not.toHaveClass(/show/);
 
@@ -108,7 +108,7 @@ test.describe("day celebration", () => {
     const icon = page.locator(".celebrate-emoji svg.ci-fire");
     await expect(icon).toHaveCount(1, T);
     await expect(page.locator(".celebrate-emoji")).toHaveAttribute("aria-hidden", "true");
-    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
+    await expect(page.locator(".celebrate [role=status]")).toContainText("Two days in a row. Keep it going");
     expect(await page.locator(".celebrate-emoji img").count()).toBe(0);
     expect(await page.evaluate(() => performance.getEntriesByType("resource").some((r) => /icons\/emoji/.test(r.name)))).toBe(false);
     await expect.poll(() => icon.locator(".ci-flame").evaluate((e) => getComputedStyle(e).animationName), T).toBe("ci-flicker");

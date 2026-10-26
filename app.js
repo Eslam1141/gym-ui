@@ -448,6 +448,8 @@ const T = {
   swappedFrom:["Swapped from {name}","بدلًا من {name}"],
   swapUndo:["Undo","تراجع"],
   cancel:["Cancel","إلغاء"],
+  celebTook:["Finished in {m} min","أنهيت التمرين في {m} دقيقة"],
+  celebTookH:["Finished in {h} h {m} min","أنهيت التمرين في {h} س {m} د"],
   celebHeld:["Done! This day counts once it's reviewed.","أحسنت! سيُحتسب هذا اليوم بعد مراجعته."],
   restTodayHeld:["Done · awaiting review","تم · بانتظار المراجعة"],
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
@@ -1491,9 +1493,13 @@ function setExDone(id, on){
   if(!wasComplete && isDayComplete(activeDay)){
     saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
     // judged on the device with the same rules gym-be applies; a day that goes to review says so
-    const state = GymVerify.judge(GymVerify.evidence(todayStr(), activeDay, "live")).state;
+    const ev = GymVerify.evidence(todayStr(), activeDay, "live");
+    const state = GymVerify.judge(ev).state;
     GymVerify.setLocalState(todayStr(), activeDay, state);
-    if(window.GymCelebrate) GymCelebrate.day(activeDay, { held: state !== "verified" });
+    endWorkoutSession(); updateSessionUI(); // the workout is over: stop its timer, and any rest / exercise timer with it
+    stopRestTimer();
+    cancelRestNotification();
+    if(window.GymCelebrate) GymCelebrate.day(activeDay, { held: state !== "verified", durationSec: ev.elapsedSec });
   }
   if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
     window.GymCalendar.onCheckChanged(activeDay, todayStr());
@@ -2441,7 +2447,8 @@ function updateSessionUI(){
     miniTimer.classList.remove("show");
     const last = lastSessionFor(activeDay);
     const dObj = DAYS.find(d=>d.id===activeDay);
-    sessionTimeEl.textContent = "00:00:00";
+    // a day finished today keeps showing how long it took; otherwise the clock is at zero
+    sessionTimeEl.textContent = last && last.date === todayStr() && isDayComplete(activeDay) ? fmtHMS(last.durationSec) : "00:00:00";
     sessionHintEl.textContent = last
       ? t("lastSession").replace("{d}", dayLabel(dObj)).replace("{n}", Math.round(last.durationSec/60))
       : t("notStarted");
@@ -2469,14 +2476,20 @@ miniTimer.onclick = ()=>{
 };
 
 // Guarded: a double tap must not start-then-immediately-stop (or double-log) a session.
+// Saves the running session of the active day and stops its clock (End Workout, or the day completing).
+// The caller refreshes the UI.
+function endWorkoutSession(){
+  if(!activeSession || activeSession.dayId !== activeDay) return;
+  const durationSec = sessionElapsedSec();
+  sessions[activeDay] = sessions[activeDay] || [];
+  sessions[activeDay].push({ date: todayStr(), durationSec });
+  saveJSON("gym_sessions", sessions);
+  activeSession = null;
+  localStorage.removeItem("gym_session_active");
+}
 sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){
-    const durationSec = sessionElapsedSec();
-    sessions[activeDay] = sessions[activeDay] || [];
-    sessions[activeDay].push({ date: todayStr(), durationSec });
-    saveJSON("gym_sessions", sessions);
-    activeSession = null;
-    localStorage.removeItem("gym_session_active");
+    endWorkoutSession();
   } else {
     if(isDayComplete(activeDay)){
       alert(t("dayAlreadyDone"));
