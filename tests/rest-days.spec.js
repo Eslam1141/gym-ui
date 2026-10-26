@@ -151,7 +151,7 @@ test.describe("rest days (signed in)", () => {
       { date: YESTERDAY, dayId: DAY_ID, today: TODAY },
       { date: YESTERDAY, dayId: DAY_ID }
     ]);
-    expect(await page.evaluate(() => localStorage.getItem("gymrest_pending"))).toBeNull();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending") || "[]"))).toEqual([]);
     await context.close();
   });
 

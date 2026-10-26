@@ -451,6 +451,7 @@ const T = {
   celebHeld:["Done! This day counts once it's reviewed.","أحسنت! سيُحتسب هذا اليوم بعد مراجعته."],
   restTodayHeld:["Done · awaiting review","تم · بانتظار المراجعة"],
   tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
+  tickClock:["Check your phone's clock: it is behind your last tick","تحقق من ساعة هاتفك: فهي متأخرة عن آخر جولة علّمتها"],
   tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
   hdrOnHold:["on hold","معلّقة"],
@@ -1141,10 +1142,15 @@ window.GymApp.dayExercises = function(dayId, date){
   const day = dayView(findDay(dayId), date);
   return day ? day.exercises : [];
 };
-// Equipment a swap may use: null = any (gym plans), else the tools of a home plan.
+// Equipment a swap may use: null = any (gym plans); a home split uses the tools ticked in the
+// survey; any other day (Classic calisthenics, a plan with no marker) the equipment its own moves use.
 window.GymApp.swapTools = function(dayId){
-  if(window.GymVerify && GymVerify.planOf(dayId) !== "home") return null;
-  return /^sp/.test(dayId || "") ? splitChoice.tools : ["band"];
+  const plan = window.GymVerify ? GymVerify.planOf(dayId) : "gym";
+  if(plan === "gym") return null;
+  if(/^sp/.test(dayId || "")) return splitChoice.tools;
+  const have = ["none"];
+  window.GymApp.dayExercises(dayId).forEach(e=>(e.tools || []).forEach(t=>{ if(have.indexOf(t) < 0) have.push(t); }));
+  return have;
 };
 window.GymApp.exName = ex=> exName(ex);
 window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
@@ -1524,7 +1530,7 @@ function toggleSet(id, i){
     }
     const r = GymVerify.tryTick(date, activeDay, id, i, Date.now());
     if(!r.ok){
-      toastMsg(t("tickWait").replace("{s}", r.waitSec));
+      toastMsg(r.clock ? t("tickClock") : t("tickWait").replace("{s}", r.waitSec));
       return { ok:false, waitSec:r.waitSec };
     }
     if(first && !activeSession){
@@ -1577,7 +1583,7 @@ function renderExercises(){
     // Plans saved before a clip matched (or whose name now matches an alias) get it here; none = "coming soon".
     if(!ex.vid){ const v = window.GymExerciseVideo ? GymExerciseVideo(ex.en) : ""; if(v) ex.vid = v; }
     const hasVid = !!ex.vid;
-    const anyTick = setState(key, ex, done).some(Boolean);
+    const anyTick = setState(key, ex, done).some(Boolean) || GymVerify.exerciseTicked(todayStr(), activeDay, ex.id);
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
     const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
     const exSh = window.GymMuscleArt ? exShapes(ex) : null;
@@ -1598,7 +1604,7 @@ function renderExercises(){
         </div>
       </div>
       ${ex.swapFrom ? `<div class="ex-swapped"><span>${esc(t("swappedFrom").replace("{name}", exName(ex.swapFrom)))}</span>
-        <button type="button" class="ex-swap-undo" data-swapundo="${esc(ex.swapFrom.id)}"${anyTick ? " hidden" : ""}>${t("swapUndo")}</button></div>` : ``}
+        <button type="button" class="ex-swap-undo" data-swapundo="${esc(ex.swapFrom.id)}"${anyTick || GymSwap.inView(todayStr(), activeDay, ex.swapFrom.id) ? " hidden" : ""}>${t("swapUndo")}</button></div>` : ``}
       <div class="ex-meta">
         <span><b>${esc(ex.sets)}</b> ${t("sets")}</span>
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
@@ -1669,7 +1675,7 @@ function renderExercises(){
       // same value the card's Rest button uses; restarts a running timer
       const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
       const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
-      if(rest > 0) startRestTimer(rest, restBtn.dataset.name);
+      if(rest > 0 && !isDayComplete(activeDay)) startRestTimer(rest, restBtn.dataset.name); // the last set just finished the day
     };
   });
 
@@ -1864,6 +1870,8 @@ document.getElementById("resetLink").onclick = ()=>{
   delete setChecks[dayKey];
   saveJSON("gym_checks", checks);
   saveSetChecks();
+  // the recorded tick times go too (the timer start and last tick stay: the day's clock keeps running)
+  window.GymApp.dayExercises(activeDay).forEach(e=>GymVerify.clearExercise(todayStr(), activeDay, e.id));
   animateCards = true;
   renderAll();
   if(window.GymToast && typeof window.GymToast.show === "function"){

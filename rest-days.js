@@ -100,9 +100,9 @@
     if (typeof left === "number") serverLeft = left;
   }
 
-  // A date the server (or this device) already has a completion for, whatever its review
-  // state: it can't take a rest mark (the server would answer already_trained).
-  function trained(entry) { return !!(entry && (entry.complete || entry.held || entry.rejected)); }
+  // A date the server (or this device) already has a completion for, counted or waiting for review: it
+  // can't take a rest mark (the server would answer already_trained). A rejected day does not block one.
+  function trained(entry) { return !!(entry && (entry.complete || entry.held)); }
 
   // Adds rest entries to a calendar completion map. Training wins: a date with
   // a completion is never shown as rest.
@@ -327,12 +327,16 @@
     }).catch(function () { return "queued"; });
   }
 
-  // Posts a completion; a retryable failure is queued instead of lost.
+  // Posts a completion. It is queued first and dropped once the server has answered for good, so an
+  // app kill mid-POST never loses the day (the server treats a repeat of the same day as a no-op).
   function submit(date, dayId, evidence) {
     var item = { date: date, dayId: dayId };
     if (evidence) item.evidence = evidence;
+    enqueue(item);
     return send(item).then(function (r) {
-      if (r === "queued" || r === "held") enqueue(item);
+      if (r === "ok" || r === "rejected") {
+        writeJSON(LS_PENDING, queue().filter(function (x) { return !(x.date === date && x.dayId === dayId); }));
+      }
       return r;
     });
   }

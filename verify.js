@@ -58,6 +58,7 @@
     var all = readAll();
     var e = entryOf(all, date, dayId);
     var gap = nowMs - e.last;
+    if (e.last && gap < 0) return { ok: false, clock: true }; // the phone's clock moved back past the last tick
     if (e.last && gap < MIN_GAP_MS) return { ok: false, waitSec: Math.ceil((MIN_GAP_MS - gap) / 1000) };
     var arr = e.ticks[exId] || (e.ticks[exId] = []);
     while (arr.length <= setIdx) arr.push(0);

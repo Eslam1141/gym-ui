@@ -63,7 +63,7 @@ test.describe("GymVerify rules", () => {
       const back = GymVerify.tryTick(d, id, "mua_bench", 1, ms - 120000);
       return [back, GymVerify.tryTick(d, id, "mua_bench", 1, ms + 60000)];
     }, [TODAY, DAY_ID, T0]);
-    expect(r[0].ok).toBe(false);
+    expect(r[0]).toEqual({ ok: false, clock: true });
     expect(r[1]).toEqual({ ok: true });
     await context.close();
   });

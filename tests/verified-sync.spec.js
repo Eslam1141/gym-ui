@@ -49,7 +49,7 @@ test.describe("completion evidence and review states", () => {
     await expect(cell(page, YESTERDAY)).not.toHaveClass(/complete/);
     await cell(page, YESTERDAY).click();
     await expect(page.locator(".cal-detail-status.rejected")).toHaveText("Not counted", T);
-    await expect(page.locator(".rest-detail .rest-btn")).toHaveCount(0);
+    await expect(page.locator(".rest-detail .rest-btn")).toHaveCount(1); // a rejected day does not block a rest mark
     await context.close();
   });
 

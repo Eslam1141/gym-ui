@@ -71,12 +71,16 @@
   }
 
   // Up to five library moves that share the exercise's primary muscle, fit the plan's equipment
-  // and are not already in the day. Same secondary muscle and same tier rank first.
+  // and are not already in the day (as it is now, or as the plan has it: a move swapped out of a
+  // slot stays reserved so undoing that swap can never put it in two slots). Same secondary muscle and same tier rank first.
   function alternatives(ex, dayId) {
     var L = lib();
     var have = window.GymApp && GymApp.swapTools ? GymApp.swapTools(dayId) : null;
     var inDay = {}, names = {};
-    (window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId) : []).forEach(function (e) { inDay[e.id] = 1; names[e.en] = 1; });
+    (window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId) : []).forEach(function (e) {
+      inDay[e.id] = 1; names[e.en] = 1;
+      if (e.swapFrom) { inDay[e.swapFrom.id] = 1; names[e.swapFrom.en] = 1; }
+    });
     var out = [];
     Object.keys(L).forEach(function (id, order) {
       var m = L[id];
@@ -87,6 +91,10 @@
     });
     out.sort(function (a, b) { return b.score - a.score || a.order - b.order; });
     return out.slice(0, MAX_ALTERNATIVES).map(function (o) { return expand(ex, o.id); });
+  }
+
+  function inView(date, dayId, exId) {
+    return (window.GymApp && GymApp.dayExercises ? GymApp.dayExercises(dayId, date) : []).some(function (e) { return e.id === exId; });
   }
 
   function locked(date, dayId, exId) { return !!(window.GymVerify && GymVerify.exerciseTicked(date, dayId, exId)); }
@@ -109,6 +117,7 @@
     var k = date + "_" + dayId;
     var cur = (all[k] || {})[origExId];
     if (!cur || locked(date, dayId, cur)) return false;
+    if (inView(date, dayId, origExId)) return false; // another slot already shows it
     delete all[k][origExId];
     writeAll(all);
     return true;
@@ -219,6 +228,7 @@
     expand: expand,
     apply: apply,
     undo: undo,
+    inView: inView,
     open: open
   };
 })();
