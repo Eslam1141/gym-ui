@@ -38,7 +38,7 @@
   --on-primary:#fff; --primary-text:#3CC2B8; --primary-soft:#0f3b39;
   --secondary:#047857; --highlight:#2BB3A3;
   --success:#2f9e4f; --success-text:#8fe0a3; --success-soft:#123320;
-  --warn:#f2c14e; --danger:#ff7b7b;
+  --warn:#f2c14e; --warn-soft:#3a2e10; --danger:#ff7b7b;
   --glow:rgba(60,194,184,0.18); --nav-bg:rgba(16,23,31,0.95);
   --glass:rgba(38,51,68,.72); --glass-line:rgba(255,255,255,.16);
   --scrim:rgba(8,7,6,.6);
@@ -96,7 +96,7 @@
   --primary-text:#0A6B67; --primary-soft:#CFE6E2;
   --secondary:#047857; --highlight:#2BB3A3;
   --success:#1B7F3F; --success-text:#1B6E3A; --success-soft:#DCEFE0;
-  --warn:#8A5A00; --danger:#B42318;
+  --warn:#8A5A00; --warn-soft:#F6E8C6; --danger:#B42318;
   --glow:rgba(11,122,117,0.14); --nav-bg:rgba(243,240,232,0.95);
   --glass:rgba(251,249,244,.78); --glass-line:rgba(20,22,27,.14);
   --scrim:rgba(20,22,27,.45);
@@ -495,6 +495,38 @@ header.hero .sub{ color:var(--paper-dim); font-size:var(--text-sm); }
 /* No demo clip yet: calm, non-interactive stand-in for the Video button */
 .btn-sm.video-soon{ background:transparent; border-style:dashed; color:var(--paper-dim); font-weight:600; cursor:default; }
 .btn-sm svg{ width:13px; height:13px; fill:currentColor; flex:none; }
+.btn-sm[hidden]{ display:none; }
+
+/* "Machine busy?" (swap.js): the swapped-from line on a card, and the alternatives sheet (.syd shell) */
+.ex-swapped{
+  display:flex; align-items:center; flex-wrap:wrap; column-gap:var(--space-2);
+  margin:var(--space-2) 0 0; margin-inline-start:38px;
+  font-size:var(--text-sm); color:var(--paper-dim);
+}
+.ex-swap-undo{
+  min-height:44px; padding:0 var(--space-2); background:none; border:0; cursor:pointer;
+  font-family:inherit; font-size:inherit; font-weight:var(--fw-bold);
+  color:var(--primary-text); text-decoration:underline; text-underline-offset:3px;
+}
+.ex-swap-undo[hidden]{ display:none; }
+.ex-swap-undo:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.swap-panel{ max-height:calc(100dvh - var(--space-6)); overflow-y:auto; }
+.swap-list{ list-style:none; margin:0 0 var(--space-4); padding:0; display:flex; flex-direction:column; gap:var(--space-2); }
+.swap-opt{
+  display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:64px;
+  padding:var(--space-2); text-align:start; cursor:pointer; font-family:inherit;
+  background:var(--panel2); color:var(--paper); border:1px solid var(--line-strong); border-radius:var(--radius);
+  transition:border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.swap-opt:hover{ border-color:var(--primary-text); }
+.swap-opt:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.swap-thumb{ flex:none; width:72px; aspect-ratio:16 / 9; border-radius:6px; overflow:hidden; background:var(--line); }
+.swap-thumb img{ display:block; width:100%; height:100%; object-fit:cover; }
+.swap-opt-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.swap-opt-name{ font-size:var(--text-base); font-weight:var(--fw-bold); line-height:var(--lh-tight); }
+.swap-opt-mus{ font-size:var(--text-sm); color:var(--paper-dim); }
+.swap-none{ margin:0 0 var(--space-5); font-size:var(--text-base); line-height:var(--lh-body); color:var(--paper-dim); }
+.swap-none[hidden], .swap-list[hidden]{ display:none; }
 
 /* inline video */
 .video-wrap{
@@ -2354,6 +2386,7 @@ body:has(#videoModal.show) #topBar{ display:none !important; }
   font-variant-numeric:tabular-nums;
 }
 .tb-streak[hidden]{ display:none; }
+.tb-streak .tb-hold{ margin-inline-start:var(--space-2); font-size:var(--text-xs); font-weight:var(--fw-bold); color:var(--warn); }
 .tb-slot{ display:inline-flex; }
 .tb-slot:empty{ display:none; }
 .tb-avatar-wrap{ position:relative; display:inline-flex; }
@@ -2645,6 +2678,18 @@ body:has(#videoModal.show) #topPrefs{ display:none !important; }
 .cal-day-cell.pending, .cal-grid-cell.pending{ background:transparent; border:1px dashed var(--primary-text); }
 .cal-day-cell.pending.today, .cal-grid-cell.pending.today{ border-color:var(--accent); }
 .cal-detail-status.pending{ color:var(--primary-text); background:transparent; border:1px dashed var(--primary-text); }
+/* Done, waiting for an admin to review it: amber, filled mark. Not counted yet, not lost. */
+.cal-day-cell.held, .cal-grid-cell.held{ position:relative; background:var(--warn-soft); border:1px solid var(--warn); }
+.cal-grid-cell.held{ color:var(--paper); }
+.cal-day-cell.held.today, .cal-grid-cell.held.today{ border-color:var(--accent); }
+.cal-held-mark, .cal-grid-cell.held::after{ position:absolute; inset-block-start:4px; inset-inline-end:4px; width:6px; height:6px; border-radius:50%; background:var(--warn); }
+.cal-grid-cell.held::after{ content:""; inset-block-start:5px; inset-inline-end:5px; }
+/* Reviewed and not counted: no colour, struck through */
+.cal-day-cell.rejected, .cal-grid-cell.rejected{ background:transparent; border:1px solid var(--line); color:var(--paper-dim); }
+.cal-day-cell.rejected .cal-num, .cal-grid-cell.rejected{ color:var(--paper-dim); text-decoration:line-through; text-decoration-thickness:1px; }
+.cal-detail-status.held{ color:var(--paper); background:var(--warn-soft); border:1px solid var(--warn); }
+.cal-detail-status.rejected{ color:var(--paper-dim); background:transparent; border:1px solid var(--line-strong); }
+.rest-card.is-held{ border-color:var(--warn); }
 .cal-rest-mark{
   position:absolute; inset-block-start:4px; inset-inline-end:4px;
   width:6px; height:6px; border-radius:50%;

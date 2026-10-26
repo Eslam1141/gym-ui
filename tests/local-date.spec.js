@@ -41,7 +41,11 @@ test("a tab left open rolls over past local midnight", async ({ browser }) => {
 test("checking an exercise stores today's local date key", async ({ browser }) => {
   const { context, page } = await newPage(browser);
   await page.getByRole("button", { name: "Continue without signing in" }).click();
-  await page.locator("#exList .check").first().click();
+  const sets = page.locator("#exList .ex-card").first().locator(".set-chk");
+  for (let i = 0; i < (await sets.count()); i++) {
+    await page.clock.fastForward(61000); // the 60 s minimum gap between ticks
+    await sets.nth(i).click();
+  }
   const keys = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("gym_checks") || "{}")));
   expect(keys.length).toBeGreaterThan(0);
   for (const k of keys) expect(k.startsWith("2026-10-02_")).toBe(true);

@@ -260,15 +260,23 @@
     if (!show) { setMenuOpen(false); return; }
 
     var streak = (me && +me.currentStreak) || 0;
-    if (streak > 0) {
+    // Days waiting for an admin to review them neither extend nor break the streak.
+    var held = (me && +me.heldDays) || 0;
+    if (streak > 0 || held > 0) {
       streakEl.hidden = false;
       streakEl.textContent = "🔥" + streak;
+      if (held > 0) {
+        var chip = document.createElement("span");
+        chip.className = "tb-hold";
+        chip.textContent = str("hdrOnHold");
+        streakEl.appendChild(chip);
+      }
       if (shownStreak !== null && streak > shownStreak && window.GymMotion) GymMotion.pop(streakEl);
       shownStreak = streak;
       // Today not trained yet: the streak is still alive (it only breaks after
       // a full missed day), so show it dimmed instead of hiding it.
-      var pending = me.todayDone === false && me.todayRested !== true;
-      var label = str(pending ? "hdrStreakPending" : "hdrStreak", { n: streak });
+      var pending = me.todayDone === false && me.todayRested !== true && me.todayHeld !== true;
+      var label = held > 0 ? str("hdrStreakHeld", { n: streak, h: held }) : str(pending ? "hdrStreakPending" : "hdrStreak", { n: streak });
       streakEl.classList.toggle("is-pending", pending);
       streakEl.title = label;
       streakEl.setAttribute("aria-label", label);

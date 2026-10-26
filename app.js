@@ -442,7 +442,22 @@ const T = {
   styleGym:["Gym","جيم"], styleCal:["In-House / Bodyweight","منزلي / وزن الجسم"],
   langBtn:["العربية","English"],
   // ---- top-right header / profile / notifications (header.js, profile.js, notifications.js) ----
+  swapBtn:["Machine busy?","الجهاز مشغول؟"],
+  swapTitle:["Swap {name} for","استبدل {name} بـ"],
+  swapNone:["No alternative with your equipment","لا يوجد بديل بأدواتك"],
+  swappedFrom:["Swapped from {name}","بدلًا من {name}"],
+  swapUndo:["Undo","تراجع"],
+  cancel:["Cancel","إلغاء"],
+  celebTook:["Finished in {m} min","أنهيت التمرين في {m} دقيقة"],
+  celebTookH:["Finished in {h} h {m} min","أنهيت التمرين في {h} س {m} د"],
+  celebHeld:["Done! This day counts once it's reviewed.","أحسنت! سيُحتسب هذا اليوم بعد مراجعته."],
+  restTodayHeld:["Done · awaiting review","تم · بانتظار المراجعة"],
+  tickEachSet:["Tick each set as you finish it","علّم كل جولة عند إنهائها"],
+  tickClock:["Check your phone's clock: it is behind your last tick","تحقق من ساعة هاتفك: فهي متأخرة عن آخر جولة علّمتها"],
+  tickWait:["Wait {s}s before ticking the next set","انتظر {s} ثانية قبل تعليم الجولة التالية"],
   hdrStreak:["{n}-day streak","سلسلة {n} يوم"],
+  hdrOnHold:["on hold","معلّقة"],
+  hdrStreakHeld:["{n}-day streak, {h} day(s) on hold awaiting review","سلسلة {n} يوم، {h} يوم معلّق بانتظار المراجعة"],
   hdrStreakPending:["{n}-day streak, today not trained yet","سلسلة {n} يوم، لم تتمرن اليوم بعد"],
   // ---- rest days + save-yesterday prompt (rest-days.js) ----
   restBadge:["Rest day","يوم راحة"],
@@ -476,10 +491,10 @@ const T = {
   restErrWindow:["Only today and yesterday can be changed.","يمكن تغيير اليوم والأمس فقط."],
   restErrNet:["Couldn't save. Check your connection and try again.","تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى."],
   sydTitle:["Did you finish yesterday's workout but forget to mark it?","هل أنهيت تمرين أمس ونسيت تسجيله؟"],
-  sydBody:["You checked {d} of {t} exercises for {day}. Saving it keeps your streak going.","أنجزت {d} من {t} تمارين في {day}. حفظه يُبقي سلسلتك مستمرة."],
-  sydYes:["Yes, save it","نعم، احفظه"],
+  sydBody:["You checked {d} of {t} exercises for {day}. Send it for review? It counts toward your streak once approved.","أنجزت {d} من {t} تمارين في {day}. هل ترسله للمراجعة؟ سيُحتسب في سلسلتك بعد الموافقة."],
+  sydYes:["Send for review","أرسله للمراجعة"],
   sydNo:["No, I didn't","لا، لم أنهِه"],
-  sydSaved:["Yesterday's workout saved","تم حفظ تمرين أمس"],
+  sydSaved:["Sent for review","تم الإرسال للمراجعة"],
   sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
   sydSignIn:["Sign in to save yesterday's workout","سجّل دخولك عشان يتحفظ تمرين امبارح"],
   queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
@@ -1117,23 +1132,30 @@ window.GymApp.coachSplit = function(){
   if(!days.length) return null;
   return { name: clip(`${splitChoice.days} days \u00b7 ${splitChoice.where === "home" ? "Home" : "Gym"}`), days };
 };
-window.GymApp.dayExercises = function(dayId){
-  const day = findDay(dayId);
+// A day as it is on `date` (default today): moves swapped with "Machine busy?" (swap.js) take
+// the original's slot, so ticks, evidence, the muscle map and the calendar all see the new move.
+function dayView(day, date){
+  if(!day || !window.GymSwap) return day;
+  const m = GymSwap.map(date || todayStr(), day.id);
+  if(!Object.keys(m).length) return day;
+  return Object.assign({}, day, { exercises: day.exercises.map(ex=> m[ex.id] ? GymSwap.expand(ex, m[ex.id]) : ex) });
+}
+window.GymApp.dayExercises = function(dayId, date){
+  const day = dayView(findDay(dayId), date);
   return day ? day.exercises : [];
 };
-// Marks every exercise of a past day's checklist as done (rest-days.js "save
-// yesterday"). Goes through the in-memory `checks` so the next toggle's
-// saveJSON doesn't overwrite it with a stale copy.
-window.GymApp.markDayComplete = function(date, dayId){
-  const day = findDay(dayId);
-  if(!day) return;
-  const k = date + "_" + dayId;
-  checks[k] = checks[k] || {};
-  day.exercises.forEach(ex=>{ checks[k][ex.id] = true; });
-  saveJSON("gym_checks", checks);
-  rememberTags(k, day.exercises);
-  refreshWeekMap();
+// Equipment a swap may use: null = any (gym plans); a home split uses the tools ticked in the
+// survey; any other day (Classic calisthenics, a plan with no marker) the equipment its own moves use.
+window.GymApp.swapTools = function(dayId){
+  const plan = window.GymVerify ? GymVerify.planOf(dayId) : "gym";
+  if(plan === "gym") return null;
+  if(/^sp/.test(dayId || "")) return splitChoice.tools;
+  const have = ["none"];
+  window.GymApp.dayExercises(dayId).forEach(e=>(e.tools || []).forEach(t=>{ if(have.indexOf(t) < 0) have.push(t); }));
+  return have;
 };
+window.GymApp.exName = ex=> exName(ex);
+window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
 // Strings and language for the weekly muscle map (muscle-map.js), and the tags of
 // one exercise of a day in any plan we can still see (Classic, either persona,
 // the AI plan). null when the plan that had it is gone: the map then falls back
@@ -1446,10 +1468,100 @@ function refreshWeekMap(){
   if(host && window.GymMuscleMap) GymMuscleMap.render(host, { sex: figureSex() });
 }
 
+// Single path for "exercise done" so the big checkbox and the last set tick
+// share the same progress / streak / calendar side effects.
+function setExDone(id, on){
+  const k = sessionKey(activeDay);
+  const wasComplete = isDayComplete(activeDay);
+  checks[k] = checks[k] || {};
+  checks[k][id] = on;
+  saveJSON("gym_checks", checks);
+  if(on) rememberTags(k, (dayView(DAYS.find(d=>d.id === activeDay)) || { exercises:[] }).exercises.filter(e=>e.id === id));
+  refreshWeekMap();
+  const el = exList.querySelector(`.check[data-id="${id}"]`);
+  if(el){
+    const was = el.classList.contains("on");
+    el.classList.toggle("on", on);
+    if(on && !was && window.GymMotion) GymMotion.pop(el);
+    const card = el.closest(".ex-card");
+    if(card) card.classList.toggle("done", on);
+  }
+  updateProgress();
+  // Record the moment this day's checklist *transitions* to complete
+  // (not on every click once already complete) so applyDayRotation()
+  // can auto-select the next day in rotation on a later day's visit.
+  if(!wasComplete && isDayComplete(activeDay)){
+    saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
+    // judged on the device with the same rules gym-be applies; a day that goes to review says so
+    const ev = GymVerify.evidence(todayStr(), activeDay, "live");
+    const state = GymVerify.judge(ev).state;
+    GymVerify.setLocalState(todayStr(), activeDay, state);
+    endWorkoutSession(); updateSessionUI(); // the workout is over: stop its timer, and any rest / exercise timer with it
+    stopRestTimer();
+    cancelRestNotification();
+    if(window.GymCelebrate) GymCelebrate.day(activeDay, { held: state !== "verified", durationSec: ev.elapsedSec });
+  }
+  if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
+    window.GymCalendar.onCheckChanged(activeDay, todayStr());
+  }
+}
+function paintSets(id, state){
+  exList.querySelectorAll(`.set-chk[data-set-ex="${id}"]`).forEach((b, i)=>{
+    b.classList.toggle("on", !!state[i]);
+    b.setAttribute("aria-checked", String(!!state[i]));
+  });
+  // "Machine busy?" and Undo only exist until the first set of that exercise is ticked
+  const card = exList.querySelector(`.check[data-id="${id}"]`);
+  if(card) card.closest(".ex-card").querySelectorAll("[data-swap], [data-swapundo]").forEach(el=>{ el.hidden = state.some(Boolean); });
+}
+// A short plain toast (set ticks are refused with one, and the big checkbox explains itself).
+function toastMsg(message){
+  if(window.GymToast && typeof window.GymToast.show === "function") window.GymToast.show({ message, duration: 3500 });
+}
+// One set tick or un-tick. A tick goes through GymVerify first (60 s since the last
+// accepted tick, workout timer started on the first tick). { ok, on, waitSec }
+function toggleSet(id, i){
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
+  const ex = day && day.exercises.find(x=>x.id===id);
+  if(!ex) return { ok:false };
+  const date = todayStr(), k = sessionKey(activeDay);
+  const st = setState(k, ex, !!(checks[k] || {})[id]);
+  const on = !st[i];
+  if(on){
+    const first = !GymVerify.hasTicks(date, activeDay);
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    // a timer started before the first tick is the workout's start (but not one left running since yesterday)
+    if(first && activeSession && activeSession.dayId === activeDay && activeSession.startedAt >= midnight.getTime()){
+      GymVerify.setTimerStart(date, activeDay, activeSession.startedAt);
+    }
+    const r = GymVerify.tryTick(date, activeDay, id, i, Date.now());
+    if(!r.ok){
+      toastMsg(r.clock ? t("tickClock") : t("tickWait").replace("{s}", r.waitSec));
+      return { ok:false, waitSec:r.waitSec };
+    }
+    if(first && !activeSession){
+      const t0 = GymVerify.timerStart(date, activeDay);
+      activeSession = { dayId: activeDay, startedAt: t0, running: true, accumSec: 0, segStart: t0 };
+      saveJSON("gym_session_active", activeSession);
+      updateSessionUI();
+    }
+  } else {
+    GymVerify.untick(date, activeDay, id, i);
+  }
+  st[i] = on;
+  setChecks[k] = setChecks[k] || {};
+  setChecks[k][id] = st;
+  saveSetChecks();
+  paintSets(id, st);
+  const all = st.every(Boolean);
+  if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
+  return { ok:true, on };
+}
+
 function renderExercises(){
   if(restSlot !== null && weekSlots()){ renderRestPanel(); return; }
   document.body.classList.remove("rest-view");
-  const day = DAYS.find(d=>d.id===activeDay);
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
   dayMuscles.textContent = dayLabel(day) + " — " + musLabel(day);
   renderMuscleTiles(day);
   const key = sessionKey(day.id);
@@ -1477,6 +1589,7 @@ function renderExercises(){
     // Plans saved before a clip matched (or whose name now matches an alias) get it here; none = "coming soon".
     if(!ex.vid){ const v = window.GymExerciseVideo ? GymExerciseVideo(ex.en) : ""; if(v) ex.vid = v; }
     const hasVid = !!ex.vid;
+    const anyTick = setState(key, ex, done).some(Boolean) || GymVerify.exerciseTicked(todayStr(), activeDay, ex.id);
     const tsec = timedSeconds(ex.reps); // >0: a hold/interval measured in seconds, not reps
     const mus = muscleBits(ex, play && i < 8 ? i : -1); // only the first screenful animates
     const exSh = window.GymMuscleArt ? exShapes(ex) : null;
@@ -1496,6 +1609,8 @@ function renderExercises(){
           ${mus.chip}
         </div>
       </div>
+      ${ex.swapFrom ? `<div class="ex-swapped"><span>${esc(t("swappedFrom").replace("{name}", exName(ex.swapFrom)))}</span>
+        <button type="button" class="ex-swap-undo" data-swapundo="${esc(ex.swapFrom.id)}"${anyTick || GymSwap.inView(todayStr(), activeDay, ex.swapFrom.id) ? " hidden" : ""}>${t("swapUndo")}</button></div>` : ``}
       <div class="ex-meta">
         <span><b>${esc(ex.sets)}</b> ${t("sets")}</span>
         <span><b>${esc(ex.reps)}</b> ${t(tsec ? "timeLbl" : "reps")}</span>
@@ -1527,6 +1642,10 @@ function renderExercises(){
           <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
           ${t("save")}
         </button>
+        <button type="button" class="btn-sm swap" data-swap="${eid}"${anyTick ? " hidden" : ""}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10.2l-2.6-2.6L16 3l5 5-5 5-1.4-1.4L17.2 9H7zm10 10H6.8l2.6 2.6L8 21l-5-5 5-5 1.4 1.4L6.8 15H17z"/></svg>
+          ${t("swapBtn")}
+        </button>
         <button class="btn-sm rest" data-rest="${esc(ex.rest)}" data-name="${nm}">
           <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11H8v-2h3V7h2z"/></svg>
           ${t("restBtn")}
@@ -1548,82 +1667,21 @@ function renderExercises(){
   if(play) setTimeout(()=>exList.querySelectorAll(".mus-settle").forEach(e=>e.classList.remove("mus-settle")), 1200);
   animateCards = false;
 
-  // --- checkbox: flip just this card, no list rebuild ---
-  // Single path for "exercise done" so the big checkbox and the last set tick
-  // share the same progress / streak / calendar side effects.
-  function setExDone(id, on){
-    const k = sessionKey(activeDay);
-    const wasComplete = isDayComplete(activeDay);
-    checks[k] = checks[k] || {};
-    checks[k][id] = on;
-    saveJSON("gym_checks", checks);
-    if(on) rememberTags(k, (DAYS.find(d=>d.id === activeDay) || { exercises:[] }).exercises.filter(e=>e.id === id));
-    refreshWeekMap();
-    const el = exList.querySelector(`.check[data-id="${id}"]`);
-    if(el){
-      const was = el.classList.contains("on");
-      el.classList.toggle("on", on);
-      if(on && !was && window.GymMotion) GymMotion.pop(el);
-      const card = el.closest(".ex-card");
-      if(card) card.classList.toggle("done", on);
-    }
-    updateProgress();
-    // Record the moment this day's checklist *transitions* to complete
-    // (not on every click once already complete) so applyDayRotation()
-    // can auto-select the next day in rotation on a later day's visit.
-    if(!wasComplete && isDayComplete(activeDay)){
-      saveJSON("gymday_last_completed", { date: todayStr(), dayId: activeDay });
-      if(window.GymCelebrate) GymCelebrate.day(activeDay);
-    }
-    if(window.GymCalendar && typeof window.GymCalendar.onCheckChanged === "function"){
-      window.GymCalendar.onCheckChanged(activeDay, todayStr());
-    }
-  }
-  function paintSets(id, state){
-    exList.querySelectorAll(`.set-chk[data-set-ex="${id}"]`).forEach((b, i)=>{
-      b.classList.toggle("on", !!state[i]);
-      b.setAttribute("aria-checked", String(!!state[i]));
-    });
-  }
+  // The big checkbox no longer completes anything: a day counts set by set (see verify.js).
   exList.querySelectorAll(".check").forEach(el=>{
-    el.onclick = ()=>{
-      const id = el.dataset.id;
-      const k = sessionKey(activeDay);
-      const on = !((checks[k] || {})[id]);
-      const ex = day.exercises.find(x=>x.id===id);
-      if(ex){
-        const st = Array(setCount(ex)).fill(on);
-        setChecks[k] = setChecks[k] || {};
-        setChecks[k][id] = st;
-        saveSetChecks();
-        paintSets(id, st);
-      }
-      setExDone(id, on);
-    };
+    el.onclick = ()=> toastMsg(t("tickEachSet"));
   });
 
   // --- set checkboxes: all sets ticked = exercise done, untick one = not done ---
   exList.querySelectorAll(".set-chk").forEach(btn=>{
     btn.onclick = ()=>{
-      const id = btn.dataset.setEx, i = +btn.dataset.set;
-      const k = sessionKey(activeDay);
-      const ex = day.exercises.find(x=>x.id===id);
-      if(!ex) return;
-      const st = setState(k, ex, !!(checks[k] || {})[id]);
-      st[i] = !st[i];
-      setChecks[k] = setChecks[k] || {};
-      setChecks[k][id] = st;
-      saveSetChecks();
-      paintSets(id, st);
-      if(st[i]){ hapticTick(); if(window.GymMotion) GymMotion.pop(btn); }
-      if(st[i]){
-        // same value the card's Rest button uses; restarts a running timer
-        const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
-        const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
-        if(rest > 0) startRestTimer(rest, restBtn.dataset.name);
-      }
-      const all = st.every(Boolean);
-      if(all !== !!(checks[k] || {})[id]) setExDone(id, all);
+      const r = toggleSet(btn.dataset.setEx, +btn.dataset.set);
+      if(!r.ok || !r.on) return;
+      hapticTick(); if(window.GymMotion) GymMotion.pop(btn);
+      // same value the card's Rest button uses; restarts a running timer
+      const restBtn = btn.closest(".ex-card").querySelector("[data-rest]");
+      const rest = restBtn ? parseInt(restBtn.dataset.rest) : 0;
+      if(rest > 0 && !isDayComplete(activeDay)) startRestTimer(rest, restBtn.dataset.name); // the last set just finished the day
     };
   });
 
@@ -1656,6 +1714,19 @@ function renderExercises(){
     };
   });
 
+  const swapped = ()=>{ renderExercises(); updateProgress(); refreshWeekMap(); };
+  exList.querySelectorAll("[data-swap]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const ex = day.exercises.find(x=>x.id === btn.dataset.swap);
+      if(ex) GymSwap.open(ex, ex.swapFrom ? ex.swapFrom.id : ex.id, activeDay, swapped);
+    };
+  });
+  exList.querySelectorAll("[data-swapundo]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const orig = btn.dataset.swapundo, cur = (GymSwap.map(todayStr(), activeDay))[orig];
+      if(GymSwap.undo(todayStr(), activeDay, orig)){ GymVerify.clearExercise(todayStr(), activeDay, cur); swapped(); }
+    };
+  });
   exList.querySelectorAll("[data-rest]").forEach(btn=>{
     btn.onclick = ()=> startRestTimer(parseInt(btn.dataset.rest), btn.dataset.name);
   });
@@ -1707,7 +1778,7 @@ function renderNotes(){
 // updateProgress() (active day's progress pill/bar) and isDayComplete()
 // (blocking timer start / driving day-rotation) so the two never drift.
 function dayProgress(dayId){
-  const day = DAYS.find(d=>d.id===dayId);
+  const day = dayView(DAYS.find(d=>d.id===dayId));
   if(!day) return { done:0, total:0 };
   const dayChecks = checks[sessionKey(dayId)] || {};
   const total = day.exercises.length;
@@ -1805,6 +1876,8 @@ document.getElementById("resetLink").onclick = ()=>{
   delete setChecks[dayKey];
   saveJSON("gym_checks", checks);
   saveSetChecks();
+  // the recorded tick times go too (the timer start and last tick stay: the day's clock keeps running)
+  window.GymApp.dayExercises(activeDay).forEach(e=>GymVerify.clearExercise(todayStr(), activeDay, e.id));
   animateCards = true;
   renderAll();
   if(window.GymToast && typeof window.GymToast.show === "function"){
@@ -1962,7 +2035,7 @@ function restTick(){
     timerBar.classList.add("done"); // the ring fills and pops while the widget leaves
     stopRestTimer();
     const sub = kind === "ex" ? preciseStr("exOverBody").replace("{n}", held) : t("restOverBody").replace("{name}", restName);
-    if(kind === "ex") fillExerciseSeconds(exId, held);
+    if(kind === "ex"){ fillExerciseSeconds(exId, held); tickAfterHold(exId); }
     // Back from a long screen-off: the native alert already rang, so don't ring a second time.
     if(notifScheduled && Date.now() - endedAt > ALARM_LATE_MS){
       notifScheduled = false;
@@ -1982,6 +2055,15 @@ function stopRestTimer(){
   readyShown = 0;
   timerBar.classList.remove("show", "ending", "ready");
   holdScreenAwake(false);
+}
+// A finished hold ticks the exercise's next open set, under the same 60 s rule as a tap.
+function tickAfterHold(id){
+  const day = dayView(DAYS.find(d=>d.id===activeDay));
+  const ex = day && day.exercises.find(x=>x.id===id);
+  if(!ex) return;
+  const k = sessionKey(activeDay);
+  const i = setState(k, ex, !!(checks[k] || {})[id]).indexOf(false);
+  if(i >= 0) toggleSet(id, i);
 }
 // Puts the seconds held into the card's reps field so the set can be saved.
 function fillExerciseSeconds(id, secs){
@@ -2365,7 +2447,8 @@ function updateSessionUI(){
     miniTimer.classList.remove("show");
     const last = lastSessionFor(activeDay);
     const dObj = DAYS.find(d=>d.id===activeDay);
-    sessionTimeEl.textContent = "00:00:00";
+    // a day finished today keeps showing how long it took; otherwise the clock is at zero
+    sessionTimeEl.textContent = last && last.date === todayStr() && isDayComplete(activeDay) ? fmtHMS(last.durationSec) : "00:00:00";
     sessionHintEl.textContent = last
       ? t("lastSession").replace("{d}", dayLabel(dObj)).replace("{n}", Math.round(last.durationSec/60))
       : t("notStarted");
@@ -2393,20 +2476,27 @@ miniTimer.onclick = ()=>{
 };
 
 // Guarded: a double tap must not start-then-immediately-stop (or double-log) a session.
+// Saves the running session of the active day and stops its clock (End Workout, or the day completing).
+// The caller refreshes the UI.
+function endWorkoutSession(){
+  if(!activeSession || activeSession.dayId !== activeDay) return;
+  const durationSec = sessionElapsedSec();
+  sessions[activeDay] = sessions[activeDay] || [];
+  sessions[activeDay].push({ date: todayStr(), durationSec });
+  saveJSON("gym_sessions", sessions);
+  activeSession = null;
+  localStorage.removeItem("gym_session_active");
+}
 sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){
-    const durationSec = sessionElapsedSec();
-    sessions[activeDay] = sessions[activeDay] || [];
-    sessions[activeDay].push({ date: todayStr(), durationSec });
-    saveJSON("gym_sessions", sessions);
-    activeSession = null;
-    localStorage.removeItem("gym_session_active");
+    endWorkoutSession();
   } else {
     if(isDayComplete(activeDay)){
       alert(t("dayAlreadyDone"));
       return;
     }
-    const now = Date.now();
+    // a day that already has ticks keeps counting from its first tick (the workout timer can't be reset)
+    const now = GymVerify.timerStart(todayStr(), activeDay) || Date.now();
     activeSession = { dayId: activeDay, startedAt: now, running: true, accumSec: 0, segStart: now };
     saveJSON("gym_session_active", activeSession);
   }

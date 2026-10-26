@@ -1,10 +1,12 @@
 const { test, expect } = require("@playwright/test");
-const { openApp, TODAY, DAY_ID, EX_IDS } = require("./helpers");
+const { openApp, tickSets, verifiedSeed, TODAY, DAY_ID, EX_IDS } = require("./helpers");
 
 test.setTimeout(45000);
 const T = { timeout: 8000 };
 const allButLast = () => ({ [TODAY + "_" + DAY_ID]: Object.fromEntries(EX_IDS.slice(0, -1).map((id) => [id, true])) });
 const lastCheck = (page) => page.locator('.check[data-id="' + EX_IDS[EX_IDS.length - 1] + '"]');
+const LAST = EX_IDS[EX_IDS.length - 1];
+const seed = () => verifiedSeed([LAST]);
 const card = (page) => page.locator(".celebrate-card");
 
 async function ready(page, signedIn) {
@@ -14,18 +16,19 @@ async function ready(page, signedIn) {
 
 test.describe("day celebration", () => {
   test("finishing the day shows streak copy once; reload and re-check stay quiet", async ({ browser }) => {
-    const { context, page, consoleErrors } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    const { context, page, consoleErrors } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 1, todayDone: false } });
     await ready(page, true);
     await expect(page.locator(".celebrate-card.show")).toHaveCount(0);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toHaveClass(/show/, T);
     await expect(card(page)).toContainText("Two days in a row. Keep it going");
-    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
+    await expect(page.locator(".celebrate [role=status]")).toContainText("Two days in a row. Keep it going");
     await card(page).click();
     await expect(card(page)).not.toHaveClass(/show/);
 
-    await lastCheck(page).click(); // uncheck
-    await lastCheck(page).click(); // re-check: complete again
+    await page.locator(`.set-chk[data-set-ex="${LAST}"]`).last().click(); // untick
+    await page.clock.fastForward(61000);
+    await page.locator(`.set-chk[data-set-ex="${LAST}"]`).last().click(); // re-tick: complete again
     await page.waitForTimeout(300);
     await expect(card(page)).not.toHaveClass(/show/);
 
@@ -38,9 +41,9 @@ test.describe("day celebration", () => {
   });
 
   test("Escape and the timer dismiss", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 3, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 3, todayDone: false } });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toContainText("4 days in a row. You're building a habit", T);
     await page.keyboard.press("Escape");
     await expect(card(page)).not.toHaveClass(/show/);
@@ -52,34 +55,35 @@ test.describe("day celebration", () => {
   });
 
   test("a full week is a milestone", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 6, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 6, todayDone: false } });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toContainText("A full week in a row. You deserve the best", T);
     await context.close();
   });
 
   test("already counted today uses the streak as is", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 2, todayDone: true } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 2, todayDone: true } });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toContainText("Two days in a row", T);
     await context.close();
   });
 
   test("anonymous gets the generic line", async ({ browser }) => {
     const { context, page } = await openApp(browser);
-    const checks = page.locator(".check");
-    await expect(checks.first()).toBeVisible(T);
-    for (let i = await checks.count(); i > 0; i--) await checks.nth(i - 1).click();
+    const sets = page.locator(".set-chk");
+    await expect(sets.first()).toBeVisible(T);
+    const n = await sets.count();
+    for (let i = 0; i < n; i++) { await page.clock.fastForward(130000); await sets.nth(i).click(); }
     await expect(card(page)).toContainText("Great job. See you tomorrow", T);
     await context.close();
   });
 
   test("Arabic copy uses Arabic numerals", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, lang: "ar", checks: allButLast(), server: { streak: 2, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, lang: "ar", checks: allButLast(), ls: seed(), server: { streak: 2, todayDone: false } });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toContainText("٣ أيام، ربنا ما يقطعها عادة", T);
     await context.close();
   });
@@ -97,14 +101,14 @@ test.describe("day celebration", () => {
   });
 
   test("streak icon is our own inline SVG: decorative, built on demand, static under reduced motion", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 1, todayDone: false } });
     await ready(page, true);
     expect(await page.locator(".celebrate-emoji svg").count()).toBe(0);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     const icon = page.locator(".celebrate-emoji svg.ci-fire");
     await expect(icon).toHaveCount(1, T);
     await expect(page.locator(".celebrate-emoji")).toHaveAttribute("aria-hidden", "true");
-    await expect(page.locator(".celebrate [role=status]")).toHaveText("Two days in a row. Keep it going");
+    await expect(page.locator(".celebrate [role=status]")).toContainText("Two days in a row. Keep it going");
     expect(await page.locator(".celebrate-emoji img").count()).toBe(0);
     expect(await page.evaluate(() => performance.getEntriesByType("resource").some((r) => /icons\/emoji/.test(r.name)))).toBe(false);
     await expect.poll(() => icon.locator(".ci-flame").evaluate((e) => getComputedStyle(e).animationName), T).toBe("ci-flicker");
@@ -112,21 +116,19 @@ test.describe("day celebration", () => {
   });
 
   test("streak icon does not animate when reduced motion is on", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 1, todayDone: false } });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(page.locator(".celebrate-emoji svg.ci-fire")).toHaveCount(1, T);
     expect(await page.locator(".celebrate-emoji .ci-flame").evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
     await context.close();
   });
 
   test("a partly done day never celebrates", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast() });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed() });
     await ready(page, true);
-    await lastCheck(page).click();
-    await lastCheck(page).click();
-    await page.locator('.check[data-id="' + EX_IDS[0] + '"]').click(); // now incomplete
+    await tickSets(page, LAST, 2); // one set short of done
     await page.waitForTimeout(200);
     await expect(page.locator(".celebrate-card.show")).toHaveCount(0);
     await context.close();
@@ -159,10 +161,10 @@ test.describe("rest celebration", () => {
 
 test.describe("reduced motion", () => {
   test("card is shown without animation", async ({ browser }) => {
-    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), server: { streak: 1, todayDone: false } });
+    const { context, page } = await openApp(browser, { signedIn: true, checks: allButLast(), ls: seed(), server: { streak: 1, todayDone: false } });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await ready(page, true);
-    await lastCheck(page).click();
+    await tickSets(page, LAST);
     await expect(card(page)).toHaveClass(/show/, T);
     const names = await page.evaluate(() => [".celebrate-mascot", ".celebrate-card"].map((s) => getComputedStyle(document.querySelector(s)).animationName));
     expect(names).toEqual(["none", "none"]);

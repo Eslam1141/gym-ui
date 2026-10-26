@@ -175,6 +175,19 @@ body.adm{background:var(--bg);color:var(--paper);min-height:100vh;margin:0;font-
 .adm-st-in_progress{background:var(--warn);color:#14161B}
 .adm-st-done{background:var(--success);color:#fff}
 .adm-st-wont_do{background:var(--panel2);color:var(--paper-dim)}
+.adm-st-flagged,.adm-st-pending{background:var(--warn-soft);color:var(--paper);border:1px solid var(--warn)}
+.adm-st-approved{background:var(--success-soft);color:var(--success-text);border:1px solid var(--success)}
+.adm-st-rejected{background:var(--panel2);color:var(--danger);border:1px solid var(--danger)}
+.adm-rv-reasons{display:flex;flex-wrap:wrap;gap:6px;margin-block:10px}
+.adm-rv-reason{background:var(--warn-soft);color:var(--paper);border:1px solid var(--warn);font-weight:600}
+.adm-rv-ticks{list-style:none;margin:8px 0 0;padding:0;font-size:var(--text-sm);font-variant-numeric:tabular-nums}
+.adm-rv-ticks li{display:grid;grid-template-columns:7.5em minmax(0,1fr) 4.5em;gap:8px;align-items:baseline;padding:6px 8px;border-inline-start:3px solid transparent;border-block-end:1px solid var(--line)}
+.adm-rv-ex{overflow-wrap:anywhere}
+.adm-rv-gap{text-align:end;color:var(--paper-dim)}
+.adm-rv-ticks li.is-short{border-inline-start-color:var(--danger);background:var(--panel2)}
+.adm-rv-ticks li.is-short .adm-rv-gap{color:var(--danger);font-weight:700}
+.adm-rv-note{display:block;width:100%;box-sizing:border-box;margin-block:6px 0;min-height:44px;background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:10px;padding:10px 12px;font:inherit}
+.adm-rv .adm-kv{margin-block:10px}
 
 /* ---- workout log dialog (opened from the user panel) ---- */
 .adm-log-bd{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30}

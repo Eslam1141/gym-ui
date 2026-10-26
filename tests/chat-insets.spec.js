@@ -41,6 +41,9 @@ test("chat input stays focused and enabled while sending and after the reply (ke
 
 test("chat input row clears the system navigation bar (bottom safe-area inset)", async ({ browser }) => {
   const { context, page } = await openChat(browser);
+  // The Messenger-style "bubble" open (fab visible) drops the inset on purpose; which mode opens races the fab's entrance
+  // animation (flaky on main too), so pin the full-screen mode this test is about.
+  await page.evaluate(() => document.getElementById("coachChat").classList.remove("bubble"));
   const pad = () => page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("coachChatForm")).paddingBottom));
   expect(await pad()).toBe(10); // no inset (browser): unchanged
   await page.evaluate(() => document.documentElement.style.setProperty("--sab", "48px")); // what env(safe-area-inset-bottom) resolves to on a 3-button bar

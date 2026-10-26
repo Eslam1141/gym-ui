@@ -2,7 +2,7 @@
 // Fake clock: Fri 2026-10-02 10:00 Cairo; weeks run Saturday-Friday, so this week is 2026-09-26 .. 2026-10-02.
 // The map-dependent tests skip while either piece is missing: they run once #149 and #156 are together.
 const { test, expect } = require("@playwright/test");
-const { openApp } = require("./helpers");
+const { openApp, tickSets } = require("./helpers");
 
 test.setTimeout(60000);
 const YESTERDAY_AT = "2026-10-01T07:00:00Z";
@@ -36,7 +36,7 @@ async function tickDay(page, i) {
   const n = await cards.count();
   for (let c = 0; c < n; c++) {
     const sets = cards.nth(c).locator(".set-chk");
-    for (let s = 0; s < (await sets.count()); s++) await sets.nth(s).click();
+    for (let s = 0; s < (await sets.count()); s++) { await page.clock.fastForward(61000); await sets.nth(s).click(); }
     await expect(cards.nth(c)).toHaveClass(/done/);
   }
   return page.evaluate(() => window.GymApp && DAYS.find((d) => d.id === activeDay).id);
@@ -92,7 +92,7 @@ test("a Classic user sees the map working as before", async ({ browser }) => {
   test.skip(!ready, "needs the body map (#149) and the split choice (#156) together");
   expect(await page.evaluate(() => localStorage.getItem("gym_split"))).toBeNull();
   await expect(page.locator("#weekMap")).toBeVisible();
-  await page.locator('.check[data-id="mua_bench"]').click();
+  await tickSets(page, "mua_bench");
   expect((await cov(page)).chest_mid).toBe(1);
   expect(await level(page, "chest_mid")).toContain("trained once");
   await context.close();
@@ -101,7 +101,7 @@ test("a Classic user sees the map working as before", async ({ browser }) => {
 test("switching split mid-week keeps the map's counts", async ({ browser }) => {
   const { context, page, ready } = await open(browser);
   test.skip(!ready, "needs the body map (#149) and the split choice (#156) together");
-  await page.locator('.check[data-id="mua_bench"]').click();   // Classic Upper, today
+  await tickSets(page, "mua_bench");   // Classic Upper, today
   const before = await cov(page);
   expect(before.chest_mid).toBe(1);
   await chooseHome4(page);                                      // Classic -> 4-day Home split

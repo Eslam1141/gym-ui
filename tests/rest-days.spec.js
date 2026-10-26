@@ -61,21 +61,22 @@ test.describe("rest days (signed in)", () => {
     await context.close();
   });
 
-  test("save-yesterday: Yes posts {date, dayId, today} and marks the day", async ({ browser }) => {
+  test("save-yesterday: Yes posts evidence kind save_yesterday and leaves checks partial", async ({ browser }) => {
     const { context, page, server } = await openApp(browser, { signedIn: true, checks: partial(3) });
     await settle(page);
     await expect(sheet(page)).toBeVisible(T);
     await expect(sheet(page).locator(".syd-body")).toContainText("3 of 6");
+    await expect(sheet(page).locator(".syd-yes")).toHaveText("Send for review");
     await sheet(page).locator(".syd-yes").click();
     await expect(sheet(page)).toHaveCount(0, T);
     const p = posts(server, "/workouts/complete");
     expect(p).toHaveLength(1);
-    expect(p[0].body).toEqual({ date: YESTERDAY, dayId: DAY_ID, today: TODAY });
-    const done = await page.evaluate(([k, ids]) => {
-      const c = JSON.parse(localStorage.getItem("gym_checks"))[k];
-      return ids.every((i) => c[i]);
-    }, [YESTERDAY + "_" + DAY_ID, EX_IDS]);
-    expect(done).toBe(true);
+    expect(p[0].body).toMatchObject({ date: YESTERDAY, dayId: DAY_ID, today: TODAY, evidence: { kind: "save_yesterday", plan: "gym" } });
+    expect(p[0].body.evidence.sets.every((s) => s.at === null)).toBe(true); // nothing is ticked for the user
+    const c = await page.evaluate((k) => JSON.parse(localStorage.getItem("gym_checks"))[k], YESTERDAY + "_" + DAY_ID);
+    expect(Object.values(c).filter(Boolean)).toHaveLength(3);
+    expect(await page.evaluate(([d, id]) => GymVerify.localState(d, id), [YESTERDAY, DAY_ID])).toBe("pending");
+    await expect(page.locator("#gymToast")).toContainText("Sent for review", T);
     await context.close();
   });
 
@@ -150,7 +151,7 @@ test.describe("rest days (signed in)", () => {
       { date: YESTERDAY, dayId: DAY_ID, today: TODAY },
       { date: YESTERDAY, dayId: DAY_ID }
     ]);
-    expect(await page.evaluate(() => localStorage.getItem("gymrest_pending"))).toBeNull();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending") || "[]"))).toEqual([]);
     await context.close();
   });
 
@@ -163,7 +164,7 @@ test.describe("rest days (signed in)", () => {
     await page.evaluate(() => window.GymRest.flushQueue());
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gymrest_pending"))), T)
       .toEqual([{ date: YESTERDAY, dayId: "bad_day" }]);
-    expect(server.records).toEqual([{ date: YESTERDAY, dayId: DAY_ID }]);
+    expect(server.records).toMatchObject([{ date: YESTERDAY, dayId: DAY_ID }]);
     // The today-less retry happens once per attempt, not in a loop.
     const poison = posts(server, "/workouts/complete").filter((r) => r.body.dayId === "bad_day");
     expect(poison.map((r) => "today" in r.body)).toEqual([true, false]);
