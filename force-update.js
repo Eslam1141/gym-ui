@@ -151,12 +151,23 @@
     }
   }
 
+  // The bar and banner sit in the page flow, but the header (#topBar, #topPrefs, the mini timer)
+  // is fixed: publish the strip's height so styles.css can drop the fixed pieces below it.
+  function syncTop() {
+    if (!els) return;
+    var strip = !els.bar.hidden ? els.bar : !els.banner.hidden ? els.banner : null;
+    var root = document.documentElement;
+    if (strip) { root.style.setProperty("--fu-top", strip.offsetHeight + "px"); root.setAttribute("data-fu-top", ""); }
+    else { root.style.removeProperty("--fu-top"); root.removeAttribute("data-fu-top"); }
+  }
+
   function render(mode) {
     if (mode === "none" && !els) return;
     if (!els) build();
     label();
     els.bar.hidden = mode !== "bar";
     els.banner.hidden = mode !== "banner";
+    syncTop();
     setBlocking(mode === "block");
   }
 
@@ -241,6 +252,8 @@
       maybeReload();
     });
     if (window.GymApp && window.GymApp.onWorkoutIdle) window.GymApp.onWorkoutIdle(function () { check(); maybeReload(); });
+    if (window.GymApp && window.GymApp.onWorkoutActive) window.GymApp.onWorkoutActive(check); // a workout starting turns the banner off (and a block into the bar)
+    window.addEventListener("resize", syncTop);
     document.addEventListener("focusout", function () { setTimeout(maybeReload, 0); }); // activeElement settles after the event
     setInterval(checkForNewBuild, UPDATE_EVERY_MS);
     var sw = navigator.serviceWorker;

@@ -1180,7 +1180,14 @@ function notifyIdleIfIdle(wasBusy){
   if(!wasBusy || workoutInProgress()) return;
   idleListeners.slice().forEach(cb=>{ try{ cb(); }catch(e){} });
 }
+// The mirror of notifyIdleIfIdle: called after a session or timer starts (wasBusy = the state before).
+const activeListeners = [];
+function notifyActiveIfActive(wasBusy){
+  if(wasBusy || !workoutInProgress()) return;
+  activeListeners.slice().forEach(cb=>{ try{ cb(); }catch(e){} });
+}
 window.GymApp.workoutInProgress = workoutInProgress;
+window.GymApp.onWorkoutActive = cb=>{ if(typeof cb === "function") activeListeners.push(cb); };
 window.GymApp.onWorkoutIdle = cb=>{ if(typeof cb === "function") idleListeners.push(cb); };
 window.GymApp.exName = ex=> exName(ex);
 window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
@@ -1570,9 +1577,11 @@ function toggleSet(id, i){
       return { ok:false, waitSec:r.waitSec };
     }
     if(first && !activeSession){
+      const wasBusy = workoutInProgress();
       const t0 = GymVerify.timerStart(date, activeDay);
       activeSession = { dayId: activeDay, startedAt: t0, running: true, accumSec: 0, segStart: t0 };
       saveJSON("gym_session_active", activeSession);
+      notifyActiveIfActive(wasBusy);
       updateSessionUI();
     }
   } else {
@@ -2017,6 +2026,7 @@ function resetDock(kind){
 
 function startRestTimer(seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
+  const wasBusy = workoutInProgress();
   resetDock("rest");
   exPhase = "";
   timerAddBtn.disabled = false;
@@ -2033,9 +2043,11 @@ function startRestTimer(seconds, name){
   timerLive.textContent = `${label}, ${timerTime.textContent}`;
   restInterval = setInterval(restTick, 250);
   startRestRing();
+  notifyActiveIfActive(wasBusy);
 }
 function startExerciseTimer(id, seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
+  const wasBusy = workoutInProgress();
   resetDock("ex");
   exId = id; exTarget = seconds; exPhase = "ready";
   restName = name;
@@ -2051,6 +2063,7 @@ function startExerciseTimer(id, seconds, name){
   timerLive.textContent = `${label}, ${t("exReady")}`;
   restInterval = setInterval(restTick, 250);
   startRestRing();
+  notifyActiveIfActive(wasBusy);
 }
 let readyShown = 0;
 function restTick(){
@@ -2541,9 +2554,11 @@ sessionBtn.onclick = GymAct.once(()=>{
       return;
     }
     // a day that already has ticks keeps counting from its first tick (the workout timer can't be reset)
+    const wasBusy = workoutInProgress();
     const now = GymVerify.timerStart(todayStr(), activeDay) || Date.now();
     activeSession = { dayId: activeDay, startedAt: now, running: true, accumSec: 0, segStart: now };
     saveJSON("gym_session_active", activeSession);
+    notifyActiveIfActive(wasBusy);
   }
   updateSessionUI();
 }, { cooldown: 500 });

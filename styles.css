@@ -2917,5 +2917,12 @@ html[data-offline] [data-needs-net]{ opacity:.55; }
 .fu-banner-x{
   display:grid; place-items:center; min-width:44px; min-height:44px; border:0; border-radius:var(--radius-sm); background:none; cursor:pointer; color:var(--muted);
 }
+/* The strip (it already clears the top inset) pushes the page down; the fixed header pieces drop below it. */
+html[data-fu-top] #topBar, html[data-fu-top] #topPrefs{ top:calc(var(--fu-top) + 10px); }
+html[data-fu-top] body::before{ display:none; }
+html[data-fu-top] .wb-top{ top:var(--fu-top); }
+html[data-fu-top] .wb-pal-head{ top:calc(var(--fu-top) + var(--wb-top-h)); }
+@media (max-width:599.98px){ html[data-fu-top] #miniTimer{ top:calc(var(--fu-top) + 72px); } }
+@media (min-width:600px){ html[data-fu-top] #miniTimer{ top:calc(var(--fu-top) + 10px); } }
 @keyframes fu-in{ from{ opacity:0; } to{ opacity:1; } }
 @media (prefers-reduced-motion:reduce){ .fu-page{ animation:none; } .fu-btn{ transition:none; } .fu-btn:active{ transform:none; } }

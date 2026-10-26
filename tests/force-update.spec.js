@@ -248,6 +248,37 @@ test.describe("force update: page, bar, banner", () => {
     await context.close();
   });
 
+  test("the bar and the banner push the page down: the header's first button sits below them", async ({ browser }) => {
+    const below = async (page, strip) => {
+      await expect(strip).toBeVisible(T);
+      await expect(page.locator("#topBar button").first()).toBeVisible(T);
+      await page.waitForTimeout(300);
+      const s = await strip.boundingBox();
+      const b = await page.locator("#topBar button").first().boundingBox();
+      expect(b.y).toBeGreaterThanOrEqual(s.y + s.height);
+    };
+    let r = await openShell(browser, { min: "1.0.9" }, { open: { signedIn: true, ls: session(ago(10 * 60000)) } });
+    await below(r.page, fu.bar(r.page));
+    await r.context.close();
+    r = await openShell(browser, { latest: "1.1.0" }, { version: "1.0.9", open: { signedIn: true } });
+    await below(r.page, fu.banner(r.page));
+    await r.context.close();
+  });
+
+  test("a workout starting while the banner is up hides the banner right away", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { latest: "1.1.0" }, { version: "1.0.9", open: { signedIn: true } });
+    await expect(fu.banner(page)).toBeVisible(T);
+    await page.evaluate(() => { window.__active = 0; GymApp.onWorkoutActive(() => { window.__active++; }); });
+    const btn = page.locator("#exList [data-rest]").first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
+    await expect(page.locator("#timerBar")).toHaveClass(/show/, T);
+    await expect(fu.banner(page)).toBeHidden();
+    expect(await page.evaluate(() => window.__active)).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.hasAttribute("data-fu-top"))).toBe(false);
+    await context.close();
+  });
+
   test("a plain browser is never blocked, whatever the minimum says", async ({ browser }) => {
     const { context, page } = await openShell(browser, { min: "9.9.9", latest: "9.9.9" }, { native: false });
     await page.waitForTimeout(1200);
