@@ -183,14 +183,11 @@ test("InBody consent links to #inbody (AR text too)", async ({ browser }) => {
   }
 });
 
-test("chat note links to #ai-coach and the meal-photo notice to #meal-photos", async ({ browser }) => {
+test("no privacy link in the chat; the meal-photo notice links to #meal-photos", async ({ browser }) => {
   const { context, page } = await openApp(browser, { signedIn: true });
   await page.click('#appNav button[data-tab="more"]');
   await page.click("#coachFab");
-  const note = page.locator("#coachChatNote a.pol-link");
-  await expect(note).toBeVisible();
-  expect(await href(note)).toBe("/privacy#ai-coach");
-  await expect(note).toHaveAttribute("target", "_blank");
+  await expect(page.locator("#coachChatNote")).toBeHidden();
   const photo = page.locator("#coachPhotoNoticePrivacy");
   expect(await href(photo)).toBe("/privacy#meal-photos");
   await expect(photo).toHaveAttribute("target", "_blank");
