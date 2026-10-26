@@ -71,6 +71,13 @@ test.describe("force update: workout-in-progress hooks", () => {
     await r.context.close();
   });
 
+  test("a session is aged from its last activity: started 7 h ago but resumed 5 min ago is a workout", async ({ browser }) => {
+    const seed = { dayId: "m_upper", startedAt: ago(7 * 3600000), running: true, accumSec: 0, segStart: ago(5 * 60000) };
+    const { context, page } = await openApp(browser, { ls: { gym_session_active: seed } });
+    expect(await inWorkout(page)).toBe(true);
+    await context.close();
+  });
+
   test("a rest timer with no session is a workout; stopping it fires the idle callback once", async ({ browser }) => {
     const { context, page } = await openApp(browser, {});
     await countIdle(page);
@@ -279,6 +286,77 @@ test.describe("force update: page, bar, banner", () => {
     await context.close();
   });
 
+  test("a failed config fetch never blocks, even with a cached minimum; a good fetch does", async ({ browser }) => {
+    const cfg = { min: "9.9.9", fail: true };
+    const { context, page } = await openApp(browser, {
+      ls: { gym_app_config: { verifyStrict: false, minAppVersion: "9.9.9" } },
+      setup: async (ctx) => {
+        await ctx.route("**/api/v1/app-config", (route) => cfg.fail
+          ? route.fulfill({ status: 500, contentType: "application/json", body: "{}" })
+          : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ verifyStrict: false, minAppVersion: cfg.min }) }));
+        await ctx.addInitScript(() => {
+          window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android" };
+          window.GYM_APP_VERSION = "1.0.8";
+        });
+      }
+    });
+    expect(await page.evaluate(() => [GymAppConfig.minAppVersion(), GymAppConfig.fresh()])).toEqual(["9.9.9", false]);
+    await page.waitForTimeout(800);
+    await expect(fu.block(page)).toBeHidden();
+    cfg.fail = false;
+    await resume(page);
+    await expect(fu.block(page)).toBeVisible(T);
+    await context.close();
+  });
+
+  test("while blocking, nodes added to the page are made inert too, and focus returns when it lifts", async ({ browser }) => {
+    const cfg = { min: "1.0.9" };
+    const { context, page } = await openShell(browser, cfg, { open: { signedIn: true } });
+    await expect(fu.block(page)).toBeVisible(T);
+    await page.evaluate(() => {
+      const b = document.createElement("button");
+      b.id = "lateBtn"; b.textContent = "late";
+      document.body.appendChild(b);
+      b.focus();
+    });
+    await expect.poll(() => page.evaluate(() => document.getElementById("lateBtn").inert), T).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.activeElement.id), T).not.toBe("lateBtn"); // focus fixup runs on the next frame
+    cfg.min = "";
+    await fu.block(page).getByRole("button", { name: "Check again" }).click();
+    await expect(fu.block(page)).toBeHidden(T);
+    expect(await page.evaluate(() => document.getElementById("lateBtn").inert)).toBe(false);
+    expect(await page.evaluate(() => !!document.activeElement.closest("#topBar"))).toBe(true);
+    await context.close();
+  });
+
+  test("the bar and banner follow a language change", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" }, { open: { signedIn: true, ls: session(ago(10 * 60000)) } });
+    await expect(fu.bar(page)).toContainText("Your workout is saved", T);
+    await page.evaluate(() => window.applyLang("ar", true));
+    await expect(fu.bar(page)).toContainText("تمرينك محفوظ", T);
+    await context.close();
+  });
+
+  test("a full-screen overlay opens below the bar, not under it", async ({ browser }) => {
+    const { context, page } = await openShell(browser, { min: "1.0.9" }, { open: { signedIn: true, ls: session(ago(10 * 60000)) } });
+    await context.route(/\/api\/v1\/me\/consents/, (route) => route.fulfill({ status: 200, contentType: "application/json",
+      body: JSON.stringify(route.request().method() === "GET" ? { consents: [{ type: "coach_ai", textVersion: "coach_ai.v1", lang: "en", grantedAt: "2026-10-17T09:00:00Z" }] } : {}) }));
+    await expect(fu.bar(page)).toBeVisible(T);
+    await expect(page.locator("#bootLoader")).toBeHidden({ timeout: 10000 });
+    await page.locator("#coachFab").click();
+    await expect(page.locator("#coachChat.show")).toBeVisible(T);
+    await page.evaluate(() => document.getElementById("coachChat").classList.remove("bubble"));
+    await page.waitForTimeout(500);
+    const bar = await fu.bar(page).boundingBox();
+    const first = await page.locator("#coachChat button:visible").first().boundingBox();
+    expect(first.y).toBeGreaterThanOrEqual(bar.y + bar.height);
+    const overlay = await page.locator("#coachChat").boundingBox();
+    expect(overlay.y).toBeGreaterThanOrEqual(bar.y + bar.height);
+    await expect(fu.bar(page)).toBeVisible();
+    await page.screenshot({ path: "../docs/screenshots/2026-10-26-force-update/bar-over-chat-en-dark-390.png" });
+    await context.close();
+  });
+
   test("a plain browser is never blocked, whatever the minimum says", async ({ browser }) => {
     const { context, page } = await openShell(browser, { min: "9.9.9", latest: "9.9.9" }, { native: false });
     await page.waitForTimeout(1200);
@@ -371,6 +449,47 @@ test.describe("force update: auto-reload", () => {
     await resume(page);
     await page.waitForTimeout(600);
     expect(await reloads(page)).toBe(1);
+    await context.close();
+  });
+
+  test("an open password reset (?reset_token) is never reloaded away", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    await page.goto("/index.html?reset_token=x");
+    await expect(page.locator("#onboarding")).toBeVisible(T);
+    await page.evaluate(() => { window.__reloads = 0; GymForceUpdate.reload = () => { window.__reloads++; }; });
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(false);
+    await swUpdate(page);
+    await resume(page);
+    await page.waitForTimeout(500);
+    expect(await reloads(page)).toBe(0);
+    await context.close();
+  });
+
+  test("any visible full-screen overlay is not safe", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    for (const sel of ["#onboarding", "#survey", "#coachChat"]) {
+      const safe = await page.evaluate((sel) => {
+        let el = document.querySelector(sel);
+        if (!el) { el = document.createElement("div"); el.id = sel.slice(1); document.body.appendChild(el); } // #survey is built on demand
+        el.hidden = false;
+        const r = GymForceUpdate.isSafeToReload();
+        el.hidden = true;
+        return r;
+      }, sel);
+      expect(safe, sel).toBe(false);
+    }
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(true);
+    await context.close();
+  });
+
+  test("away from the Plan tab it waits for the next resume; on Plan it goes at once", async ({ browser }) => {
+    const { context, page } = await openReload(browser, { signedIn: true });
+    await page.click('#appNav button[data-tab="more"]');
+    await swUpdate(page);
+    await page.waitForTimeout(600);
+    expect(await reloads(page)).toBe(0);
+    await resume(page);
+    await expect.poll(() => reloads(page), T).toBe(1);
     await context.close();
   });
 

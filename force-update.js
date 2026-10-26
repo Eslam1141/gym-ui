@@ -9,7 +9,8 @@
  *  - Update: GymNativeShell.startUpdate() (Play in-app update) when the shell has it, else the
  *    Play Store listing (market://, with the https URL shown as text).
  *  - Reload: a new service worker taking control of an already-open page reloads it, but only
- *    when that is safe (no workout, no open sheet, no focused field) and once per build per tab.
+ *    when that is safe (no workout, no overlay or sheet, no focused field), once per build per tab,
+ *    and only on the Plan tab, on resume, or when a workout ends.
  */
 (function () {
   "use strict";
@@ -50,6 +51,7 @@
   var blocking = false;
   var els = null;        // the page, bar and banner, built on first use
   var inerted = [];      // body children made inert while the page is up
+  var watcher = null;    // MutationObserver: inerts nodes appended while the page is up
 
   function t(k) { return window.GymApp && window.GymApp.t ? window.GymApp.t(k) : k; }
   function isNative() {
@@ -57,7 +59,9 @@
   }
   function inWorkout() { return !!(window.GymApp && window.GymApp.workoutInProgress && window.GymApp.workoutInProgress()); }
   function dismissed() { try { return localStorage.getItem(DISMISS_KEY) || ""; } catch (e) { return ""; } }
-  function cfg(name) { return window.GymAppConfig ? window.GymAppConfig[name]() : ""; }
+  // The server's versions count only after a real fetch this session: a failed fetch (offline) must
+  // never block or nag on the strength of a cached value.
+  function cfg(name) { return window.GymAppConfig && window.GymAppConfig.fresh() ? window.GymAppConfig[name]() : ""; }
 
   function el(tag, cls, attrs) {
     var n = document.createElement(tag);
@@ -143,11 +147,25 @@
       Array.prototype.forEach.call(document.body.children, function (c) {
         if (c !== els.page && !c.inert) { c.inert = true; inerted.push(c); }
       });
+      if (window.MutationObserver) {
+        watcher = new MutationObserver(function (list) {
+          list.forEach(function (m) {
+            Array.prototype.forEach.call(m.addedNodes, function (n) {
+              if (n.nodeType === 1 && n !== els.page && !n.inert) { n.inert = true; inerted.push(n); }
+            });
+          });
+        });
+        watcher.observe(document.body, { childList: true });
+      }
       els.update.focus();
     } else {
+      if (watcher) { watcher.disconnect(); watcher = null; }
       inerted.forEach(function (c) { c.inert = false; });
       inerted = [];
       els.storeNote.hidden = true;
+      var first = document.querySelector("#topBar button");
+      if (first && first.offsetParent) first.focus();
+      else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     }
   }
 
@@ -157,7 +175,7 @@
     if (!els) return;
     var strip = !els.bar.hidden ? els.bar : !els.banner.hidden ? els.banner : null;
     var root = document.documentElement;
-    if (strip) { root.style.setProperty("--fu-top", strip.offsetHeight + "px"); root.setAttribute("data-fu-top", ""); }
+    if (strip) { root.style.setProperty("--fu-top", Math.ceil(strip.getBoundingClientRect().height) + "px"); root.setAttribute("data-fu-top", ""); }
     else { root.style.removeProperty("--fu-top"); root.removeAttribute("data-fu-top"); }
   }
 
@@ -207,7 +225,7 @@
   // No workout, no open sheet / dialog / ringing timer, no focused text field.
   api.isSafeToReload = function () {
     if (inWorkout()) return false;
-    if (document.querySelector('[role="dialog"]:not([hidden]), .sheet.open, .syd, #alarmBanner:not([hidden])')) return false;
+    if (document.querySelector('[role="dialog"]:not([hidden]), .sheet.open, .syd, #alarmBanner:not([hidden]), .m-ovl:not([hidden]), #survey:not([hidden]), .net-screen:not([hidden]), .pv-done:not([hidden]), #coachChat:not([hidden]), #tour:not([hidden])')) return false;
     var a = document.activeElement;
     return !(a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable));
   };
@@ -254,7 +272,6 @@
     if (window.GymApp && window.GymApp.onWorkoutIdle) window.GymApp.onWorkoutIdle(function () { check(); maybeReload(); });
     if (window.GymApp && window.GymApp.onWorkoutActive) window.GymApp.onWorkoutActive(check); // a workout starting turns the banner off (and a block into the bar)
     window.addEventListener("resize", syncTop);
-    document.addEventListener("focusout", function () { setTimeout(maybeReload, 0); }); // activeElement settles after the event
     setInterval(checkForNewBuild, UPDATE_EVERY_MS);
     var sw = navigator.serviceWorker;
     if (sw) {
@@ -262,7 +279,9 @@
       sw.addEventListener("controllerchange", function () {
         if (!hadController) { hadController = true; return; }
         pendingReload = true;
-        maybeReload();
+        // Reload at once only from the Plan tab; anywhere else wait for the next resume or workout end
+        // (a field on another screen can hold text that isn't saved).
+        if (!window.GymUI || !window.GymUI.currentTab || window.GymUI.currentTab() === "plan") maybeReload();
       });
     }
   }

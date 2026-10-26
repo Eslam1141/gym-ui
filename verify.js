@@ -194,6 +194,7 @@
     untick: untick,
     clearExercise: clearExercise,
     hasTicks: hasTicks,
+    lastTick: function (date, dayId) { return (readAll()[keyOf(date, dayId)] || {}).last || 0; },
     exerciseTicked: exerciseTicked,
     tickedDays: tickedDays,
     timerStart: timerStart,

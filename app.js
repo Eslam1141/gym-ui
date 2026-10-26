@@ -1164,13 +1164,15 @@ window.GymApp.swapTools = function(dayId){
   window.GymApp.dayExercises(dayId).forEach(e=>(e.tools || []).forEach(t=>{ if(have.indexOf(t) < 0) have.push(t); }));
   return have;
 };
-// A workout is in progress while a session started less than 6 h ago is open (paused counts; an older
-// one is a stale leftover) or a rest / exercise timer is running. force-update.js never blocks then.
+// A workout is in progress while a session with activity (start, resume, tick) in the last 6 h is open
+// (paused counts; an older one is a stale leftover) or a rest / exercise timer is running. force-update.js never blocks then.
 const WORKOUT_STALE_MS = 6 * 3600000;
 function workoutInProgress(){
   if(activeSession){
-    const t0 = activeSession.startedAt || activeSession.startTime || 0;
-    if(Date.now() - t0 < WORKOUT_STALE_MS) return true;
+    // aged from its last activity: startedAt can be the day's first tick, hours before a resume
+    const last = Math.max(activeSession.segStart || 0, activeSession.startedAt || activeSession.startTime || 0,
+      window.GymVerify ? GymVerify.lastTick(todayStr(), activeSession.dayId) : 0);
+    if(Date.now() - last < WORKOUT_STALE_MS) return true;
   }
   return restEndAt > 0 || exPhase !== "";
 }
@@ -2655,6 +2657,9 @@ function applyLang(lang, persist){
   try {
     if(window.GymFood && typeof window.GymFood.refresh === "function") window.GymFood.refresh();
   } catch(e){ if(window.console) console.warn("food re-render failed", e); }
+  try {
+    if(window.GymForceUpdate) window.GymForceUpdate.check(); // re-label the update bar / banner / page
+  } catch(e){ if(window.console) console.warn("force-update re-label failed", e); }
   try {
     // P0-3: keep the Google Sign-In button's own language in sync with the
     // app's toggle instead of it silently staying on the browser/OS locale.
