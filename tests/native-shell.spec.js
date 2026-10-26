@@ -280,3 +280,81 @@ test("web / missing SystemBars: theme changes never throw", async ({ browser }) 
   expect(consoleErrors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]);
   await context.close();
 });
+
+// ---- Play in-app updates bridge: GymNativeShell.startUpdate() ----
+async function mockUpdate(page, au) {
+  await page.evaluate((au) => {
+    window.__au = { immediate: 0 };
+    const Plugins = {};
+    if (au) {
+      Plugins.AppUpdate = {
+        getAppUpdateInfo: async () => {
+          if (au.infoThrows) throw new Error("boom");
+          return { updateAvailability: au.availability == null ? 2 : au.availability, immediateUpdateAllowed: au.allowed !== false };
+        },
+        performImmediateUpdate: async () => {
+          window.__au.immediate++;
+          if (au.immediateThrows) throw new Error("flow");
+          return { code: au.code == null ? 0 : au.code };
+        }
+      };
+    }
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android", Plugins };
+  }, au);
+}
+const startUpdate = (page) => page.evaluate(() => window.GymNativeShell.startUpdate());
+
+test("startUpdate: update available -> started, immediate flow launched once", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, {});
+  expect(await startUpdate(page)).toBe("started");
+  expect(await page.evaluate(() => window.__au.immediate)).toBe(1);
+  await context.close();
+});
+
+test("startUpdate: user cancels the Play flow -> still started (no fallback)", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, { code: 1 });
+  expect(await startUpdate(page)).toBe("started");
+  await context.close();
+});
+
+test("startUpdate: no plugin / browser / no update / immediate not allowed -> unavailable", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, null);
+  expect(await startUpdate(page)).toBe("unavailable");
+  await mockUpdate(page, { availability: 1 });
+  expect(await startUpdate(page)).toBe("unavailable");
+  await mockUpdate(page, { allowed: false });
+  expect(await startUpdate(page)).toBe("unavailable");
+  expect(await page.evaluate(() => window.__au.immediate)).toBe(0);
+  await page.evaluate(() => { window.Capacitor = undefined; });
+  expect(await startUpdate(page)).toBe("unavailable");
+  await context.close();
+});
+
+test("startUpdate: plugin throws or flow fails -> failed, never rejects", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, { infoThrows: true });
+  expect(await startUpdate(page)).toBe("failed");
+  await mockUpdate(page, { immediateThrows: true });
+  expect(await startUpdate(page)).toBe("failed");
+  await mockUpdate(page, { code: 2 });
+  expect(await startUpdate(page)).toBe("failed");
+  await context.close();
+});
+
+test("Back does nothing while the update-required page is blocking", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockShell(page);
+  await page.evaluate(() => { window.GymForceUpdate = { isBlocking: () => true }; window.history.pushState({}, "", "#x"); });
+  await back(page, true);
+  await back(page, false);
+  await back(page, false);
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(0);
+  expect(await page.evaluate(() => location.hash)).toBe("#x"); // history.back() not called
+  await page.evaluate(() => { window.GymForceUpdate = { isBlocking: () => false }; });
+  await back(page, false); await back(page, false);
+  expect(await page.evaluate(() => window.__shell.exit)).toBe(1);
+  await context.close();
+});

@@ -32,6 +32,9 @@
  *    for it). Native sets window.__etqMotion (true/false) with the same document-start
  *    script (read once at parse time, then deleted) and keeps the attribute
  *    current by evaluateJavascript (page load, resume).
+ *  - startUpdate(): Play In-App Updates immediate flow for the "Update required"
+ *    page (force-update.js); see the function. Back is ignored while
+ *    GymForceUpdate.isBlocking().
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -179,6 +182,8 @@
   }
 
   function handleBack(canGoBack) {
+    // The non-dismissable "Update required" page: Back does nothing at all.
+    try { if (window.GymForceUpdate && typeof GymForceUpdate.isBlocking === "function" && GymForceUpdate.isBlocking()) return; } catch (e) {}
     if (closeTopLayer()) return;
     var ui = window.GymUI;
     if (ui && typeof ui.back === "function" && ui.back()) { exitArmedAt = 0; return; }
@@ -196,6 +201,30 @@
     }
     exitArmedAt = now;
     if (window.GymToast) GymToast.show({ message: exitHint(), duration: EXIT_WINDOW_MS });
+  }
+
+  // Google Play In-App Updates (immediate flow) via @capawesome/capacitor-app-update.
+  // Resolves "started" once the Play flow ran (finished or cancelled by the user),
+  // "unavailable" (no plugin, not a Play install, or no update offered: the web
+  // falls back to the store link), "failed" (anything thrown or a failed flow).
+  // Never rejects. AppUpdateAvailability.UPDATE_AVAILABLE = 2, UPDATE_IN_PROGRESS = 3;
+  // AppUpdateResultCode OK = 0, CANCELED = 1.
+  function startUpdate() {
+    return new Promise(function (resolve) {
+      try {
+        var c = cap(), au = c && plugin(c, "AppUpdate");
+        if (!au || typeof au.getAppUpdateInfo !== "function" || typeof au.performImmediateUpdate !== "function") { resolve("unavailable"); return; }
+        Promise.resolve(au.getAppUpdateInfo()).then(function (info) {
+          var a = info && info.updateAvailability;
+          if (a !== 2 && a !== 3) return "unavailable";
+          if (info.immediateUpdateAllowed === false) return "unavailable";
+          return Promise.resolve(au.performImmediateUpdate()).then(function (res) {
+            var code = res && res.code;
+            return code === 0 || code === 1 ? "started" : "failed";
+          });
+        }).then(resolve, function () { resolve("failed"); });
+      } catch (e) { resolve("failed"); }
+    });
   }
 
   var barsWatching = false;
@@ -266,7 +295,7 @@
   }
   syncReduceMotion();
 
-  window.GymNativeShell = { init: init, handleBack: handleBack, exitApp: exitApp };
+  window.GymNativeShell = { init: init, handleBack: handleBack, exitApp: exitApp, startUpdate: startUpdate };
   installSessionStore();
   init();
 })();
