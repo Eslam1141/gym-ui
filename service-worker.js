@@ -66,6 +66,7 @@ const ASSETS = [
   "./dom.js",
   "./config.js",
   "./app-config.js",
+  "./force-update.js",
   "./manifest.json",
   "./vendor/html2canvas.min.js",
   "./icons/logo-etq.svg",

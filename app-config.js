@@ -5,7 +5,8 @@
  *   verifyStrict      false (the default) = every training day counts; the on-device
  *                     60 s gap and the held/review UI are off. Evidence is collected and
  *                     sent either way. true = verified training days are enforced.
- *   minAppVersion / latestAppVersion   for the force-update flow (no UI yet).
+ *   minAppVersion / latestAppVersion   read by force-update.js (the update-required page
+ *                     and the update banner).
  *
  * A failed fetch with nothing cached means strict is off. */
 (function () {
@@ -24,6 +25,7 @@
   }
 
   var cfg;
+  var fresh = false; // true once a fetch has succeeded in this page session
   try { cfg = clean(JSON.parse(localStorage.getItem(LS_KEY))); } catch (e) { cfg = clean(null); }
 
   function load() {
@@ -33,6 +35,7 @@
       .then(function (res) { if (!res.ok) throw new Error("app-config " + res.status); return res.json(); })
       .then(function (doc) {
         cfg = clean(doc);
+        fresh = true;
         try { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); } catch (e) {}
       })
       .catch(function () { /* keep the cached (or default) values */ })
@@ -43,6 +46,10 @@
     strict: function () { return cfg.verifyStrict === true; },
     minAppVersion: function () { return cfg.minAppVersion || ""; },
     latestAppVersion: function () { return cfg.latestAppVersion || ""; },
+    // A cached answer is fine for verifyStrict, but the version fields only count after a real fetch:
+    // an offline old app must not be blocked by a stale cached minAppVersion.
+    fresh: function () { return fresh; },
+    refresh: load, // the same fetch again (force-update.js calls it on resume); never rejects
     ready: load() // resolves once the one startup fetch has settled (never rejects)
   };
 })();

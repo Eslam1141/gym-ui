@@ -600,6 +600,13 @@ const T = {
   restTimer:["Rest — {name}","راحة — {name}"],
   restAdd:["Add 15 seconds","إضافة 15 ثانية"],
   restTenLeft:["10 seconds left","باقي 10 ثوانٍ"],
+  fuTitle:["Update required","تحديث مطلوب"],
+  fuBody:["A new version of Etqadem is ready. Update to keep training.","إصدار جديد من اتقدم جاهز. حدّث التطبيق لمتابعة التمرين."],
+  fuUpdate:["Update","تحديث"],
+  fuCheck:["Check again","تحقق مرة أخرى"],
+  fuStoreText:["Open Google Play and update Etqadem:","افتح Google Play وحدّث اتقدم:"],
+  fuBar:["Update required. Your workout is saved. Update when you finish.","التحديث مطلوب. تمرينك محفوظ. حدّث التطبيق بعد أن تنتهي."],
+  fuBanner:["A new version is available","يتوفر إصدار جديد"],
   restOverLive:["Rest is over","انتهت الراحة"],
   restOverTitle:["Rest is over","انتهت الراحة"],
   restOverBody:["Next set: {name}","المجموعة التالية: {name}"],
@@ -1157,6 +1164,33 @@ window.GymApp.swapTools = function(dayId){
   window.GymApp.dayExercises(dayId).forEach(e=>(e.tools || []).forEach(t=>{ if(have.indexOf(t) < 0) have.push(t); }));
   return have;
 };
+// A workout is in progress while a session with activity (start, resume, tick) in the last 6 h is open
+// (paused counts; an older one is a stale leftover) or a rest / exercise timer is running. force-update.js never blocks then.
+const WORKOUT_STALE_MS = 6 * 3600000;
+function workoutInProgress(){
+  if(activeSession){
+    // aged from its last activity: startedAt can be the day's first tick, hours before a resume
+    const last = Math.max(activeSession.segStart || 0, activeSession.startedAt || activeSession.startTime || 0,
+      window.GymVerify ? GymVerify.lastTick(todayStr(), activeSession.dayId) : 0);
+    if(Date.now() - last < WORKOUT_STALE_MS) return true;
+  }
+  return restEndAt > 0 || exPhase !== "";
+}
+const idleListeners = [];
+// Called wherever a workout can end (session ended, last timer stopped); wasBusy = the state before the change.
+function notifyIdleIfIdle(wasBusy){
+  if(!wasBusy || workoutInProgress()) return;
+  idleListeners.slice().forEach(cb=>{ try{ cb(); }catch(e){} });
+}
+// The mirror of notifyIdleIfIdle: called after a session or timer starts (wasBusy = the state before).
+const activeListeners = [];
+function notifyActiveIfActive(wasBusy){
+  if(wasBusy || !workoutInProgress()) return;
+  activeListeners.slice().forEach(cb=>{ try{ cb(); }catch(e){} });
+}
+window.GymApp.workoutInProgress = workoutInProgress;
+window.GymApp.onWorkoutActive = cb=>{ if(typeof cb === "function") activeListeners.push(cb); };
+window.GymApp.onWorkoutIdle = cb=>{ if(typeof cb === "function") idleListeners.push(cb); };
 window.GymApp.exName = ex=> exName(ex);
 window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
 // Strings and language for the weekly muscle map (muscle-map.js), and the tags of
@@ -1545,9 +1579,11 @@ function toggleSet(id, i){
       return { ok:false, waitSec:r.waitSec };
     }
     if(first && !activeSession){
+      const wasBusy = workoutInProgress();
       const t0 = GymVerify.timerStart(date, activeDay);
       activeSession = { dayId: activeDay, startedAt: t0, running: true, accumSec: 0, segStart: t0 };
       saveJSON("gym_session_active", activeSession);
+      notifyActiveIfActive(wasBusy);
       updateSessionUI();
     }
   } else {
@@ -1992,6 +2028,7 @@ function resetDock(kind){
 
 function startRestTimer(seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
+  const wasBusy = workoutInProgress();
   resetDock("rest");
   exPhase = "";
   timerAddBtn.disabled = false;
@@ -2008,9 +2045,11 @@ function startRestTimer(seconds, name){
   timerLive.textContent = `${label}, ${timerTime.textContent}`;
   restInterval = setInterval(restTick, 250);
   startRestRing();
+  notifyActiveIfActive(wasBusy);
 }
 function startExerciseTimer(id, seconds, name){
   if (isDayComplete(activeDay)) { alert(t("dayAlreadyDone")); return; }
+  const wasBusy = workoutInProgress();
   resetDock("ex");
   exId = id; exTarget = seconds; exPhase = "ready";
   restName = name;
@@ -2026,6 +2065,7 @@ function startExerciseTimer(id, seconds, name){
   timerLive.textContent = `${label}, ${t("exReady")}`;
   restInterval = setInterval(restTick, 250);
   startRestRing();
+  notifyActiveIfActive(wasBusy);
 }
 let readyShown = 0;
 function restTick(){
@@ -2064,6 +2104,7 @@ function restTick(){
   }
 }
 function stopRestTimer(){
+  const wasBusy = workoutInProgress();
   clearInterval(restInterval);
   cancelAnimationFrame(restRaf);
   restEndAt = 0;
@@ -2071,6 +2112,7 @@ function stopRestTimer(){
   readyShown = 0;
   timerBar.classList.remove("show", "ending", "ready");
   holdScreenAwake(false);
+  notifyIdleIfIdle(wasBusy);
 }
 // A finished hold ticks the exercise's next open set, under the same 60 s rule as a tap.
 function tickAfterHold(id){
@@ -2496,12 +2538,14 @@ miniTimer.onclick = ()=>{
 // The caller refreshes the UI.
 function endWorkoutSession(){
   if(!activeSession || activeSession.dayId !== activeDay) return;
+  const wasBusy = workoutInProgress();
   const durationSec = sessionElapsedSec();
   sessions[activeDay] = sessions[activeDay] || [];
   sessions[activeDay].push({ date: todayStr(), durationSec });
   saveJSON("gym_sessions", sessions);
   activeSession = null;
   localStorage.removeItem("gym_session_active");
+  notifyIdleIfIdle(wasBusy);
 }
 sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){
@@ -2512,9 +2556,11 @@ sessionBtn.onclick = GymAct.once(()=>{
       return;
     }
     // a day that already has ticks keeps counting from its first tick (the workout timer can't be reset)
+    const wasBusy = workoutInProgress();
     const now = GymVerify.timerStart(todayStr(), activeDay) || Date.now();
     activeSession = { dayId: activeDay, startedAt: now, running: true, accumSec: 0, segStart: now };
     saveJSON("gym_session_active", activeSession);
+    notifyActiveIfActive(wasBusy);
   }
   updateSessionUI();
 }, { cooldown: 500 });
@@ -2611,6 +2657,9 @@ function applyLang(lang, persist){
   try {
     if(window.GymFood && typeof window.GymFood.refresh === "function") window.GymFood.refresh();
   } catch(e){ if(window.console) console.warn("food re-render failed", e); }
+  try {
+    if(window.GymForceUpdate) window.GymForceUpdate.check(); // re-label the update bar / banner / page
+  } catch(e){ if(window.console) console.warn("force-update re-label failed", e); }
   try {
     // P0-3: keep the Google Sign-In button's own language in sync with the
     // app's toggle instead of it silently staying on the browser/OS locale.

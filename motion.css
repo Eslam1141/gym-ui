@@ -376,6 +376,9 @@ html[data-reduce-motion="1"] .rest-btn{ transition:none; }
 html[data-reduce-motion="1"] .fb-done-mark{ animation:none; }
 html[data-reduce-motion="1"] .set-chk,
 html[data-reduce-motion="1"] .set-chk svg{ transition:none; }
+html[data-reduce-motion="1"] .fu-page{ animation:none; }
+html[data-reduce-motion="1"] .fu-btn{ transition:none; }
+html[data-reduce-motion="1"] .fu-btn:active{ transform:none; }
 /* from motion.css */
 html[data-reduce-motion="1"] .m-enter > *,
 html[data-reduce-motion="1"] .m-pop{ animation:none; }
