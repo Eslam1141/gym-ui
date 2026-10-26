@@ -205,26 +205,38 @@
 
   // Google Play In-App Updates (immediate flow) via @capawesome/capacitor-app-update.
   // Resolves "started" once the Play flow ran (finished or cancelled by the user),
-  // "unavailable" (no plugin, not a Play install, or no update offered: the web
-  // falls back to the store link), "failed" (anything thrown or a failed flow).
-  // Never rejects. AppUpdateAvailability.UPDATE_AVAILABLE = 2, UPDATE_IN_PROGRESS = 3;
-  // AppUpdateResultCode OK = 0, CANCELED = 1.
+  // "unavailable" (no plugin, no update offered, immediate not allowed, or the
+  // flow said NOT_AVAILABLE / NOT_ALLOWED / INFO_MISSING), "failed" (anything
+  // thrown, a failed flow, or an unknown result). On sideloaded / non-Play installs
+  // getAppUpdateInfo usually rejects ("failed"), or reports no update
+  // ("unavailable"); both lead the web to the store fallback. Never rejects.
+  // AppUpdateAvailability.UPDATE_AVAILABLE = 2 (the only value the plugin's
+  // readyForUpdate accepts); AppUpdateResultCode OK = 0, CANCELED = 1, FAILED = 2,
+  // NOT_AVAILABLE = 3, NOT_ALLOWED = 4, INFO_MISSING = 5.
+  // One flow at a time: a second call while one is pending reuses its promise
+  // (the plugin keeps a single saved call, so a second launch would orphan the first).
+  var pendingUpdate = null;
   function startUpdate() {
-    return new Promise(function (resolve) {
+    if (pendingUpdate) return pendingUpdate;
+    pendingUpdate = new Promise(function (resolve) {
       try {
         var c = cap(), au = c && plugin(c, "AppUpdate");
         if (!au || typeof au.getAppUpdateInfo !== "function" || typeof au.performImmediateUpdate !== "function") { resolve("unavailable"); return; }
         Promise.resolve(au.getAppUpdateInfo()).then(function (info) {
-          var a = info && info.updateAvailability;
-          if (a !== 2 && a !== 3) return "unavailable";
+          if (!info || info.updateAvailability !== 2) return "unavailable";
           if (info.immediateUpdateAllowed === false) return "unavailable";
           return Promise.resolve(au.performImmediateUpdate()).then(function (res) {
             var code = res && res.code;
-            return code === 0 || code === 1 ? "started" : "failed";
+            if (code === 0 || code === 1) return "started";
+            if (code === 3 || code === 4 || code === 5) return "unavailable";
+            return "failed";
           });
         }).then(resolve, function () { resolve("failed"); });
       } catch (e) { resolve("failed"); }
     });
+    var clear = function () { pendingUpdate = null; };
+    pendingUpdate.then(clear, clear);
+    return pendingUpdate;
   }
 
   var barsWatching = false;

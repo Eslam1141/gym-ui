@@ -97,6 +97,14 @@ Never commit a keystore. Release signing uses `C:\Users\L\keys\etqadem-upload.ke
   then goes back, then exits; `window.GYM_APP_VERSION` = versionName (sent as `context.appVersion` in
   feedback); deletes the old `rest-timer` channel at startup.
 
+## In-app updates (Google Play)
+
+`@capawesome/capacitor-app-update` (pinned) is registered as `window.Capacitor.Plugins.AppUpdate`;
+`GymNativeShell.startUpdate()` (native-shell.js) runs the Play immediate-update flow for the web's
+"Update required" page and resolves `"started"`, `"unavailable"` or `"failed"` (never rejects). It
+only works on builds installed from Google Play with a newer versionCode on Play. Sideloaded / debug
+APKs always report unavailable or failed, so the web falls back to the Play Store link.
+
 ## Health Connect (watch data, read-only)
 
 `@capgo/capacitor-health` (pinned) is registered as `window.Capacitor.Plugins.Health`. Android 14+ has

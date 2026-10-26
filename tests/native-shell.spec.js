@@ -294,6 +294,7 @@ async function mockUpdate(page, au) {
         },
         performImmediateUpdate: async () => {
           window.__au.immediate++;
+          if (au.delay) await new Promise((r) => setTimeout(r, au.delay));
           if (au.immediateThrows) throw new Error("flow");
           return { code: au.code == null ? 0 : au.code };
         }
@@ -356,5 +357,34 @@ test("Back does nothing while the update-required page is blocking", async ({ br
   await page.evaluate(() => { window.GymForceUpdate = { isBlocking: () => false }; });
   await back(page, false); await back(page, false);
   expect(await page.evaluate(() => window.__shell.exit)).toBe(1);
+  await context.close();
+});
+
+test("startUpdate: a second call after a cancel launches the flow again", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, { code: 1 });
+  expect(await startUpdate(page)).toBe("started");
+  expect(await startUpdate(page)).toBe("started");
+  expect(await page.evaluate(() => window.__au.immediate)).toBe(2);
+  await context.close();
+});
+
+test("startUpdate: concurrent calls launch once and resolve the same value", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  await mockUpdate(page, { delay: 200 });
+  const r = await page.evaluate(() => Promise.all([window.GymNativeShell.startUpdate(), window.GymNativeShell.startUpdate()]));
+  expect(r).toEqual(["started", "started"]);
+  expect(await page.evaluate(() => window.__au.immediate)).toBe(1);
+  await context.close();
+});
+
+test("startUpdate: flow codes NOT_AVAILABLE / NOT_ALLOWED / INFO_MISSING -> unavailable, unknown -> failed", async ({ browser }) => {
+  const { context, page } = await openApp(browser, { signedIn: false });
+  for (const code of [3, 4, 5]) {
+    await mockUpdate(page, { code });
+    expect(await startUpdate(page)).toBe("unavailable");
+  }
+  await mockUpdate(page, { code: 99 });
+  expect(await startUpdate(page)).toBe("failed");
   await context.close();
 });
