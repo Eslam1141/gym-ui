@@ -50,15 +50,14 @@ async function shot(page, name, o) {
 // ---------------- chat: the note left the coach screen ----------------
 
 for (const lang of ["en", "ar"]) {
-  test("chat (" + lang + "): no Anthropic note; the title says it is an AI chat; the Privacy link stays", async ({ browser }) => {
+  test("chat (" + lang + "): no Anthropic note; the title says it is an AI chat; no Privacy link in the chat", async ({ browser }) => {
     const cs = newCs({ list: [COACH_REC, TERMS_REC] });
     const { context, page } = await openApp(browser, { signedIn: true, lang, setup: consentRoutes(cs) });
     await expect(page.locator("#bootLoader")).toBeHidden({ timeout: 8000 });
     await page.click("#coachFab");
     await expect(page.locator("#coachChatTitle")).toHaveText(lang === "en" ? "Etqadem Coach" : "المدرّب اتقدم");
-    // the note line under the messages is now just the Privacy link (the meal-photo notice further down keeps naming Anthropic on purpose)
-    await expect(page.locator("#coachChatNote")).toHaveText(lang === "en" ? "Privacy" : "الخصوصية");
-    await expect(page.locator("#coachChatNote a")).toHaveAttribute("href", /\/privacy#ai-coach/);
+    // the note line under the messages is gone (owner 2026-10-25); the consent sheet and meal-photo notice keep their links
+    await expect(page.locator("#coachChatNote")).toBeHidden();
     await shot(page, "chat-header-" + lang, { clip: { x: 0, y: 0, width: 390, height: 844 } });
     await context.close();
   });
