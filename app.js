@@ -1157,6 +1157,24 @@ window.GymApp.swapTools = function(dayId){
   window.GymApp.dayExercises(dayId).forEach(e=>(e.tools || []).forEach(t=>{ if(have.indexOf(t) < 0) have.push(t); }));
   return have;
 };
+// A workout is in progress while a session started less than 6 h ago is open (paused counts; an older
+// one is a stale leftover) or a rest / exercise timer is running. force-update.js never blocks then.
+const WORKOUT_STALE_MS = 6 * 3600000;
+function workoutInProgress(){
+  if(activeSession){
+    const t0 = activeSession.startedAt || activeSession.startTime || 0;
+    if(Date.now() - t0 < WORKOUT_STALE_MS) return true;
+  }
+  return restEndAt > 0 || exPhase !== "";
+}
+const idleListeners = [];
+// Called wherever a workout can end (session ended, last timer stopped); wasBusy = the state before the change.
+function notifyIdleIfIdle(wasBusy){
+  if(!wasBusy || workoutInProgress()) return;
+  idleListeners.slice().forEach(cb=>{ try{ cb(); }catch(e){} });
+}
+window.GymApp.workoutInProgress = workoutInProgress;
+window.GymApp.onWorkoutIdle = cb=>{ if(typeof cb === "function") idleListeners.push(cb); };
 window.GymApp.exName = ex=> exName(ex);
 window.GymApp.exMuscles = ex=>{ const sh = exShapes(ex); return sh ? shapeText(sh) : ""; };
 // Strings and language for the weekly muscle map (muscle-map.js), and the tags of
@@ -2064,6 +2082,7 @@ function restTick(){
   }
 }
 function stopRestTimer(){
+  const wasBusy = workoutInProgress();
   clearInterval(restInterval);
   cancelAnimationFrame(restRaf);
   restEndAt = 0;
@@ -2071,6 +2090,7 @@ function stopRestTimer(){
   readyShown = 0;
   timerBar.classList.remove("show", "ending", "ready");
   holdScreenAwake(false);
+  notifyIdleIfIdle(wasBusy);
 }
 // A finished hold ticks the exercise's next open set, under the same 60 s rule as a tap.
 function tickAfterHold(id){
@@ -2496,12 +2516,14 @@ miniTimer.onclick = ()=>{
 // The caller refreshes the UI.
 function endWorkoutSession(){
   if(!activeSession || activeSession.dayId !== activeDay) return;
+  const wasBusy = workoutInProgress();
   const durationSec = sessionElapsedSec();
   sessions[activeDay] = sessions[activeDay] || [];
   sessions[activeDay].push({ date: todayStr(), durationSec });
   saveJSON("gym_sessions", sessions);
   activeSession = null;
   localStorage.removeItem("gym_session_active");
+  notifyIdleIfIdle(wasBusy);
 }
 sessionBtn.onclick = GymAct.once(()=>{
   if(activeSession && activeSession.dayId === activeDay){

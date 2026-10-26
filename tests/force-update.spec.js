@@ -2,7 +2,7 @@
 // logic, workout-in-progress hooks, the update-required page / bar / banner, and the
 // safe auto-reload of long-open sessions.
 const { test, expect } = require("@playwright/test");
-const { openApp } = require("./helpers");
+const { openApp, NOW, EX_IDS } = require("./helpers");
 
 test.setTimeout(60000);
 
@@ -47,6 +47,60 @@ test.describe("force update: version logic", () => {
     body = { verifyStrict: false };
     await page.evaluate(() => GymAppConfig.refresh());
     expect(await page.evaluate(() => GymAppConfig.minAppVersion())).toBe("");
+    await context.close();
+  });
+});
+
+const T = { timeout: 8000 };
+const ago = (ms) => Date.parse(NOW) - ms;
+const session = (startedAt) => ({ gym_session_active: { dayId: "m_upper", startedAt, running: true, accumSec: 0, segStart: startedAt } });
+const inWorkout = (page) => page.evaluate(() => GymApp.workoutInProgress());
+const countIdle = (page) => page.evaluate(() => { window.__idle = 0; GymApp.onWorkoutIdle(() => { window.__idle++; }); });
+const idleCount = (page) => page.evaluate(() => window.__idle);
+
+test.describe("force update: workout-in-progress hooks", () => {
+  test("no session is not a workout; a fresh one is; a 7 h old one is stale", async ({ browser }) => {
+    let r = await openApp(browser, {});
+    expect(await inWorkout(r.page)).toBe(false);
+    await r.context.close();
+    r = await openApp(browser, { ls: session(ago(10 * 60000)) });
+    expect(await inWorkout(r.page)).toBe(true);
+    await r.context.close();
+    r = await openApp(browser, { ls: session(ago(7 * 3600000)) });
+    expect(await inWorkout(r.page)).toBe(false);
+    await r.context.close();
+  });
+
+  test("a rest timer with no session is a workout; stopping it fires the idle callback once", async ({ browser }) => {
+    const { context, page } = await openApp(browser, {});
+    await countIdle(page);
+    const btn = page.locator("#exList [data-rest]").first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
+    await expect(page.locator("#timerBar")).toHaveClass(/show/, T);
+    expect(await inWorkout(page)).toBe(true);
+    expect(await idleCount(page)).toBe(0);
+    await page.click("#timerSkip");
+    expect(await inWorkout(page)).toBe(false);
+    expect(await idleCount(page)).toBe(1);
+    await context.close();
+  });
+
+  test("ending the session fires the idle callback", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, ls: session(ago(10 * 60000)) });
+    await countIdle(page);
+    await page.click("#sessionBtn");
+    await expect.poll(() => inWorkout(page), T).toBe(false);
+    expect(await idleCount(page)).toBe(1);
+    await context.close();
+  });
+
+  test("finishing a day fires the idle callback", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: true, server: { verifyStrict: false }, ls: session(ago(10 * 60000)) });
+    await countIdle(page);
+    for (const id of EX_IDS) await page.locator(`.check[data-id="${id}"]`).click();
+    await expect.poll(() => idleCount(page), T).toBeGreaterThan(0);
+    expect(await inWorkout(page)).toBe(false);
     await context.close();
   });
 });
