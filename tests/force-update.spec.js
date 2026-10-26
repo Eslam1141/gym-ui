@@ -268,3 +268,91 @@ test.describe("force update: page, bar, banner", () => {
     await context.close();
   });
 });
+
+// ---- Task 4: auto-reload of long-open sessions ----
+// A page that was already controlled by a service worker, so a controllerchange is an update and
+// not the first install. location.reload is unforgeable, so force-update.js calls
+// GymForceUpdate.reload(); the tests count that.
+async function openReload(browser, open) {
+  const r = await openApp(browser, Object.assign({
+    server: { verifyStrict: false },
+    setup: (ctx) => ctx.addInitScript(() => {
+      try { Object.defineProperty(navigator.serviceWorker, "controller", { get: () => ({}), configurable: true }); } catch (e) {}
+    })
+  }, open || {}));
+  await r.page.evaluate(() => { window.__reloads = 0; GymForceUpdate.reload = () => { window.__reloads++; }; });
+  return r;
+}
+const swUpdate = (page) => page.evaluate(() => navigator.serviceWorker.dispatchEvent(new Event("controllerchange")));
+const reloads = (page) => page.evaluate(() => window.__reloads);
+
+test.describe("force update: auto-reload", () => {
+  test("a new service worker reloads the page once when it is safe", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(true);
+    await swUpdate(page);
+    await expect.poll(() => reloads(page), T).toBe(1);
+    await context.close();
+  });
+
+  test("the first install (no earlier controller) never reloads", async ({ browser }) => {
+    const { context, page } = await openApp(browser, {});
+    await page.evaluate(() => { window.__reloads = 0; GymForceUpdate.reload = () => { window.__reloads++; }; });
+    await swUpdate(page);
+    await page.waitForTimeout(500);
+    expect(await reloads(page)).toBe(0);
+    await context.close();
+  });
+
+  test("a workout in progress holds the reload off until it is finished", async ({ browser }) => {
+    const { context, page } = await openReload(browser, { signedIn: true, ls: session(ago(10 * 60000)) });
+    await swUpdate(page);
+    await page.waitForTimeout(500);
+    expect(await reloads(page)).toBe(0);
+    for (const id of EX_IDS) await page.locator(`.check[data-id="${id}"]`).click();
+    await expect.poll(() => reloads(page), { timeout: 15000 }).toBe(1);
+    await context.close();
+  });
+
+  test("a focused text field holds it off; leaving it (or resuming) lets it through", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    await page.evaluate(() => {
+      const i = document.createElement("input");
+      i.id = "fuProbe"; i.type = "text";
+      document.body.appendChild(i);
+      i.focus();
+    });
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(false);
+    await swUpdate(page);
+    await page.waitForTimeout(500);
+    expect(await reloads(page)).toBe(0);
+    await page.evaluate(() => document.getElementById("fuProbe").blur());
+    await resume(page);
+    await expect.poll(() => reloads(page), T).toBe(1);
+    await context.close();
+  });
+
+  test("a second controllerchange in the same tab does not reload again", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    await swUpdate(page);
+    await expect.poll(() => reloads(page), T).toBe(1);
+    await swUpdate(page);
+    await resume(page);
+    await page.waitForTimeout(600);
+    expect(await reloads(page)).toBe(1);
+    await context.close();
+  });
+
+  test("an open sheet is not safe", async ({ browser }) => {
+    const { context, page } = await openReload(browser);
+    await page.evaluate(() => {
+      const s = document.createElement("div");
+      s.id = "fuSheet"; s.className = "syd"; s.setAttribute("role", "dialog");
+      document.body.appendChild(s);
+    });
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(false);
+    await page.evaluate(() => document.getElementById("fuSheet").remove());
+    expect(await page.evaluate(() => GymForceUpdate.isSafeToReload())).toBe(true);
+    await context.close();
+  });
+});

@@ -8,6 +8,8 @@
  *    while a workout is in progress, and a dismissible "new version" banner.
  *  - Update: GymNativeShell.startUpdate() (Play in-app update) when the shell has it, else the
  *    Play Store listing (market://, with the https URL shown as text).
+ *  - Reload: a new service worker taking control of an already-open page reloads it, but only
+ *    when that is safe (no workout, no open sheet, no focused field) and once per build per tab.
  */
 (function () {
   "use strict";
@@ -41,6 +43,8 @@
   var STORE_URL = "https://play.google.com/store/apps/details?id=" + APP_ID;
   var DISMISS_KEY = "gym_update_dismissed";
   var VERSION_POLL_MS = 250, VERSION_POLL_MAX_MS = 10000;
+  var GUARD_KEY = "gym_fu_reloaded";
+  var UPDATE_EVERY_MS = 30 * 60000;
 
   var api = { compare: compare, decide: decide };
   var blocking = false;
@@ -185,6 +189,41 @@
   api.isBlocking = function () { return blocking; };
   api.check = check;
 
+  // ---- reload onto a new deploy ----
+  var pendingReload = false;
+  api.reload = function () { window.location.reload(); };
+
+  // No workout, no open sheet / dialog / ringing timer, no focused text field.
+  api.isSafeToReload = function () {
+    if (inWorkout()) return false;
+    if (document.querySelector('[role="dialog"]:not([hidden]), .sheet.open, .syd, #alarmBanner:not([hidden])')) return false;
+    var a = document.activeElement;
+    return !(a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable));
+  };
+
+  // The caches present now name the deployed build (the service worker's CACHE_NAME changes with
+  // every deploy that touches an asset); "unknown" without the Cache API.
+  function buildId() {
+    if (!window.caches || !window.caches.keys) return Promise.resolve("unknown");
+    return window.caches.keys().then(function (k) { return k.sort().join(",") || "unknown"; }, function () { return "unknown"; });
+  }
+  function maybeReload() {
+    if (!pendingReload || !api.isSafeToReload()) return;
+    pendingReload = false;
+    buildId().then(function (id) {
+      if (!api.isSafeToReload()) { pendingReload = true; return; } // something opened meanwhile
+      try {
+        if (sessionStorage.getItem(GUARD_KEY) === id) return; // already reloaded onto this build in this tab
+        sessionStorage.setItem(GUARD_KEY, id);
+      } catch (e) {}
+      api.reload();
+    });
+  }
+  function checkForNewBuild() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.getRegistration) return;
+    navigator.serviceWorker.getRegistration().then(function (r) { if (r) return r.update(); }).catch(function () {});
+  }
+
   function init() {
     if (window.GymAppConfig) window.GymAppConfig.ready.then(check);
     // window.GYM_APP_VERSION is set by native-shell.js once App.getInfo() resolves, usually after
@@ -195,8 +234,24 @@
       if (window.GYM_APP_VERSION) { clearInterval(poll); check(); }
       else if (waited >= VERSION_POLL_MAX_MS) clearInterval(poll);
     }, VERSION_POLL_MS);
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshAndCheck(); });
-    if (window.GymApp && window.GymApp.onWorkoutIdle) window.GymApp.onWorkoutIdle(check);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) return;
+      refreshAndCheck();
+      checkForNewBuild();
+      maybeReload();
+    });
+    if (window.GymApp && window.GymApp.onWorkoutIdle) window.GymApp.onWorkoutIdle(function () { check(); maybeReload(); });
+    document.addEventListener("focusout", function () { setTimeout(maybeReload, 0); }); // activeElement settles after the event
+    setInterval(checkForNewBuild, UPDATE_EVERY_MS);
+    var sw = navigator.serviceWorker;
+    if (sw) {
+      var hadController = !!sw.controller; // the first install also fires controllerchange: not an update
+      sw.addEventListener("controllerchange", function () {
+        if (!hadController) { hadController = true; return; }
+        pendingReload = true;
+        maybeReload();
+      });
+    }
   }
 
   window.GymForceUpdate = api;
