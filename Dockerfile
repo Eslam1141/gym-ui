@@ -11,7 +11,7 @@ USER 101
 
 # Image layout: the landing page (repo landing/) at the html root, the PWA
 # (repo root files) under /app/. See docker/default.conf.
-COPY --chown=101:101 index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js muscle-map.js splits.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js net.js offline.html offline.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css survey.js survey.css terms-update.js motion.js motion.css celebrate.js verify.js swap.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js service-worker.js manifest.json config.js app-config.js admin.html admin.js admin.css /usr/share/nginx/html/app/
+COPY --chown=101:101 index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js muscle-map.js splits.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js net.js offline.html offline.js auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css survey.js survey.css terms-update.js motion.js motion.css celebrate.js verify.js swap.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js service-worker.js manifest.json config.js app-config.js force-update.js admin.html admin.js admin.css /usr/share/nginx/html/app/
 COPY --chown=101:101 vendor/ /usr/share/nginx/html/app/vendor/
 COPY --chown=101:101 icons/ /usr/share/nginx/html/app/icons/
 COPY --chown=101:101 fonts/ /usr/share/nginx/html/app/fonts/
@@ -31,7 +31,7 @@ COPY --chown=101:101 icons/ /usr/share/nginx/html/icons/
 RUN cd /usr/share/nginx/html/app && \
     HASH=$(cat index.html theme-boot.js boot-loader.js styles.css app.js muscle-art.js muscle-map.js splits.js ui.js mascot.js coach-consent.js coach.js checkin.js chat.js food.js sync.js net.js offline.html offline.js \
         auth-email.js auth-email.css privacy.js privacy.css onboarding.js onboarding.css survey.js survey.css terms-update.js motion.js motion.css \
-        celebrate.js verify.js swap.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js config.js app-config.js manifest.json \
+        celebrate.js verify.js swap.js rest-days.js calendar.js workout-builder.js header.js feedback.js native-shell.js notifications.js profile.js watch.js watch.css toast.js dom.js config.js app-config.js force-update.js manifest.json \
         tour.js tour.css watch-screen.js watch-screen.css \
         vendor/html2canvas.min.js icons/logo-etq.svg icons/coach.svg icons/avatar-default.svg icons/icon-192-etq.png icons/icon-512-etq.png \
         icons/icon-maskable-192-etq.png icons/icon-maskable-512-etq.png \
