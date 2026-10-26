@@ -6,6 +6,9 @@ const T = { timeout: 8000 };
 const chk = (page, ex, i) => page.locator(`.set-chk[data-set-ex="${ex}"][data-set="${i}"]`);
 const posts = (server) => server.log.filter((e) => e.method === "POST" && e.path === "/workouts/complete");
 const partial = (n) => ({ [YESTERDAY + "_" + DAY_ID]: Object.fromEntries(EX_IDS.slice(0, n).map((id) => [id, true])) });
+// A signed-out (anonymous) user trains the one-day preview plan.
+const PV = "preview";
+const pvChecks = { [YESTERDAY + "_" + PV]: { pv_legpress: true, pv_dbbench: true, pv_cablerow: true } };
 const sheet = (page) => page.locator("#saveYdaySheet");
 
 test.describe("verify strict switch: off", () => {
@@ -62,9 +65,42 @@ test.describe("verify strict switch: off", () => {
     expect(p).toHaveLength(1);
     expect(p[0].body.evidence).toMatchObject({ kind: "save_yesterday", plan: "gym" });
     expect(await page.evaluate(([d, id]) => GymVerify.localState(d, id), [YESTERDAY, DAY_ID])).toBe("verified");
+    await expect(page.locator(`.cal-day-cell[data-date="${YESTERDAY}"]`)).toHaveClass(/complete/, T);
     await expect(page.locator(`.cal-day-cell[data-date="${YESTERDAY}"]`)).not.toHaveClass(/held|pending/);
     await context.close();
+  });
 
+  test("save yesterday signed out counts as a normal trained day", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: false, server: { verifyStrict: false }, checks: pvChecks });
+    await page.evaluate(() => window.GymRest.maybePrompt());
+    await expect(sheet(page)).toBeVisible(T);
+    await sheet(page).locator(".syd-yes").click();
+    await expect(sheet(page)).toHaveCount(0, T);
+    expect(await page.evaluate(([d, id]) => GymVerify.localState(d, id), [YESTERDAY, PV])).toBe("verified");
+    await expect(page.locator(`.cal-day-cell[data-date="${YESTERDAY}"]`)).toHaveClass(/complete/, T);
+    await expect(page.locator(`.cal-day-cell[data-date="${YESTERDAY}"]`)).not.toHaveClass(/held|pending/);
+    await context.close();
+  });
+
+  test("a locally counted yesterday does not prompt again", async ({ browser }) => {
+    const { context, page } = await openApp(browser, { signedIn: false, server: { verifyStrict: false }, checks: pvChecks, ls: { gymday_verify: { [YESTERDAY + "_" + PV]: { start: 0, last: 0, ticks: {}, state: "verified" } } } });
+    await page.evaluate(() => window.GymRest.maybePrompt());
+    await expect(sheet(page)).toHaveCount(0);
+    await context.close();
+  });
+
+  test("untick then re-tick with the big checkbox posts the completion once", async ({ browser }) => {
+    const { context, page, server } = await openApp(browser, off);
+    for (const id of EX_IDS) await page.locator(`.check[data-id="${id}"]`).click();
+    await expect.poll(() => posts(server).length, T).toBe(1);
+    const first = page.locator(`.check[data-id="${EX_IDS[0]}"]`);
+    await first.click();
+    await expect(first).not.toHaveClass(/on/, T);
+    await first.click();
+    await expect(first).toHaveClass(/on/, T);
+    await page.clock.fastForward(3000);
+    expect(posts(server)).toHaveLength(1);
+    await context.close();
   });
 
   test("a leftover local held state is not shown as held", async ({ browser }) => {

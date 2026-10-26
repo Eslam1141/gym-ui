@@ -497,7 +497,7 @@ const T = {
   sydYes:["Send for review","أرسله للمراجعة"],
   sydNo:["No, I didn't","لا، لم أنهِه"],
   sydSaved:["Sent for review","تم الإرسال للمراجعة"],
-  sydSavedCounted:["Saved. Yesterday counts.","تم الحفظ. أمس محسوب."],
+  sydSavedCounted:["Saved. Yesterday counts.","تم الحفظ، واحتُسب تمرين أمس."],
   sydTooLate:["Yesterday's workout can't be saved any more.","لم يعد بالإمكان حفظ تمرين أمس."],
   sydSignIn:["Sign in to save yesterday's workout","سجّل دخولك عشان يتحفظ تمرين امبارح"],
   queueDropped:["A workout from an earlier day wasn't saved. Only today and yesterday can be recorded.","لم يُحفظ تمرين من يوم سابق. يمكن تسجيل اليوم والأمس فقط."],
@@ -1684,7 +1684,7 @@ function renderExercises(){
       const st = setState(k, ex, !!(checks[k] || {})[id]);
       const want = !st.every(Boolean);
       st.forEach((v, i)=>{ if(v !== want) toggleSet(id, i); });
-      if(want){ hapticTick(); if(window.GymMotion) GymMotion.pop(el); }
+      if(want) hapticTick();
     };
   });
 
