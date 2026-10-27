@@ -1408,6 +1408,11 @@ body::before{
    nav) plus a 16px gap, so at max scroll the last exercise card's Save/Rest
    row and wt/rep inputs never sit under a fixed FAB. */
 .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 88px); }
+/* A native ad banner (ads.js) sits above the nav on Food and More: its height (--ad-banner-h, set by ads.js)
+   is added to the page padding and to everything parked just above the nav. */
+body.has-ad-banner .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 88px + var(--ad-banner-h, 0px)); }
+body.has-ad-banner #coachFab:not(.moved), body.has-ad-banner #toTop{ bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px + var(--ad-banner-h, 0px)); }
+body.has-ad-banner .gym-toast{ bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px + var(--ad-banner-h, 0px)); }
 /* the rest dock floats over the page: let the current card scroll clear of it (dock 128px + 12px offset + 16px gap) */
 body:has(#timerBar.show) .screen{ padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 156px); }
 
