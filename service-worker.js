@@ -51,6 +51,7 @@ const ASSETS = [
   "./verify.js",
   "./swap.js",
   "./rest-days.js",
+  "./ads.js",
   "./calendar.js",
   "./workout-builder.js",
   "./header.js",
