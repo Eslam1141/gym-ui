@@ -12,7 +12,7 @@ const STATUS_SAVE = { rewardedEnabled: true, coachVideosLeftToday: 0, streakSave
 async function openChatAt429(browser, opts) {
   const app = await openAdsApp(browser, Object.assign({ signedIn: true }, opts, {
     setup: async (context) => {
-      await context.route("**/api/v1/assistant/chat", (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: { code: "rate_limited", message: "x" } }) }));
+      await context.route("**/api/v1/assistant/chat", (route) => route.fulfill({ status: 429, contentType: "application/json", headers: opts.reset === null ? {} : { "X-RateLimit-Reset": opts.reset || "2026-10-03T00:00:00Z" }, body: JSON.stringify({ error: { code: "rate_limited", message: "x" } }) }));
     }
   }));
   const { page } = app;
@@ -41,6 +41,17 @@ test.describe("coach video", () => {
     await z.page.waitForTimeout(500);
     await expect(offer(z.page)).toHaveCount(0);
     await z.context.close();
+  });
+
+  test("only the daily quota (reset at the next UTC midnight) earns the offer, not the per-minute throttle", async ({ browser }) => {
+    const minute = await openChatAt429(browser, { reset: "2026-10-02T07:01:00Z", rewards: { status: STATUS_COACH } });
+    await minute.page.waitForTimeout(500);
+    await expect(offer(minute.page)).toHaveCount(0);
+    await minute.context.close();
+    const none = await openChatAt429(browser, { reset: null, rewards: { status: STATUS_COACH } });
+    await none.page.waitForTimeout(500);
+    await expect(offer(none.page)).toHaveCount(0);
+    await none.context.close();
   });
 
   test("no button without the bridge or with rewarded off", async ({ browser }) => {
@@ -80,12 +91,14 @@ test.describe("coach video", () => {
   });
 
   test("409 and 503 say no video; so does no fill; closing the video early just re-arms the button", async ({ browser }) => {
-    for (const code of [409, 503]) {
-      const a = await openChatAt429(browser, { rewards: { status: STATUS_COACH, ticketStatus: code } });
-      await offer(a.page).click();
-      await expect(a.page.locator("#coachChat .ad-offer")).toContainText("No video right now, try later");
-      await a.context.close();
-    }
+    const lim = await openChatAt429(browser, { rewards: { status: STATUS_COACH, ticketStatus: 409, ticketBody: { error: "limit_reached", reason: "" } } });
+    await offer(lim.page).click();
+    await expect(lim.page.locator("#coachChat .ad-offer")).toContainText("You've watched all of today's videos. Try again tomorrow.");
+    await lim.context.close();
+    const off = await openChatAt429(browser, { rewards: { status: STATUS_COACH, ticketStatus: 503, ticketBody: { error: "rewards_disabled" } } });
+    await offer(off.page).click();
+    await expect(off.page.locator("#coachChat .ad-offer")).toContainText("No video right now, try later");
+    await off.context.close();
     const nf = await openChatAt429(browser, { ads: { rewarded: { rewarded: false, reason: "no_fill" } }, rewards: { status: STATUS_COACH } });
     await offer(nf.page).click();
     await expect(nf.page.locator("#coachChat .ad-offer")).toContainText("No video right now, try later");
@@ -150,11 +163,19 @@ test.describe("streak save card", () => {
     await a.context.close();
   });
 
-  test("409 says no video and keeps the card usable", async ({ browser }) => {
+  test("409 week_used says the week's save is used; other not_eligible drops the card", async ({ browser }) => {
     const a = await openAdsApp(browser, { signedIn: true, rewards: { status: STATUS_SAVE, ticketStatus: 409, ticketBody: { error: "not_eligible", reason: "week_used" } } });
     await saveCard(a.page).locator("button").click();
-    await expect(saveCard(a.page)).toContainText("No video right now, try later");
+    await expect(saveCard(a.page)).toContainText("You've already saved a day this week.");
     await a.context.close();
+    const b = await openAdsApp(browser, { signedIn: true, rewards: { status: STATUS_SAVE, ticketStatus: 409, ticketBody: { error: "not_eligible", reason: "held" } } });
+    await saveCard(b.page).locator("button").click();
+    await expect(saveCard(b.page)).toHaveCount(0);
+    await b.context.close();
+    const c = await openAdsApp(browser, { signedIn: true, rewards: { status: STATUS_SAVE, ticketStatus: 503, ticketBody: { error: "rewards_disabled" } } });
+    await saveCard(c.page).locator("button").click();
+    await expect(saveCard(c.page)).toContainText("No video right now, try later");
+    await c.context.close();
   });
 
   test("Arabic copy in RTL, and a phone-width card does not overflow", async ({ browser }) => {

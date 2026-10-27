@@ -26,7 +26,7 @@ async function openAdsApp(browser, opts) {
   return app;
 }
 
-// Stand-in for the NA-1 bridge. a: { consent, bannerHeight, bannerReject, rewarded (result or fn name), calls }
+// Stand-in for the NA-1 bridge. a: { start, consent, bannerHeight, bannerReject, rewarded (result or fn name), calls }
 async function installBridge(page, a) {
   await page.evaluate(async (a) => {
     const calls = (window.__adsCalls = []);
@@ -43,7 +43,8 @@ async function installBridge(page, a) {
       hideBanner: () => { rec("hideBanner"); return Promise.resolve(); },
       showRewarded: (o) => { rec("showRewarded", o); return Promise.resolve(a.rewarded || { rewarded: true }); }
     };
-    await window.GymAds.start();
+    // The app starts consent lazily (first Food/More visit or Watch tap); a.start asks for it up front.
+    if (a.start) await window.GymAds.start(); else window.GymAds.recheck();
   }, a);
 }
 

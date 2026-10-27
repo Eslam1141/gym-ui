@@ -105,4 +105,17 @@ test.describe("banner placement", () => {
     expect(await calls(page)).not.toContain("showBanner");
     await context.close();
   });
+
+  test("a dragged coach bubble is kept above the banner", async ({ browser }) => {
+    const { context, page } = await openAdsApp(browser, { ads: { bannerHeight: 60 }, ls: { gymcoach_bubble_pos: { side: "r", bottom: 70 } } });
+    await go(page, "food");
+    await expect.poll(() => shown(page)).toBe(true);
+    const r = await page.evaluate(() => {
+      const nav = document.getElementById("appNav").getBoundingClientRect();
+      const fab = document.getElementById("coachFab").getBoundingClientRect();
+      return { fabBottom: fab.bottom, bannerTop: nav.top - 60 };
+    });
+    expect(r.fabBottom).toBeLessThanOrEqual(r.bannerTop);
+    await context.close();
+  });
 });

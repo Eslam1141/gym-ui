@@ -483,6 +483,8 @@ const T = {
   adLoading:["Loading video…","جارٍ تحميل الفيديو…"],
   adConfirming:["Confirming…","جارٍ التأكيد…"],
   adNoVideo:["No video right now, try later","لا يوجد فيديو الآن، حاول لاحقاً"],
+  adLimitToday:["You've watched all of today's videos. Try again tomorrow.","شاهدت كل فيديوهات اليوم. حاول مجدداً غداً."],
+  adLimitWeek:["You've already saved a day this week.","لقد حفظت يوماً بالفعل هذا الأسبوع."],
   adUnconfirmed:["We couldn't confirm the video. Try again later.","تعذّر تأكيد الفيديو. حاول مرة أخرى لاحقاً."],
   adPrivacyTitle:["Privacy options","خيارات الخصوصية"],
   adPrivacyDesc:["Change how ads use your data.","غيّر طريقة استخدام الإعلانات لبياناتك."],
@@ -2671,6 +2673,9 @@ function applyLang(lang, persist){
   try {
     if(window.GymFood && typeof window.GymFood.refresh === "function") window.GymFood.refresh();
   } catch(e){ if(window.console) console.warn("food re-render failed", e); }
+  try {
+    if(window.GymAds && window.GymAds.refreshText) window.GymAds.refreshText(); // ad card / video offer text
+  } catch(e){ if(window.console) console.warn("ads re-label failed", e); }
   try {
     if(window.GymForceUpdate) window.GymForceUpdate.check(); // re-label the update bar / banner / page
   } catch(e){ if(window.console) console.warn("force-update re-label failed", e); }

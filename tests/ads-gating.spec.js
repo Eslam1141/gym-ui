@@ -39,7 +39,7 @@ test.describe("ads gating", () => {
   });
 
   test("ads on and consent granted: init once, canShowAds true", async ({ browser }) => {
-    const { context, page } = await openAdsApp(browser, {});
+    const { context, page } = await openAdsApp(browser, { ads: { start: true } });
     await page.evaluate(() => GymAds.start());
     expect(await calls(page)).toEqual(["init"]);
     expect(await page.evaluate(() => GymAds.canShowAds())).toBe(true);
@@ -49,7 +49,7 @@ test.describe("ads gating", () => {
   test("consent says no ads: no banner, no rewarded offer", async ({ browser }) => {
     const { context, page } = await openAdsApp(browser, { ads: { consent: { canRequestAds: false, privacyOptionsRequired: true } } });
     await page.evaluate(() => GymUI.navigate("food"));
-    await page.waitForTimeout(300);
+    await expect.poll(() => calls(page)).toEqual(["init"]);
     expect(await page.evaluate(() => GymAds.canShowAds())).toBe(false);
     expect(await calls(page)).toEqual(["init"]);
     await context.close();
