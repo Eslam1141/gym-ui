@@ -291,7 +291,8 @@
     var nr = nav ? nav.getBoundingClientRect() : null;
     var rail = !!nr && nr.width > 0 && nr.width < vw / 2;
     var rtl = document.documentElement.dir === "rtl";
-    var minBottom = rail ? 24 : (nr && nr.height ? vh - nr.top + EDGE_GAP : EDGE_GAP);
+    var ad = document.body.classList.contains("has-ad-banner") ? parseFloat(document.body.style.getPropertyValue("--ad-banner-h")) || 0 : 0; // ads.js banner above the nav
+    var minBottom = rail ? 24 : (nr && nr.height ? vh - nr.top + ad + EDGE_GAP : EDGE_GAP);
     var topLimit = headerBottom() + EDGE_GAP;
     return {
       vw: vw, vh: vh, size: size, minBottom: minBottom, topLimit: topLimit,
@@ -664,6 +665,7 @@
             if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
           }
           msgsEl.appendChild(systemBubble(text));
+          if (window.GymAds) GymAds.offerCoachVideo(msgsEl, { reset: reset }); // "watch a video for 3 more messages" (daily quota only), if ads are on
           scrollToBottom(); setSending(false); refocusInput(hadFocus);
           return null;
         }

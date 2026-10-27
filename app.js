@@ -473,6 +473,22 @@ const T = {
   weekDayN:["Day {n}","اليوم {n}"],
   restPanelBody:["Day {n} of 7. Recovery is when training turns into strength. Nothing to log today.","اليوم {n} من 7. في الراحة يتحول التمرين إلى قوة. لا شيء لتسجيله اليوم."],
   restPanelNext:["Next up: {day}","التالي: {day}"],
+  // ---- ads: rewarded videos, streak save, privacy options (ads.js) ----
+  adCoachWatch:["Watch a short video for 3 more messages","شاهد فيديو قصيراً لتحصل على 3 رسائل إضافية"],
+  adCoachGranted:["+3 messages","+3 رسائل"],
+  adStreakTitle:["Watch a video to keep your streak","شاهد فيديو لتحافظ على سلسلتك"],
+  adStreakMissed:["You missed {d}","فاتك {d}"],
+  adStreakSaved:["Streak saved","تم حفظ السلسلة"],
+  adWatch:["Watch","شاهد"],
+  adLoading:["Loading video…","جارٍ تحميل الفيديو…"],
+  adConfirming:["Confirming…","جارٍ التأكيد…"],
+  adNoVideo:["No video right now, try later","لا يوجد فيديو الآن، حاول لاحقاً"],
+  adLimitToday:["You've watched all of today's videos. Try again tomorrow.","شاهدت كل فيديوهات اليوم. حاول مجدداً غداً."],
+  adLimitWeek:["You've already saved a day this week.","لقد حفظت يوماً بالفعل هذا الأسبوع."],
+  adUnconfirmed:["We couldn't confirm the video. Try again later.","تعذّر تأكيد الفيديو. حاول مرة أخرى لاحقاً."],
+  adPrivacyTitle:["Privacy options","خيارات الخصوصية"],
+  adPrivacyDesc:["Change how ads use your data.","غيّر طريقة استخدام الإعلانات لبياناتك."],
+  adPrivacyBtn:["Manage","إدارة"],
   restMarked:["Rest day saved","تم حفظ يوم الراحة"],
   restRemoved:["Rest day removed","تم إلغاء يوم الراحة"],
   celebDay1:["Great job. See you tomorrow","عمل رائع. نشوفك بكرة إن شاء الله"],
@@ -2657,6 +2673,9 @@ function applyLang(lang, persist){
   try {
     if(window.GymFood && typeof window.GymFood.refresh === "function") window.GymFood.refresh();
   } catch(e){ if(window.console) console.warn("food re-render failed", e); }
+  try {
+    if(window.GymAds && window.GymAds.refreshText) window.GymAds.refreshText(); // ad card / video offer text
+  } catch(e){ if(window.console) console.warn("ads re-label failed", e); }
   try {
     if(window.GymForceUpdate) window.GymForceUpdate.check(); // re-label the update bar / banner / page
   } catch(e){ if(window.console) console.warn("force-update re-label failed", e); }

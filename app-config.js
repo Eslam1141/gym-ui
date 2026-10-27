@@ -21,6 +21,11 @@
     var out = { verifyStrict: o.verifyStrict === true };
     if (typeof o.minAppVersion === "string") out.minAppVersion = o.minAppVersion;
     if (typeof o.latestAppVersion === "string") out.latestAppVersion = o.latestAppVersion;
+    out.adsEnabled = o.adsEnabled === true;
+    out.bannersEnabled = o.bannersEnabled === true;
+    out.rewardedEnabled = o.rewardedEnabled === true;
+    if (typeof o.admobBannerUnit === "string") out.admobBannerUnit = o.admobBannerUnit;
+    if (typeof o.admobRewardedUnit === "string") out.admobRewardedUnit = o.admobRewardedUnit;
     return out;
   }
 
@@ -46,6 +51,10 @@
     strict: function () { return cfg.verifyStrict === true; },
     minAppVersion: function () { return cfg.minAppVersion || ""; },
     latestAppVersion: function () { return cfg.latestAppVersion || ""; },
+    adsEnabled: function () { return cfg.adsEnabled === true; },
+    bannersEnabled: function () { return cfg.adsEnabled === true && cfg.bannersEnabled === true; },
+    rewardedEnabled: function () { return cfg.adsEnabled === true && cfg.rewardedEnabled === true; },
+    admobUnits: function () { return { banner: cfg.admobBannerUnit || "", rewarded: cfg.admobRewardedUnit || "" }; },
     // A cached answer is fine for verifyStrict, but the version fields only count after a real fetch:
     // an offline old app must not be blocked by a stale cached minAppVersion.
     fresh: function () { return fresh; },

@@ -1,6 +1,8 @@
 const { defineConfig } = require("@playwright/test");
 
 // Serves the repo root (parent dir) statically; no build step.
+const PORT = process.env.PW_PORT || 4173; // other agents/worktrees pick their own port
+
 module.exports = defineConfig({
   testDir: ".",
   testMatch: "*.spec.js",
@@ -8,11 +10,11 @@ module.exports = defineConfig({
   // (seen on main too, 2026-10-08); 4 is reliable on a 16-thread laptop.
   workers: 4,
   webServer: {
-    command: "python static-server.py 4173 ..",
-    url: "http://127.0.0.1:4173/index.html",
+    command: `python static-server.py ${PORT} ..`,
+    url: `http://127.0.0.1:${PORT}/index.html`,
     reuseExistingServer: true,
     stdout: "ignore",
     stderr: "ignore"
   },
-  use: { baseURL: "http://127.0.0.1:4173" }
+  use: { baseURL: `http://127.0.0.1:${PORT}` }
 });
