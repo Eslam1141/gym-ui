@@ -35,6 +35,10 @@
  *  - startUpdate(): Play In-App Updates immediate flow for the "Update required"
  *    page (force-update.js); see the function. Back is ignored while
  *    GymForceUpdate.isBlocking().
+ *  - Ads: window.GymNativeShell.ads (only when the AdMob plugin is present, i.e. shell
+ *    >= 1.0.10; absent otherwise) wraps @capacitor-community/admob + Google UMP consent
+ *    for ads.js; see the "ads bridge" section. Debug APKs (window.__etqDebug, set by the
+ *    same document-start script) only ever use Google's test ad units.
  *  - Deletes the superseded "rest-timer" notification channel (the timers
  *    use "timer-alarm" now); a no-op once it is gone.
  */
@@ -62,10 +66,10 @@
   }
 
   // Read at parse time, before anything else can look at it, then removed.
-  var vaultMarker, motionMarker;
+  var vaultMarker, motionMarker, debugMarker;
   try {
-    vaultMarker = window.__etqVault; motionMarker = window.__etqMotion;
-    delete window.__etqVault; delete window.__etqMotion;
+    vaultMarker = window.__etqVault; motionMarker = window.__etqMotion; debugMarker = window.__etqDebug;
+    delete window.__etqVault; delete window.__etqMotion; delete window.__etqDebug;
   } catch (e) {}
 
   function installSessionStore() {
@@ -262,12 +266,168 @@
     else run();
   }
 
+
+  // ---- ads bridge (see header) ----
+  // window.GymNativeShell.ads: available / init / showPrivacyOptions / showBanner /
+  // hideBanner / showRewarded. Rewards are never granted here: showRewarded only
+  // reports that the player finished the video; the server grants after a signed callback.
+  var TEST_BANNER = "ca-app-pub-3940256099942544/9214589741";
+  var TEST_REWARDED = "ca-app-pub-3940256099942544/5224354917";
+  var BANNER_TIMEOUT_MS = 15000, REWARD_LOAD_TIMEOUT_MS = 20000;
+  var adsInitPromise = null;
+
+  function admob() {
+    var c = cap();
+    var p = c && plugin(c, "AdMob");
+    return p && typeof p.initialize === "function" ? p : null;
+  }
+  function listen(p, name, fn) {
+    try { return Promise.resolve(p.addListener(name, fn)).catch(function () { return null; }); }
+    catch (e) { return Promise.resolve(null); }
+  }
+  function dropAll(handles) {
+    handles.forEach(function (h) {
+      Promise.resolve(h).then(function (x) { if (x && typeof x.remove === "function") x.remove(); }).catch(function () {});
+    });
+  }
+  // Debug APKs (window.__etqDebug) always use Google's test units, whatever id was passed.
+  function unit(id, test) { return debugMarker === true ? test : id; }
+
+  function adsAvailable() { return !!admob(); }
+
+  // AdMob.initialize, then UMP: requestConsentInfo and, when consent is required,
+  // showConsentForm. One promise for the app's life; never rejects.
+  function adsInit() {
+    if (adsInitPromise) return adsInitPromise;
+    var fail = { canRequestAds: false, privacyOptionsRequired: false };
+    adsInitPromise = new Promise(function (resolve) {
+      var p = admob();
+      if (!p) { resolve(fail); return; }
+      var info;
+      Promise.resolve(p.initialize({})).then(function () {
+        return p.requestConsentInfo();
+      }).then(function (i) {
+        info = i || {};
+        if (info.status === "REQUIRED" && info.isConsentFormAvailable !== false && typeof p.showConsentForm === "function") {
+          return Promise.resolve(p.showConsentForm()).then(function (after) { if (after) info = after; });
+        }
+      }).then(function () {
+        resolve({
+          canRequestAds: info.canRequestAds === true,
+          privacyOptionsRequired: info.privacyOptionsRequirementStatus === "REQUIRED"
+        });
+      }).catch(function () { resolve(fail); });
+    });
+    return adsInitPromise;
+  }
+
+  function showPrivacyOptions() {
+    return new Promise(function (resolve) {
+      var p = admob();
+      if (!p || typeof p.showPrivacyOptionsForm !== "function") { resolve(); return; }
+      Promise.resolve(p.showPrivacyOptionsForm()).then(function () { resolve(); }, function () { resolve(); });
+    });
+  }
+
+  function removeBanner(p) {
+    if (!p || typeof p.removeBanner !== "function") return Promise.resolve();
+    return Promise.resolve(p.removeBanner()).then(function () {}, function () {});
+  }
+  // Adaptive banner at the bottom, `marginPx` (CSS px = dp) above the bottom edge. Resolves
+  // {heightPx} once the ad loaded; rejects on no fill / timeout and leaves nothing on screen.
+  // The plugin resolves showBanner immediately and reports the load by event. Any banner
+  // already up is removed first (the plugin's hide only collapses it and a reshow would stay hidden).
+  function showBanner(opts) {
+    opts = opts || {};
+    var p = admob();
+    if (!p) return Promise.reject(new Error("no_plugin"));
+    var handles = [];
+    return removeBanner(p).then(function () {
+      return new Promise(function (resolve, reject) {
+        var height = 0, done = false, timer = null;
+        function finish(err) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          dropAll(handles);
+          if (err) { removeBanner(p).then(function () { reject(err); }); return; }
+          resolve({ heightPx: height });
+        }
+        handles.push(listen(p, "bannerAdSizeChanged", function (s) { if (s && s.height > 0) height = s.height; }));
+        handles.push(listen(p, "bannerAdLoaded", function () { finish(null); }));
+        handles.push(listen(p, "bannerAdFailedToLoad", function () { finish(new Error("no_fill")); }));
+        timer = setTimeout(function () { finish(new Error("timeout")); }, BANNER_TIMEOUT_MS);
+        Promise.all(handles).then(function () {
+          if (done) return;
+          return p.showBanner({
+            adId: unit(String(opts.adUnitId || ""), TEST_BANNER),
+            adSize: "ADAPTIVE_BANNER",
+            position: "BOTTOM_CENTER",
+            margin: Math.max(0, Math.round(Number(opts.marginPx) || 0)),
+            isTesting: false   // the id already is Google's test unit on debug builds
+          });
+        }).catch(function () { finish(new Error("error")); });
+      });
+    });
+  }
+  function hideBanner() { return removeBanner(admob()); }
+
+  // Load + show one rewarded video with server-side-verification data. Resolves once the
+  // video is dismissed (rewarded:true if the player earned the reward first). Never rejects.
+  function showRewarded(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var p = admob();
+      if (!p) { resolve({ rewarded: false, reason: "error" }); return; }
+      var handles = [], done = false, earned = false, timer = null;
+      function finish(res) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        dropAll(handles);
+        resolve(res);
+      }
+      var adId = unit(String(opts.adUnitId || ""), TEST_REWARDED);
+      var ssv = {};
+      if (opts.customData) ssv.customData = String(opts.customData);
+      if (opts.userId) ssv.userId = String(opts.userId);
+      handles.push(listen(p, "onRewardedVideoAdReward", function () { earned = true; }));
+      handles.push(listen(p, "onRewardedVideoAdDismissed", function () {
+        finish(earned ? { rewarded: true } : { rewarded: false, reason: "dismissed" });
+      }));
+      handles.push(listen(p, "onRewardedVideoAdFailedToShow", function () { finish({ rewarded: false, reason: "error" }); }));
+      handles.push(listen(p, "onRewardedVideoAdFailedToLoad", function () { finish({ rewarded: false, reason: "no_fill" }); }));
+      timer = setTimeout(function () { finish({ rewarded: false, reason: "no_fill" }); }, REWARD_LOAD_TIMEOUT_MS);
+      Promise.all(handles).then(function () {
+        if (done) return;
+        var prep = { adId: adId, isTesting: false };
+        if (ssv.customData || ssv.userId) prep.ssv = ssv;
+        return Promise.resolve(p.prepareRewardVideoAd(prep)).then(function () {
+          if (done) return;
+          clearTimeout(timer);   // loaded: from here the dismissed / failed-to-show events end it
+          // The plugin's own promise resolves only on a reward, so it is not awaited:
+          // a dismissal without reward would never settle it.
+          Promise.resolve(p.showRewardVideoAd({ adId: adId })).catch(function () { finish({ rewarded: false, reason: "error" }); });
+        });
+      }).catch(function () { finish({ rewarded: false, reason: "no_fill" }); });
+    });
+  }
+
+  function installAds() {
+    if (!admob()) return;
+    window.GymNativeShell.ads = {
+      available: adsAvailable, init: adsInit, showPrivacyOptions: showPrivacyOptions,
+      showBanner: showBanner, hideBanner: hideBanner, showRewarded: showRewarded
+    };
+  }
+
   function init() {
     if (started) return;
     var c = cap();
     if (!c) return;
     started = true;
     installSessionStore();
+    installAds();
     unwrapHomeLinks();
     watchSystemBars();
 

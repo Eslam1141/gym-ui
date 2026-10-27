@@ -164,3 +164,12 @@ one-shot `window.__etqVault` (JSON string literal of the record, `""` when empty
   Replies still go only to the main frame, so a frame cannot read anything back, but it can post plugin calls.
   Open follow-up (not in this change): make the bridge use the web-message listener.
 - Unit test: `./gradlew testDebugUnitTest` (`DocStartScriptTest`: quoting, `</script>`, U+2028/2029, origins).
+
+## AdMob (shell 1.0.10+)
+
+`@capacitor-community/admob` 8.2.1 (pinned; its package.json depends on `@capacitor/core ^8`) plus Google UMP consent,
+exposed to the web as `window.GymNativeShell.ads` (see `native-shell.js`). The AdMob **app id** comes from the
+`ADMOB_APP_ID` gradle property (`./gradlew assembleRelease -PADMOB_APP_ID=ca-app-pub-XXXX~YYYY`); unset or blank falls
+back to Google's sample app id, so the app never crashes at startup and only serves test ads. Debug APKs set
+`window.__etqDebug` (document-start script) and the bridge then always uses Google's test banner/rewarded units.
+The merged manifest gains `AD_ID` and `ACCESS_ADSERVICES_*` permissions (Play Console: advertising ID declaration).

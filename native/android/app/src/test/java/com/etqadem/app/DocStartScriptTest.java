@@ -51,4 +51,8 @@ public class DocStartScriptTest {
             DocStartScript.allowedOrigins("https://etqadem.cloider.app/app/"));
         assertEquals(new LinkedHashSet<>(Arrays.asList("https://localhost")), DocStartScript.allowedOrigins(null));
     }
+    @Test public void debugFlagMarker() {
+        assertTrue(DocStartScript.build("", false, true).contains("window.__etqDebug=true;"));
+        assertTrue(DocStartScript.build("", false).contains("window.__etqDebug=false;"));
+    }
 }

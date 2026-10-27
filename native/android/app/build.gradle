@@ -7,8 +7,14 @@ android {
         applicationId "com.etqadem.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "1.0.9"
+        versionCode 10
+        versionName "1.0.10"
+        // AdMob app id (not a secret). Set -PADMOB_APP_ID=ca-app-pub-XXXX~YYYY (or in
+        // ~/.gradle/gradle.properties) for release builds. Unset/blank falls back to Google's
+        // sample app id so the app never crashes at startup (the SDK throws without one);
+        // it only ever serves test ads.
+        def admobAppId = (project.findProperty('ADMOB_APP_ID') ?: '').toString().trim()
+        manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'ca-app-pub-3940256099942544~3347511713']
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

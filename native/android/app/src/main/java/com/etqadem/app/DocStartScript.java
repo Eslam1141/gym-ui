@@ -26,9 +26,15 @@ final class DocStartScript {
      * @param reduceMotion Android "Remove animations" is on
      */
     static String build(String vaultValue, boolean reduceMotion) {
+        return build(vaultValue, reduceMotion, false);
+    }
+
+    /** @param debuggable the APK is a debug build: the ads bridge then uses Google's test ad units only */
+    static String build(String vaultValue, boolean reduceMotion, boolean debuggable) {
         return "(function(){try{if(window!==window.top)return;"
             + "window.__etqVault=" + quote(vaultValue == null ? "" : vaultValue) + ";"
             + "window.__etqMotion=" + (reduceMotion ? "true" : "false") + ";"
+            + "window.__etqDebug=" + (debuggable ? "true" : "false") + ";"
             + "}catch(e){}})();";
     }
 
