@@ -26,6 +26,7 @@
     nextMonth: ["Next month", "الشهر التالي"],
     noWorkout: ["No workout logged", "لم يُسجَّل تمرين"],
     completed: ["Completed", "مكتمل"],
+    calSaved: ["Saved", "محفوظ"],
     inProgress: ["{d}/{t} exercises checked", "{d}/{t} تمارين مؤشَّرة"],
     syncing: ["Syncing, sign in to save", "بيتزامن، سجّل دخولك عشان يتحفظ"],
     calHeld: ["Done · awaiting review", "تم · بانتظار المراجعة"],
@@ -142,7 +143,7 @@
           if (kind === "rejected") e.rejected = true;
           map[r.date] = e;
         });
-        if (window.GymRest) GymRest.setServer(from, to, doc.restDays, doc.restDaysLeftThisWeek);
+        if (window.GymRest) GymRest.setServer(from, to, doc.restDays, doc.restDaysLeftThisWeek, doc.savedDays);
         return map;
       })
       .catch(function () { return computeLocalCompletion(from, to); });
@@ -224,15 +225,17 @@
       var btn = document.createElement("button");
       btn.type = "button";
       var rest = !!(entry && entry.rest && !entry.complete);
+      var saved = !!(entry && entry.saved && !entry.complete && !rest);
       var pend = !!(entry && entry.pending);
       var held = !!(entry && entry.held && !entry.complete);
       var rej = !!(entry && entry.rejected && !entry.complete && !held);
-      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (held ? " held" : "") + (rej ? " rejected" : "") + (rest ? " rest" : "") + (pend ? " pending" : "") + (key === tKey ? " today" : "");
+      btn.className = "cal-day-cell" + (entry && entry.complete ? " complete" : "") + (held ? " held" : "") + (rej ? " rejected" : "") + (rest ? " rest" : "") + (saved ? " saved" : "") + (pend ? " pending" : "") + (key === tKey ? " today" : "");
       btn.dataset.date = key;
       btn.innerHTML =
         '<span class="cal-dow">' + dowShort(d.getDay()) + '</span>' +
         '<span class="cal-num">' + d.getDate() + '</span>' +
         (rest ? '<span class="cal-rest-mark" aria-hidden="true"></span><span class="sr-only">' + s("restBadge") + '</span>' : '') +
+        (saved ? '<span class="cal-saved-mark" aria-hidden="true"></span><span class="sr-only">' + s("calSaved") + '</span>' : '') +
         (pend ? '<span class="sr-only">' + s("syncing") + '</span>' : '') +
         (held ? '<span class="cal-held-mark" aria-hidden="true"></span><span class="sr-only">' + s("calPending") + '</span>' : '') +
         (rej ? '<span class="sr-only">' + s("calRejected") + '</span>' : '');
@@ -326,6 +329,7 @@
         else if (entry && entry.held) cell.className += " held";
         else if (entry && entry.rejected) cell.className += " rejected";
         else if (entry && entry.rest) cell.className += " rest";
+        else if (entry && entry.saved) cell.className += " saved";
         else if (entry && entry.pending) cell.className += " pending";
         if (key === tKey) cell.className += " today";
         cell.textContent = String(dayNum);
@@ -349,6 +353,11 @@
     dayDetail.hidden = false;
     if (window.GymMotion) GymMotion.play(dayDetail, "m-row-in");
     var controls = function (e) { if (window.GymRest) GymRest.renderDetailControls(dayDetail, dateKey, e); };
+
+    if (entry && entry.saved && !entry.dayId) {
+      dayDetail.innerHTML = '<div class="cal-detail-date">' + label + '</div><span class="cal-detail-status saved">' + s("calSaved") + '</span>';
+      return;
+    }
 
     if (!entry || ((entry.rest || entry.pending) && !entry.dayId)) {
       // Fall back to a local record for this exact date even when the map

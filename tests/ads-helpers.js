@@ -62,6 +62,7 @@ async function mockRewards(context, server, h) {
     }
     if (path === "/rewards/ticket" && req.method() === "POST") {
       if (h.ticketStatus && h.ticketStatus !== 201) return json(h.ticketStatus, h.ticketBody || { error: "limit_reached" });
+      if (h.onTicket) h.onTicket(server);
       return json(201, { ticketId: "tk1", kind: JSON.parse(req.postData() || "{}").kind, expiresAt: "2026-10-02T08:00:00Z", ssvUserId: "u1" });
     }
     if (path.startsWith("/rewards/ticket/")) {

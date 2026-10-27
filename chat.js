@@ -664,6 +664,7 @@
             if (!isNaN(d.getTime())) text = fmt(s("quota"), { t: d.toLocaleString(lang() === "ar" ? "ar-EG" : "en-US") });
           }
           msgsEl.appendChild(systemBubble(text));
+          if (window.GymAds) GymAds.offerCoachVideo(msgsEl); // "watch a video for 3 more messages", if ads are on
           scrollToBottom(); setSending(false); refocusInput(hadFocus);
           return null;
         }

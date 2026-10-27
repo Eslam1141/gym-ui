@@ -40,7 +40,7 @@ async function mockApi(context, s) {
     if (path === "/workouts/complete" && req.method() === "GET") {
       const from = url.searchParams.get("from") || "0000", to = url.searchParams.get("to") || "9999";
       const inR = (d) => (typeof d === "string" ? d : d.date) >= from && (typeof d === "string" ? d : d.date) <= to;
-      return json(200, { records: s.records.filter(inR), restDays: s.restDays.filter(inR), restDaysLeftThisWeek: s.left });
+      return json(200, { records: s.records.filter(inR), restDays: s.restDays.filter(inR), savedDays: (s.savedDays || []).filter(inR), restDaysLeftThisWeek: s.left });
     }
     if (path === "/workouts/complete" && req.method() === "POST") {
       const status = s.completeStatus; // decided on arrival, before any gate

@@ -121,11 +121,204 @@
     else if (!watch && timer) { clearInterval(timer); timer = null; }
   }
 
+  // ---------------- rewarded videos ----------------
+  var POLL_MS = 1000, POLL_MAX = 10; // wait up to ~10 s for gym-be to hear from Google
+  var FETCH_TIMEOUT_MS = 8000;
+
+  function str(key, params) {
+    var out = typeof window.t === "function" ? window.t(key) : key;
+    if (params) out = out.replace(/\{(\w+)\}/g, function (_, k) { return params[k] != null ? params[k] : ""; });
+    return out;
+  }
+  function isAuthed() { return !!(window.GymSync && typeof GymSync.isSignedIn === "function" && GymSync.isSignedIn()); }
+  function rewardedOn() { return canShowAds() && cfg().rewardedEnabled() && isAuthed(); }
+  function localToday() { return window.GymDate.key(); }
+
+  function api(method, path, body) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
+    var headers = { "Authorization": "Bearer " + (window.GymSync && GymSync.token ? GymSync.token() : "") };
+    if (body) headers["Content-Type"] = "application/json";
+    return fetch(API_BASE + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal })
+      .finally(function () { clearTimeout(timer); });
+  }
+  function getStatus() {
+    return api("GET", "/rewards/status?today=" + localToday())
+      .then(function (res) { if (!res.ok) throw new Error("status " + res.status); return res.json(); });
+  }
+
+  function pollTicket(id) {
+    return new Promise(function (resolve) {
+      var n = 0;
+      function step() {
+        api("GET", "/rewards/ticket/" + encodeURIComponent(id))
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .catch(function () { return null; })
+          .then(function (t) {
+            if (t && t.status === "granted") return resolve("granted");
+            if (t && t.status === "expired") return resolve("unconfirmed");
+            if (++n >= POLL_MAX) return resolve("unconfirmed");
+            setTimeout(step, POLL_MS);
+          });
+      }
+      setTimeout(step, POLL_MS);
+    });
+  }
+
+  // One rewarded video, start to finish. phase("loading" | "confirming") reports progress to the UI.
+  // Resolves "granted" | "dismissed" | "unavailable" (409, 503, no fill, any error) | "unconfirmed".
+  function redeem(kind, date, phase) {
+    var b = bridge();
+    if (!b) return Promise.resolve("unavailable");
+    phase("loading");
+    var body = { kind: kind };
+    if (date) body.date = date;
+    return api("POST", "/rewards/ticket", body).then(function (res) {
+      if (res.status !== 201) return "unavailable";
+      return res.json().then(function (t) {
+        return Promise.resolve().then(function () {
+          return b.showRewarded({ adUnitId: cfg().admobUnits().rewarded, customData: t.ticketId, userId: t.ssvUserId });
+        }).then(function (r) {
+          if (!r || r.rewarded !== true) return r && r.reason === "dismissed" ? "dismissed" : "unavailable";
+          phase("confirming");
+          return pollTicket(t.ticketId);
+        });
+      });
+    }).catch(function () { return "unavailable"; });
+  }
+
+  var ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14z"/></svg>';
+  var ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.2 16.6 4.9 12.3l-1.4 1.4 5.7 5.7L20.5 7.1l-1.4-1.4z"/></svg>';
+
+  function failText(outcome) { return str(outcome === "unconfirmed" ? "adUnconfirmed" : "adNoVideo"); }
+
+  // ---- coach: under the chat-limit message ----
+  function offerCoachVideo(host) {
+    if (!host || !rewardedOn()) return;
+    getStatus().then(function (st) {
+      if (!st || !(st.coachVideosLeftToday > 0) || !host.isConnected) return;
+      var old = host.querySelector(".ad-offer");
+      if (old) old.remove();
+      var box = document.createElement("div");
+      box.className = "ad-offer";
+      box.setAttribute("aria-live", "polite");
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ad-offer-btn";
+      function idle() {
+        btn.disabled = false;
+        btn.innerHTML = ICON_PLAY + "<span></span>";
+        btn.lastChild.textContent = str("adCoachWatch");
+      }
+      function note(cls, icon, text) {
+        box.className = "ad-offer " + cls;
+        box.innerHTML = (icon || "") + "<span></span>";
+        box.lastChild.textContent = text;
+      }
+      idle();
+      btn.onclick = function () {
+        btn.disabled = true;
+        redeem("coach_messages", "", function (p) { btn.lastChild.textContent = str(p === "loading" ? "adLoading" : "adConfirming"); }).then(function (r) {
+          if (r === "granted") note("is-done", ICON_CHECK, str("adCoachGranted"));
+          else if (r === "dismissed") idle();
+          else note("is-note", "", failText(r));
+        });
+      };
+      box.appendChild(btn);
+      host.appendChild(box);
+      host.scrollTop = host.scrollHeight;
+    }).catch(function () { /* no offer: the normal limit text stands */ });
+  }
+
+  // ---- streak: a card under the rest card on Plan ----
+  var saveInfo = null;     // streakSave from /rewards/status while eligible
+  var saveState = "idle";  // idle | loading | confirming | done | none | unconfirmed
+  var SAVED_SHOWN_MS = 6000;
+
+  function longDate(key) {
+    var loc = document.documentElement.lang === "ar" ? "ar-EG" : "en-US";
+    return new Date(key + "T00:00:00").toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
+  }
+
+  function renderSaveCard() {
+    var panel = document.querySelector("#calendarStrip .cal-strip");
+    if (!panel) return;
+    var card = panel.querySelector(".ad-save");
+    var done = saveState === "done";
+    var show = done || (saveInfo && saveInfo.eligible && rewardedOn() &&
+      !(window.GymRest && GymRest.promptBusy && GymRest.promptBusy(saveInfo.date)));
+    if (!show) { if (card) card.remove(); return; }
+    if (!card) {
+      card = document.createElement("div");
+      panel.appendChild(card);
+    }
+    var busy = saveState === "loading" || saveState === "confirming";
+    var failed = saveState === "none" || saveState === "unconfirmed";
+    card.className = "ad-save" + (done ? " is-done" : "");
+    if (done) {
+      card.innerHTML = '<span class="ad-save-icon">' + ICON_CHECK + '</span><div class="ad-save-text" role="status"><span class="ad-save-title"></span></div>';
+      card.querySelector(".ad-save-title").textContent = str("adStreakSaved");
+      return;
+    }
+    card.innerHTML =
+      '<span class="ad-save-icon">' + ICON_PLAY + '</span>' +
+      '<div class="ad-save-text"><span class="ad-save-title"></span><span class="ad-save-sub" role="status"></span></div>' +
+      (failed ? '' : '<button type="button" class="ad-save-btn"></button>');
+    card.querySelector(".ad-save-title").textContent = str("adStreakTitle");
+    card.querySelector(".ad-save-sub").textContent =
+      failed ? failText(saveState) :
+      busy ? str(saveState === "loading" ? "adLoading" : "adConfirming") : str("adStreakMissed", { d: longDate(saveInfo.date) });
+    var btn = card.querySelector(".ad-save-btn");
+    if (!btn) return;
+    btn.textContent = str("adWatch");
+    btn.disabled = busy;
+    btn.onclick = function () {
+      redeem("streak_save", saveInfo.date, function (p) { saveState = p; renderSaveCard(); }).then(function (r) {
+        if (r === "granted") {
+          saveState = "done";
+          saveInfo = null;
+          if (window.GymCalendar && GymCalendar.reload) GymCalendar.reload();
+          renderSaveCard();
+          setTimeout(function () { saveState = "idle"; renderSaveCard(); }, SAVED_SHOWN_MS);
+        } else {
+          saveState = r === "dismissed" ? "idle" : r === "unconfirmed" ? "unconfirmed" : "none";
+          renderSaveCard();
+        }
+      });
+    };
+  }
+
+  var lastStatusAt = 0;
+  function loadSaveStatus() {
+    if (!rewardedOn() || Date.now() - lastStatusAt < 30000) return;
+    lastStatusAt = Date.now();
+    getStatus().then(function (st) {
+      saveInfo = st && st.streakSave && st.streakSave.eligible ? st.streakSave : null;
+      if (saveState !== "done") saveState = "idle";
+      renderSaveCard();
+    }).catch(function () { lastStatusAt = 0; });
+  }
+
+  // ---- Settings: Privacy options (only when Google's consent flow says it is required) ----
+  function wirePrivacyRow() {
+    var row = document.getElementById("moreAdPrivacy");
+    var btn = document.getElementById("adPrivacyBtn");
+    if (!row || !btn) return;
+    row.hidden = !(consent && consent.privacyOptionsRequired);
+    btn.onclick = function () {
+      var b = bridge();
+      if (b) Promise.resolve().then(function () { return b.showPrivacyOptions(); }).catch(function () {});
+    };
+  }
+
   window.GymAds = {
     isPremium: isPremium,
     canShowAds: canShowAds,
-    start: function () { return start().then(function (ok) { refreshBanner(); return ok; }); },
-    offerCoachVideo: function () {},
+    start: function () {
+      return start().then(function (ok) { refreshBanner(); wirePrivacyRow(); loadSaveStatus(); return ok; });
+    },
+    offerCoachVideo: offerCoachVideo,
+    renderSaveCard: renderSaveCard,
     refreshBanner: refreshBanner
   };
 
@@ -134,6 +327,8 @@
     new MutationObserver(refreshBanner).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
     if (window.GymApp && GymApp.onWorkoutActive) GymApp.onWorkoutActive(refreshBanner);
     if (window.GymApp && GymApp.onWorkoutIdle) GymApp.onWorkoutIdle(refreshBanner);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) { loadSaveStatus(); refreshBanner(); } });
+    document.addEventListener("gym:authchange", function () { lastStatusAt = 0; window.GymAds.start(); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

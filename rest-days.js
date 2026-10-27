@@ -82,6 +82,7 @@
   // ---------------- rest-day state ----------------
   var serverRest = [];     // rest dates the server reported (merged per fetched range)
   var serverLeft = null;   // restDaysLeftThisWeek from the server, null until known
+  var serverSaved = [];    // days kept by a rewarded video (ads.js), same per-range merge; signed-in only
 
   function localRest() { var l = readJSON(LS_REST, []); return Array.isArray(l) ? l : []; }
   function restList() { return isAuthed() ? serverRest : localRest(); }
@@ -95,8 +96,9 @@
   }
 
   // calendar.js feeds each GET /workouts/complete?from&to response in here.
-  function setServer(from, to, restDays, left) {
+  function setServer(from, to, restDays, left, savedDays) {
     serverRest = serverRest.filter(function (k) { return k < from || k > to; }).concat(restDays || []);
+    serverSaved = serverSaved.filter(function (k) { return k < from || k > to; }).concat(savedDays || []);
     if (typeof left === "number") serverLeft = left;
   }
 
@@ -104,8 +106,8 @@
   // can't take a rest mark (the server would answer already_trained). A rejected day does not block one.
   function trained(entry) { return !!(entry && (entry.complete || entry.held)); }
 
-  // Adds rest entries to a calendar completion map. Training wins: a date with
-  // a completion is never shown as rest.
+  // Adds rest and saved entries to a calendar completion map. Training wins: a date with
+  // a completion is never shown as rest or saved.
   function decorate(map, from, to) {
     queue().forEach(function (q) {
       var e = map[q.date];
@@ -117,6 +119,12 @@
       var e = map[k];
       if (trained(e)) return;
       if (e) e.rest = true; else map[k] = { complete: false, rest: true };
+    });
+    if (isAuthed()) serverSaved.forEach(function (k) {
+      if (k < from || k > to) return;
+      var e = map[k];
+      if (trained(e) || (e && e.rest)) return;
+      if (e) e.saved = true; else map[k] = { complete: false, saved: true };
     });
     return map;
   }
@@ -236,6 +244,7 @@
     card.appendChild(text);
     var btn = done || held ? null : actionButton(tKey, entry);
     if (btn) card.appendChild(btn);
+    adCardRefresh(); // the streak-save card (ads.js) hangs under this one and is rebuilt with it
   }
 
   // Controls for the month overlay's day-detail panel (calendar.js).
@@ -449,10 +458,20 @@
     return fetchTimeout("/workouts/complete?from=" + date + "&to=" + date + "&today=" + today())
       .then(function (res) { if (!res.ok) throw new Error("workouts " + res.status); return res.json(); })
       .then(function (doc) {
-        setServer(date, date, doc.restDays, doc.restDaysLeftThisWeek);
-        return (doc.records || []).length > 0 || (doc.restDays || []).indexOf(date) !== -1;
+        setServer(date, date, doc.restDays, doc.restDaysLeftThisWeek, doc.savedDays);
+        return (doc.records || []).length > 0 || (doc.restDays || []).indexOf(date) !== -1 || (doc.savedDays || []).indexOf(date) !== -1;
       });
   }
+
+  // True while the "save yesterday" prompt is open, being decided, or about to ask about `date`: ads.js
+  // must not offer its own streak-save card for that date (two prompts for one day).
+  function promptBusy(date) {
+    if (sheet || checking) return true;
+    if (resolvedFor === date || dismissedList().indexOf(date) !== -1) return false;
+    var partial = partialFor(date);
+    return !!partial && !heldLocally(date, partial.dayId) && !queue().some(function (x) { return x.date === date; });
+  }
+  function adCardRefresh() { if (window.GymAds && GymAds.renderSaveCard) GymAds.renderSaveCard(); }
 
   function maybePrompt() {
     var date = yesterday();
@@ -465,7 +484,7 @@
     checking = true;
     alreadyRecorded(date).then(function (recorded) {
       checking = false;
-      if (recorded) { resolvedFor = date; return; }
+      if (recorded) { resolvedFor = date; adCardRefresh(); return; }
       if (yesterday() !== date) return; // midnight passed while we asked
       resolvedFor = date;
       openSheet(date, partial);
@@ -498,6 +517,7 @@
       var gone = sheet;
       sheet = null;
       if (gone) GymMotion.hide(gone, function () { gone.remove(); });
+      adCardRefresh();
     }
     function onKey(e) {
       if (e.key === "Escape") { e.stopPropagation(); no.onclick(); return; }
@@ -547,6 +567,7 @@
     decorate: decorate,
     setServer: setServer,
     isRest: isRest,
+    promptBusy: promptBusy,
     left: restLeft,
     renderCard: renderCard,
     renderDetailControls: renderDetailControls,
