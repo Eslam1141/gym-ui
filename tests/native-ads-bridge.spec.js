@@ -98,6 +98,11 @@ test("init(): initialize runs only after consent, and not at all when ads cannot
   });
   expect(await page.evaluate(() => window.GymNativeShell.ads.init())).toEqual({ canRequestAds: true, privacyOptionsRequired: true });
   expect(await page.evaluate(() => window.__ads.order)).toEqual(["requestConsentInfo", "showConsentForm", "initialize"]);
+  await context.close();
+});
+
+test("init(): consent refused (canRequestAds false) never initializes AdMob", async ({ browser }) => {
+  const { context, page } = await openApp(browser, open());
   await mockAdMob(page, {
     consent: { status: "REQUIRED", canRequestAds: false, isConsentFormAvailable: true, privacyOptionsRequirementStatus: "REQUIRED" },
     afterForm: { status: "REQUIRED", canRequestAds: false, privacyOptionsRequirementStatus: "REQUIRED" }
