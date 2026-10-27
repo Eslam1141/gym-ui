@@ -157,7 +157,8 @@ public class MainActivity extends BridgeActivity {
         // Unsupported WebView: no marker, the page keeps its localStorage session store.
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return;
         try {
-            String script = DocStartScript.build(SessionVault.get(this), animationsRemoved(this));
+            String script = DocStartScript.build(SessionVault.get(this), animationsRemoved(this),
+                (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
             ScriptHandler next = WebViewCompat.addDocumentStartJavaScript(
                 getBridge().getWebView(), script, DocStartScript.allowedOrigins(getBridge().getServerUrl()));
             if (docStartHandler != null) docStartHandler.remove();

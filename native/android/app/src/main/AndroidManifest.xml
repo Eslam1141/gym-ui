@@ -23,6 +23,19 @@
             </intent-filter>
         </activity>
 
+        <!-- AdMob app id; the SDK crashes at startup without it. Value comes from the
+             ADMOB_APP_ID gradle property (build.gradle falls back to Google's test app id). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${ADMOB_APP_ID}" />
+
+        <!-- Hold the Mobile Ads SDK's app-measurement init until AdMob.initialize() runs. The web
+             bridge calls it only after the ads flag is on and UMP says ads may be requested, so
+             nothing is sent at app launch or without consent. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+
         <receiver android:name=".TimerAlarmReceiver" android:exported="false" />
 
         <provider
