@@ -295,8 +295,10 @@
 
   function adsAvailable() { return !!admob(); }
 
-  // AdMob.initialize, then UMP: requestConsentInfo and, when consent is required,
-  // showConsentForm. One promise for the app's life; never rejects.
+  // UMP first: requestConsentInfo and, when consent is required, showConsentForm. Only when
+  // the result says canRequestAds does AdMob.initialize run (the plugin's consent calls use
+  // UMP alone and do not need the Mobile Ads SDK initialised). One promise for the app's
+  // life; never rejects.
   function adsInit() {
     if (adsInitPromise) return adsInitPromise;
     var fail = { canRequestAds: false, privacyOptionsRequired: false };
@@ -304,17 +306,16 @@
       var p = admob();
       if (!p) { resolve(fail); return; }
       var info;
-      Promise.resolve(p.initialize({})).then(function () {
-        return p.requestConsentInfo();
-      }).then(function (i) {
+      Promise.resolve(p.requestConsentInfo()).then(function (i) {
         info = i || {};
         if (info.status === "REQUIRED" && info.isConsentFormAvailable !== false && typeof p.showConsentForm === "function") {
           return Promise.resolve(p.showConsentForm()).then(function (after) { if (after) info = after; });
         }
       }).then(function () {
-        resolve({
-          canRequestAds: info.canRequestAds === true,
-          privacyOptionsRequired: info.privacyOptionsRequirementStatus === "REQUIRED"
+        var privacy = info.privacyOptionsRequirementStatus === "REQUIRED";
+        if (info.canRequestAds !== true) { resolve({ canRequestAds: false, privacyOptionsRequired: privacy }); return; }
+        return Promise.resolve(p.initialize({})).then(function () {
+          resolve({ canRequestAds: true, privacyOptionsRequired: privacy });
         });
       }).catch(function () { resolve(fail); });
     });

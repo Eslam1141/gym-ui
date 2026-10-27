@@ -13,12 +13,12 @@ const TEST_REWARDED = "ca-app-pub-3940256099942544/5224354917";
 async function mockAdMob(page, o) {
   await page.evaluate((o) => {
     const L = {};
-    const calls = (window.__ads = { initialize: 0, requestConsentInfo: 0, showConsentForm: 0, privacy: 0, removed: 0, showBanner: [], prepare: [], show: [], listeners: 0, removedListeners: 0 });
+    const calls = (window.__ads = { order: [], initialize: 0, requestConsentInfo: 0, showConsentForm: 0, privacy: 0, removed: 0, showBanner: [], prepare: [], show: [], listeners: 0, removedListeners: 0 });
     const fire = (name, data) => setTimeout(() => (L[name] || []).slice().forEach((f) => f(data)), 5);
     const AdMob = {
-      initialize: async () => { calls.initialize++; if (o.initFails) throw new Error("x"); },
-      requestConsentInfo: async () => { calls.requestConsentInfo++; return o.consent; },
-      showConsentForm: async () => { calls.showConsentForm++; return o.afterForm || o.consent; },
+      initialize: async () => { calls.initialize++; calls.order.push("initialize"); if (o.initFails) throw new Error("x"); },
+      requestConsentInfo: async () => { calls.requestConsentInfo++; calls.order.push("requestConsentInfo"); return o.consent; },
+      showConsentForm: async () => { calls.showConsentForm++; calls.order.push("showConsentForm"); return o.afterForm || o.consent; },
       showPrivacyOptionsForm: async () => { calls.privacy++; },
       addListener: async (name, cb) => {
         calls.listeners++;
@@ -87,6 +87,25 @@ test("init(): consent REQUIRED shows the UMP form and reports the post-form stat
   });
   expect(await page.evaluate(() => window.GymNativeShell.ads.init())).toEqual({ canRequestAds: true, privacyOptionsRequired: true });
   expect(await page.evaluate(() => window.__ads.showConsentForm)).toBe(1);
+  await context.close();
+});
+
+test("init(): initialize runs only after consent, and not at all when ads cannot be requested", async ({ browser }) => {
+  const { context, page } = await openApp(browser, open());
+  await mockAdMob(page, {
+    consent: { status: "REQUIRED", canRequestAds: false, isConsentFormAvailable: true, privacyOptionsRequirementStatus: "UNKNOWN" },
+    afterForm: { status: "OBTAINED", canRequestAds: true, privacyOptionsRequirementStatus: "REQUIRED" }
+  });
+  expect(await page.evaluate(() => window.GymNativeShell.ads.init())).toEqual({ canRequestAds: true, privacyOptionsRequired: true });
+  expect(await page.evaluate(() => window.__ads.order)).toEqual(["requestConsentInfo", "showConsentForm", "initialize"]);
+  await mockAdMob(page, {
+    consent: { status: "REQUIRED", canRequestAds: false, isConsentFormAvailable: true, privacyOptionsRequirementStatus: "REQUIRED" },
+    afterForm: { status: "REQUIRED", canRequestAds: false, privacyOptionsRequirementStatus: "REQUIRED" }
+  });
+  expect(await page.evaluate(() => window.GymNativeShell.ads.init())).toEqual({ canRequestAds: false, privacyOptionsRequired: true });
+  const c = await page.evaluate(() => window.__ads);
+  expect(c.initialize).toBe(0);
+  expect(c.order).toEqual(["requestConsentInfo", "showConsentForm"]);
   await context.close();
 });
 
